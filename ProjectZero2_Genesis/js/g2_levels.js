@@ -117,7 +117,7 @@ Object.assign(LEVELS, {
         b.beacon(3, 26); b.gate(8, 16, 10, 'arena_l');
         const x0 = 9, x1 = 67, y = 26;
         [14, 30, 46, 62].forEach((tx, i) => b.obj('exit', tx, y, { g2: 'tower', id: 'tower' + i, label: 'Raise the shadow', cd: 0 }));
-        b.bossArena('seraphina', x0, x1, y, 52, 18, { trigger: 12, pillars: [{ x: 22 * TILE, top: 19 * TILE }, { x: 38 * TILE, top: 19 * TILE }, { x: 54 * TILE, top: 19 * TILE }] });
+        b.bossArena('seraphina', x0, x1, y, 52, 18, { trigger: 12, pillars: [{ x: 22 * TILE, top: 17 * TILE }, { x: 38 * TILE, top: 17 * TILE }, { x: 54 * TILE, top: 17 * TILE }] });
         return b.done();
     }
 });
@@ -161,6 +161,6 @@ Object.assign(OBJECTIVES, { garden: 'Walk to the Gate of Seven Days', dawn: 'Rea
             else if (o.g2 === 'portal') { c.fillStyle = '#8a8070'; c.fillRect(x - 70, y - 170, 18, 170); c.fillRect(x + 52, y - 170, 18, 170); c.beginPath(); c.arc(x, y - 170, 70, Math.PI, 0); c.arc(x, y - 170, 52, 0, Math.PI, true); c.fill(); c.save(); c.globalCompositeOperation = 'lighter'; c.fillStyle = 'rgba(255,240,190,.35)'; c.fillRect(x - 52, y - 170, 104, 170); c.restore(); REGIONS.forEach((r, i) => { const a = Math.PI + (i + .5) / 7 * Math.PI; Paint.disc(c, x + Math.cos(a) * 61, y - 170 + Math.sin(a) * 61, 6, r.level ? r.col : '#3a3a3a'); }); }
             else if (o.g2 === 'statue') { const g = Save.data.g2; if (!g.spared.seraphina && !g.killed.seraphina) continue; c.fillStyle = '#9a9488'; c.fillRect(x - 26, y - 20, 52, 20); if (g.spared.seraphina) { c.fillStyle = '#e0dacc'; c.beginPath(); c.moveTo(x - 10, y - 110); c.lineTo(x + 10, y - 110); c.lineTo(x + 24, y - 20); c.lineTo(x - 24, y - 20); c.fill(); Paint.disc(c, x, y - 120, 10, '#e0dacc'); for (const d of [-1, 1]) { c.beginPath(); c.ellipse(x + d * 30, y - 96, 30, 10, d * .5, 0, TAU); c.fill(); } } else { c.fillStyle = '#7a746a'; c.beginPath(); c.moveTo(x - 14, y - 20); c.lineTo(x - 6, y - 50); c.lineTo(x + 4, y - 34); c.lineTo(x + 14, y - 56); c.lineTo(x + 18, y - 20); c.fill(); } }
         }
-        if (G.arena && G.arena.pillars) for (const p of G.arena.pillars) { const gr = c.createLinearGradient(p.x - 22, 0, p.x + 22, 0); gr.addColorStop(0, '#bfb092'); gr.addColorStop(.4, '#fffaf0'); gr.addColorStop(1, '#9a8c70'); c.fillStyle = gr; c.fillRect(p.x - 22, p.top, 44, G.arena.y - p.top); c.fillStyle = '#d8c89a'; c.fillRect(p.x - 30, p.top - 14, 60, 16); }
+        if (G.arena && G.arena.pillars) for (const p of G.arena.pillars) { const W = Shadow.PW, gr = c.createLinearGradient(p.x - W, 0, p.x + W, 0); gr.addColorStop(0, '#2a2430'); gr.addColorStop(.45, '#8a7e70'); gr.addColorStop(1, '#1e1a22'); c.fillStyle = gr; c.fillRect(p.x - W, p.top, W * 2, G.arena.y - p.top); c.fillStyle = '#6e6258'; c.fillRect(p.x - W - 8, p.top - 14, W * 2 + 16, 16); c.fillRect(p.x - W - 6, G.arena.y - 12, W * 2 + 12, 12); }
     };
 })();

@@ -7985,6 +7985,9 @@ Object.assign(VI, {
     "The arm cannon from the Day of Judgment, put back together. Long range. Zero rarely draws it now: a gun judges from far away.": "Khẩu pháo tay từ Ngày Phán Xét, được lắp lại. Bắn xa. Giờ Zero hiếm khi dùng: súng là để phán xét từ xa."
 });
 
+/* Seraphina's light */
+Object.assign(VI, { "SHADE": "BÓNG RÂM", "Hide in the violet shade, or make your own Little Night": "Núp vào vùng bóng tím, hoặc tự tạo Đêm Nhỏ", "Stand in a pillar's shadow": "Đứng vào bóng của cột" });
+
 </script>
 <script>
 'use strict';
@@ -8502,14 +8505,15 @@ Object.assign(Bodies, {
 
 /* A telegraph that hits everyone who is NOT in a pillar's shadow from the light at (lx, ly). */
 const Shadow = {
+    PW: 48, // half the width of a cathedral pillar
     segRect(x0, y0, x1, y1, r) {
         let t0 = 0, t1 = 1; const dx = x1 - x0, dy = y1 - y0, p = [-dx, dx, -dy, dy], q = [x0 - r.x0, r.x1 - x0, y0 - r.y0, r.y1 - y0];
         for (let i = 0; i < 4; i++) { if (p[i] === 0) { if (q[i] < 0) return false; } else { const t = q[i] / p[i]; if (p[i] < 0) { if (t > t1) return false; if (t > t0) t0 = t; } else { if (t < t0) return false; if (t < t1) t1 = t; } } }
         return true;
     },
-    covered(lx, ly, x, y) { const A = G.arena; if (!A || !A.pillars) return false; return A.pillars.some(p => this.segRect(lx, ly, x, y, { x0: p.x - 22, x1: p.x + 22, y0: p.top, y1: A.y })); },
+    covered(lx, ly, x, y) { const A = G.arena; if (!A || !A.pillars) return false; return A.pillars.some(p => this.segRect(lx, ly, x, y, { x0: p.x - Shadow.PW, x1: p.x + Shadow.PW, y0: p.top, y1: A.y })); },
     /** Ground interval in shadow behind a pillar, used by the bot and the renderer. */
-    span(lx, ly, p, G0) { const e = [p.x - 22, p.x + 22], pr = x => p.top <= ly ? (x < lx ? -1e4 : 1e4) : lx + (x - lx) * (G0 - ly) / (p.top - ly), xs = e.concat(e.map(pr)); return [Math.min(...xs), Math.max(...xs)]; }
+    span(lx, ly, p, G0) { const e = [p.x - this.PW, p.x + this.PW], pr = x => p.top <= ly ? (x < lx ? -1e4 : 1e4) : lx + (x - lx) * (G0 - ly) / (p.top - ly), xs = e.concat(e.map(pr)); return [Math.min(...xs), Math.max(...xs)]; }
 };
 (function () {
     const wh = Combat.warnHits.bind(Combat);
@@ -8521,13 +8525,27 @@ const Shadow = {
         for (const w of lights) {
             const k = 1 - w.t / w.max, srcs = [{ x: w.lx, y: w.ly, real: true }].concat((w.decoys || []).map(d => ({ x: d.x, y: d.y, real: false })));
             c.save(); c.globalCompositeOperation = 'lighter'; c.fillStyle = `rgba(255,245,210,${k * .14})`; c.fillRect(A.x0 - 200, A.y - 900, A.x1 - A.x0 + 400, 1000); c.restore();
+            const W = Shadow.PW, proj = (s, p, x) => p.top <= s.y ? (x < s.x ? -9999 : 9999) : s.x + (x - s.x) * (A.y - s.y) / (p.top - s.y);
+            const poly = (s, p) => [[p.x - W, p.top], [p.x + W, p.top], [proj(s, p, p.x + W), A.y], [proj(s, p, p.x - W), A.y]];
             for (const s of srcs) {
-                const fl = s.real ? 1 : .5 + .5 * Math.sin(G.time * .9 + s.x);
+                const fl = s.real ? 1 : .5 + .5 * Math.sin(G.time * .9 + s.x), a = s.real ? .1 + .42 * k : (.05 + .12 * k) * fl;
+                // The lit floor is everything outside the shadows: draw it with the shadows cut out.
+                c.save(); c.beginPath(); c.rect(A.x0 - 200, A.y - 900, A.x1 - A.x0 + 400, 960);
+                for (const p of A.pillars) { const q = poly(s, p); c.moveTo(q[0][0], q[0][1]); for (let i = 1; i < 4; i++) c.lineTo(q[i][0], q[i][1]); c.closePath(); }
+                c.globalCompositeOperation = 'lighter'; c.fillStyle = s.real ? `rgba(255,236,180,${a})` : `rgba(255,150,130,${a})`; c.fill('evenodd'); c.restore();
                 c.save(); c.globalCompositeOperation = 'lighter'; c.drawImage(Glow.get('#fff4c8'), s.x - 40 - 90 * k, s.y - 40 - 90 * k, 80 + 180 * k, 80 + 180 * k); c.restore();
                 c.strokeStyle = s.real ? `rgba(255,215,90,${.5 + .5 * k})` : `rgba(255,90,90,${.7 * fl})`; c.lineWidth = s.real ? 4 : 2; c.beginPath(); c.arc(s.x, s.y, 22 + Math.sin(G.time * .2) * 4, 0, TAU); c.stroke();
-                c.save(); c.globalAlpha = (s.real ? .45 : .22 * fl) + .3 * k; c.fillStyle = '#1a1030';
-                for (const p of A.pillars) { const pj = x => p.top <= s.y ? (x < s.x ? -9999 : 9999) : s.x + (x - s.x) * (A.y - s.y) / (p.top - s.y); c.beginPath(); c.moveTo(p.x - 22, p.top); c.lineTo(p.x + 22, p.top); c.lineTo(pj(p.x + 22), A.y); c.lineTo(pj(p.x - 22), A.y); c.closePath(); c.fill(); }
-                c.restore();
+                if (!s.real) continue;
+                // Mark the safe ground clearly: a violet band on the floor and the shadow's edges.
+                for (const p of A.pillars) {
+                    const q = poly(s, p), g0 = Math.max(A.x0, Math.min(q[2][0], q[3][0])), g1 = Math.min(A.x1, Math.max(q[2][0], q[3][0]));
+                    c.save(); c.globalAlpha = .16 + .16 * k + .06 * Math.sin(G.time * .2); c.fillStyle = '#7a4ae0'; c.beginPath(); c.moveTo(q[0][0], q[0][1]); for (let i = 1; i < 4; i++) c.lineTo(q[i][0], q[i][1]); c.closePath(); c.fill();
+                    c.globalAlpha = .7 + .3 * Math.sin(G.time * .25); c.strokeStyle = '#c8a8ff'; c.lineWidth = 3; c.setLineDash([10, 6]);
+                    c.beginPath(); c.moveTo(q[0][0], q[0][1]); c.lineTo(q[3][0], q[3][1]); c.moveTo(q[1][0], q[1][1]); c.lineTo(q[2][0], q[2][1]); c.stroke(); c.setLineDash([]);
+                    if (g1 > g0) { c.globalAlpha = .85; c.fillStyle = '#b48cff'; c.fillRect(g0, A.y - 5, g1 - g0, 5); c.globalCompositeOperation = 'lighter'; c.globalAlpha = .35; c.fillStyle = '#6a3ac0'; c.fillRect(g0, A.y - 40, g1 - g0, 40);
+                        c.globalCompositeOperation = 'source-over'; c.globalAlpha = 1; c.font = 'bold 20px "Palatino Linotype", serif'; c.textAlign = 'center'; c.fillStyle = '#f0e4ff'; c.fillText(tr('SHADE'), (g0 + g1) / 2, A.y - 110); }
+                    c.restore();
+                }
             }
         }
     };
@@ -8620,12 +8638,12 @@ const B_SERA = {
         },
         *feathers2(b) { yield* B_SERA.moves.feathers(b, true); },
         *radiance(b, decoy) {
-            const xs = [b.A.pillars[0].x - 140, (b.A.x0 + b.A.x1) / 2, b.A.pillars[2].x + 140], lx = U.pick(xs), ly = b.A.y - 440;
+            const P0 = b.A.pillars, xs = [P0[0].x - 100, P0[1].x + 80, P0[1].x - 80, P0[2].x + 100], lx = U.pick(xs), ly = b.A.y - 600;
             yield* b.moveTo(lx, ly + 150, 26); b.arms = 1;
-            const decoys = decoy ? xs.filter(x => x !== lx).map(x => ({ x, y: ly })) : [];
-            G.toast(decoy ? 'Only one light is true: its rim does not flicker' : 'Stand in a pillar\'s shadow', '#fff4c8');
-            Sound.sfx('charge'); Combat.warn({ shape: 'light', lx, ly, decoys, t: decoy ? 130 : 150, dmg: b.D(42), src: b, unblockable: true, kb: 6, onFire: () => { G.flash = .9; Sound.sfx('bigboom'); G.addShake(10); } });
-            yield decoy ? 134 : 154; b.arms = 0;
+            const decoys = decoy ? xs.filter(x => x !== lx).sort(() => Math.random() - .5).slice(0, 2).map(x => ({ x, y: ly })) : [];
+            G.toast(decoy ? 'Only one light is true: its rim does not flicker' : G.player.id === 'nyx' ? 'Hide in the violet shade, or make your own Little Night' : 'Stand in a pillar\'s shadow', '#fff4c8');
+            Sound.sfx('charge'); Combat.warn({ shape: 'light', lx, ly, decoys, t: decoy ? 150 : 170, dmg: b.D(42), src: b, unblockable: true, kb: 6, onFire: () => { G.flash = .9; Sound.sfx('bigboom'); G.addShake(10); } });
+            yield decoy ? 154 : 174; b.arms = 0;
             yield* B_SERA.moves.rest(b, lx);
         },
         *radiance2(b) { yield* B_SERA.moves.radiance(b, true); },
@@ -9020,7 +9038,7 @@ Object.assign(LEVELS, {
         b.beacon(3, 26); b.gate(8, 16, 10, 'arena_l');
         const x0 = 9, x1 = 67, y = 26;
         [14, 30, 46, 62].forEach((tx, i) => b.obj('exit', tx, y, { g2: 'tower', id: 'tower' + i, label: 'Raise the shadow', cd: 0 }));
-        b.bossArena('seraphina', x0, x1, y, 52, 18, { trigger: 12, pillars: [{ x: 22 * TILE, top: 19 * TILE }, { x: 38 * TILE, top: 19 * TILE }, { x: 54 * TILE, top: 19 * TILE }] });
+        b.bossArena('seraphina', x0, x1, y, 52, 18, { trigger: 12, pillars: [{ x: 22 * TILE, top: 17 * TILE }, { x: 38 * TILE, top: 17 * TILE }, { x: 54 * TILE, top: 17 * TILE }] });
         return b.done();
     }
 });
@@ -9064,7 +9082,7 @@ Object.assign(OBJECTIVES, { garden: 'Walk to the Gate of Seven Days', dawn: 'Rea
             else if (o.g2 === 'portal') { c.fillStyle = '#8a8070'; c.fillRect(x - 70, y - 170, 18, 170); c.fillRect(x + 52, y - 170, 18, 170); c.beginPath(); c.arc(x, y - 170, 70, Math.PI, 0); c.arc(x, y - 170, 52, 0, Math.PI, true); c.fill(); c.save(); c.globalCompositeOperation = 'lighter'; c.fillStyle = 'rgba(255,240,190,.35)'; c.fillRect(x - 52, y - 170, 104, 170); c.restore(); REGIONS.forEach((r, i) => { const a = Math.PI + (i + .5) / 7 * Math.PI; Paint.disc(c, x + Math.cos(a) * 61, y - 170 + Math.sin(a) * 61, 6, r.level ? r.col : '#3a3a3a'); }); }
             else if (o.g2 === 'statue') { const g = Save.data.g2; if (!g.spared.seraphina && !g.killed.seraphina) continue; c.fillStyle = '#9a9488'; c.fillRect(x - 26, y - 20, 52, 20); if (g.spared.seraphina) { c.fillStyle = '#e0dacc'; c.beginPath(); c.moveTo(x - 10, y - 110); c.lineTo(x + 10, y - 110); c.lineTo(x + 24, y - 20); c.lineTo(x - 24, y - 20); c.fill(); Paint.disc(c, x, y - 120, 10, '#e0dacc'); for (const d of [-1, 1]) { c.beginPath(); c.ellipse(x + d * 30, y - 96, 30, 10, d * .5, 0, TAU); c.fill(); } } else { c.fillStyle = '#7a746a'; c.beginPath(); c.moveTo(x - 14, y - 20); c.lineTo(x - 6, y - 50); c.lineTo(x + 4, y - 34); c.lineTo(x + 14, y - 56); c.lineTo(x + 18, y - 20); c.fill(); } }
         }
-        if (G.arena && G.arena.pillars) for (const p of G.arena.pillars) { const gr = c.createLinearGradient(p.x - 22, 0, p.x + 22, 0); gr.addColorStop(0, '#bfb092'); gr.addColorStop(.4, '#fffaf0'); gr.addColorStop(1, '#9a8c70'); c.fillStyle = gr; c.fillRect(p.x - 22, p.top, 44, G.arena.y - p.top); c.fillStyle = '#d8c89a'; c.fillRect(p.x - 30, p.top - 14, 60, 16); }
+        if (G.arena && G.arena.pillars) for (const p of G.arena.pillars) { const W = Shadow.PW, gr = c.createLinearGradient(p.x - W, 0, p.x + W, 0); gr.addColorStop(0, '#2a2430'); gr.addColorStop(.45, '#8a7e70'); gr.addColorStop(1, '#1e1a22'); c.fillStyle = gr; c.fillRect(p.x - W, p.top, W * 2, G.arena.y - p.top); c.fillStyle = '#6e6258'; c.fillRect(p.x - W - 8, p.top - 14, W * 2 + 16, 16); c.fillRect(p.x - W - 6, G.arena.y - 12, W * 2 + 12, 12); }
     };
 })();
 

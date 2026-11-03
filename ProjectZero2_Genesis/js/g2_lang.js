@@ -291,3 +291,6 @@ Object.assign(VI, {
     "Line 3 Arm Cannon": "Pháo Tay Tuyến 3",
     "The arm cannon from the Day of Judgment, put back together. Long range. Zero rarely draws it now: a gun judges from far away.": "Khẩu pháo tay từ Ngày Phán Xét, được lắp lại. Bắn xa. Giờ Zero hiếm khi dùng: súng là để phán xét từ xa."
 });
+
+/* Seraphina's light */
+Object.assign(VI, { "SHADE": "BÓNG RÂM", "Hide in the violet shade, or make your own Little Night": "Núp vào vùng bóng tím, hoặc tự tạo Đêm Nhỏ", "Stand in a pillar's shadow": "Đứng vào bóng của cột" });
