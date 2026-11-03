@@ -23,6 +23,8 @@ const F = ['genre', 'meter', 'key', 'lead', 'tempo'];
 for (let i = 0; i < g2.length; i++) for (let j = i + 1; j < g2.length; j++) {
     const a = T[g2[i]].meta, b = T[g2[j]].meta; if (a.family && a.family === b.family) continue;
     const same = F.filter(f => f === 'tempo' ? Math.abs(a.tempo - b.tempo) < 8 : a[f] === b[f]);
+    // At the player's request all of Part II shares one epic orchestral style: those tracks must still differ in two of metre, key, lead and tempo.
+    if (a.genre === 'epic orchestral' && b.genre === 'epic orchestral') { if (same.length - 1 > 2) bad(`${g2[i]} and ${g2[j]} share ${same.join(', ')}`); continue; }
     if (same.length > 2) bad(`${g2[i]} and ${g2[j]} share ${same.join(', ')}`);
 }
 for (const k of g2) {

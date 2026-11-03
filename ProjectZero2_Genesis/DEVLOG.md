@@ -40,6 +40,29 @@ Dựng trên mã nguồn Phần 1 (`../ProjectZero_Aocalyst/`, không sửa). Ph
 - `tools/music_render.js` render từng bài ra MP3 (`shots/music/`) và đo độ to. `--normalize` cân bằng âm lượng: mọi bài nằm trong khoảng −18 ±1.5 dB RMS (trừ 2 bài cố ý nhỏ: im lặng chương 5 và hồi 4), không rè.
 - `tools/music_check.js`: mỗi cặp bài khác nhau ít nhất 3/5 yếu tố, không dùng lại arranger hay vòng hợp âm của Phần 1, mỗi boss có bài riêng với ≥3 đoạn theo pha: **PASS**.
 
+
+### Nhạc, lần làm lại thứ hai: một phong cách epic chung (theo yêu cầu của người chơi)
+Người chơi gửi một bài tham khảo ("I wrote EPIC Boss Fight music for a Video Game", GameChanger OST) và yêu cầu toàn bộ nhạc Phần 2 theo chất đó, đồng nhất, bỏ chất điện tử. Phân tích bài tham khảo bằng `ana.py` (FFT, spectral flux, chroma):
+
+| | Tham khảo | Nhạc cũ của game |
+|---|---|---|
+| Tempo | ~172 BPM | 136–152 |
+| Giọng | La thứ hòa âm (nốt cảm G# mạnh) | Rê thứ |
+| Độ sáng | 1730 Hz | ~1050 Hz |
+| Dải tần | trung–cao 54%, sub 8% | 60–800 Hz chiếm 67%, sub 3% |
+| Cấu trúc | intro dồn từ −46 lên −9 dB trong 25 giây, cao trào, lắng, dồn lại | phẳng |
+
+**Đã làm:**
+- EQ chung cho nhạc Phần 2: −4 dB ở 330 Hz, +4 dB ở 3.8 kHz, +5 dB trên 8.5 kHz, +3 dB sub.
+- Bộ máy `epic()` (`js/g2_epic.js`) dùng chung cho mọi bài vùng, mini-boss và boss:
+  - ostinato dây trầm (móc đơn) và dây cao (móc kép), kèn sừng, "braam" trombone;
+  - hợp xướng, taiko, tom, snare half-time, cymbal;
+  - riser và cú "boom" khi đổi pha; chu kỳ 16 ô nhịp có đoạn lắng và đoạn dồn lại.
+- Mỗi bài giữ leitmotif và một màu riêng: Mareva hát soprano, Lilith có guitar méo, Astraea có đồng hồ và celesta, Mẹ Của Rễ có giọng trẻ con lệch tông, Archon có violin solo, The Architect có dãy 12 âm.
+- Nhạc khám phá chơi cùng dàn nhạc ở mức nhẹ, và tự chuyển sang epic khi vào trận.
+- Boss nhanh hơn (120–168 BPM). Hồi 1 chạy 164 BPM nhịp 7/4, hồi 3 chạy 172 BPM giọng La thứ như bài tham khảo.
+- `music_check` được nới cho phong cách chung: các bài epic phải khác nhau ít nhất 2 trong 4 yếu tố (nhịp, giọng, nhạc cụ chính, tempo), thay cho quy tắc cũ "khác thể loại".
+
 ### Kiểm thử (đều do bot)
 - `node tools/e2e2.js`: chương 1 bằng Nyx (cả tha và giết), 7 nhân vật đánh thật Hiệp Sĩ và Seraphina: PASS.
 - `node tools/e2e3.js`: chiến dịch từ ngày 2 tới cả 4 kết thúc (cutscene, chương, lựa chọn, mở khóa, các hồi, NG+, lưu/tải). Người chơi được giữ sống, bài này kiểm tra mạch truyện, không kiểm tra độ khó: **CAMPAIGN II COMPLETE**.

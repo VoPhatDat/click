@@ -158,6 +158,10 @@ Object.assign(Inst, {
         Sound.reverb = this.revIn; ens(); Sound.reverb = keep;
         this.samples.dulc = this.karplus(220, 1.6, .9952, .9);
         this.trackGain = 1; this.setReverb('hall');
+        // Master EQ for Part II music: less low-mid mud, more presence and air, a little more sub.
+        const B = Sound.buses, eq = (type, f, g, q) => { const n = c.createBiquadFilter(); n.type = type; n.frequency.value = f; n.gain.value = g; if (q) n.Q.value = q; return n; };
+        const lo = eq('lowshelf', 70, 3), mud = eq('peaking', 330, -4, .8), pres = eq('peaking', 3800, 4, .7), air = eq('highshelf', 8500, 5);
+        try { B.music.disconnect(); } catch (e) { } B.music.connect(lo); lo.connect(mud); mud.connect(pres); pres.connect(air); air.connect(B.master);
     };
     Music.setReverb = function (kind) {
         if (!Sound.ok || !this.revIn || this.revKind === kind) return; this.revKind = kind;
