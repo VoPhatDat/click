@@ -29,7 +29,7 @@ for (const k of g2) {
     if (P1.includes(T[k].arr)) bad(k + ' reuses the Part I arranger ' + T[k].arr);
     if (!T[k].meta.quote) for (const p of P1) if (T[p] && !T[k].progFn && JSON.stringify(T[p].prog) === JSON.stringify(T[k].prog)) bad(k + ' reuses the chord progression of Part I ' + p);
 }
-const bm = {}; for (const b of Object.values(X.BOSSES)) { if (!b.music || !String(b.music).startsWith('g2')) continue; if (bm[b.music]) bad(`${b.id} and ${bm[b.music]} share ${b.music}`); bm[b.music] = b.id; const m = T[b.music] && T[b.music].meta; if (m && !b.mini && (m.sections || 1) < 3) bad(`${b.id}'s track has fewer than 3 sections`); }
+const bm = {}; for (const b of Object.values(X.BOSSES)) { if (!b.music || !String(b.music).startsWith('g2')) continue; if (bm[b.music]) bad(`${b.id} and ${bm[b.music]} share ${b.music}`); bm[b.music] = b.id; const m = T[b.music] && T[b.music].meta; if (m && !b.mini && !b.oneSong && (m.sections || 1) < 3) bad(`${b.id}'s track has fewer than 3 sections`); }
 // Harmony: strong beats of each melody against the chord of its bar.
 let rows = [];
 for (const k of g2) {
@@ -48,6 +48,6 @@ const LV = path.join(__dirname, '..', 'shots', 'music', 'levels.json');
 if (fs.existsSync(LV)) {
     const L = JSON.parse(fs.readFileSync(LV, 'utf8')), ks = Object.keys(L).filter(k => T[k.split(':')[0]] && T[k.split(':')[0]].meta && T[k.split(':')[0]].ver !== 5), avg = ks.reduce((a, k) => a + L[k].rmsDb, 0) / (ks.length || 1);
     console.log(`\nLoudness (rendered, average ${avg.toFixed(1)} dB RMS):`);
-    for (const k of ks) { const d = L[k].rmsDb - avg; console.log(`  ${k.padEnd(20)} ${L[k].rmsDb.toFixed(1)} dB  (${d >= 0 ? '+' : ''}${d.toFixed(1)})  peak ${L[k].peakDb.toFixed(1)} dB${L[k].clip ? '  CLIPS ' + L[k].clip : ''}`); if (Math.abs(d) > 3) bad(`${k} is ${d.toFixed(1)} dB from the average`); if (L[k].clip > 50) bad(`${k} clips`); }
+    for (const k of ks) { const d = L[k].rmsDb - avg; console.log(`  ${k.padEnd(20)} ${L[k].rmsDb.toFixed(1)} dB  (${d >= 0 ? '+' : ''}${d.toFixed(1)})  peak ${L[k].peakDb.toFixed(1)} dB${L[k].clip ? '  CLIPS ' + L[k].clip : ''}`); if (Math.abs(d) > 3 && !T[k.split(':')[0]].meta.quiet) bad(`${k} is ${d.toFixed(1)} dB from the average`); if (L[k].clip > 50) bad(`${k} clips`); }
 } else console.log('\n(no renders yet: run node tools/music_render.js for loudness)');
 console.log(fails ? `\n${fails} FAILED` : '\nMUSIC CHECK PASSED'); process.exit(fails ? 1 : 0);

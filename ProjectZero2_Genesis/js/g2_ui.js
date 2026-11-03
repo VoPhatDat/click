@@ -15,7 +15,9 @@ Object.assign(UI.screens, {
         <nav class="row"><button data-do="relics">RELICS</button><button data-do="g2close" autofocus>BACK</button></nav></div>`;
     }
 });
+G2.stationExt = G2.stationExt || {};
 G2.station = function (id) {
+    if (G2.stationExt[id]) return G2.stationExt[id]();
     Game.state = 'menu';
     if (id === 'altar') { if ((Save.data.g2.chapter || 1) < 5) { Game.state = 'play'; G.toast('Only Nyx walks the first days. The Riders join on the Fifth Day.', '#e8d8ff'); return; } UI.show('select', { pick: Save.data.activeChar, from: 'hub' }); }
     else if (id === 'tree') UI.show('skills', { ch: Save.data.activeChar });

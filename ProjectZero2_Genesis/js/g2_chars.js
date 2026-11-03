@@ -411,7 +411,7 @@ Player = class extends _PlayerP1 {
                 const t = Combat.nearest(f.x, f.y - 30, 600); if (t) { f.facing = U.sign(t.x - f.x); if (Math.abs(t.x - f.x) > 46) f.x += f.facing * 3.4; else if (--f.cd <= 0) { f.cd = 40; Combat.hit(f.owner, t, { dmg: .7, stag: 20, col: '#ffaa33', hit: 'hit_l' }); VFX.slash(f.x + f.facing * 26, f.y - 30, 40, f.facing, '#ffaa33'); } }
                 else f.x = U.lerp(f.x, P.x - P.facing * 60, .05);
                 const s = G.level.surfaceBelow(f.x, f.y - 40, 200); if (s !== null) f.y = s;
-            } else if (f.kind !== 'g2shade' && f.t % 30 === 0) {
+            } else if (f.kind !== 'g2shade' && f.kind !== 'g2heal' && f.t % 30 === 0) {
                 const heal = (f.kind === 'g2smoke' || f.kind === 'g2fog') ? (f.owner.up && f.owner.up('m2_heal') ? 2 : 1) : 0;
                 for (const t of Combat.targetsNear(f.x, f.y - 20, f.r)) {
                     Combat.hit(f.owner, t, { dmg: f.kind === 'g2fog' ? .6 : f.kind === 'g2wither' ? .45 : .4, stag: 6, col: f.col, hit: 'hit_l', ult: true, poison: f.kind !== 'g2wither' });
@@ -426,7 +426,7 @@ Player = class extends _PlayerP1 {
         const mine = G.fields.filter(f => f.kind.startsWith('g2')), rest = G.fields.filter(f => !f.kind.startsWith('g2'));
         G.fields = rest; df(c); G.fields = rest.concat(mine);
         for (const f of mine) {
-            if (f.kind === 'g2shade') continue;
+            if (f.kind === 'g2shade' || f.kind === 'g2heal') continue;
             const a = Math.min(1, f.t / 12) * Math.min(1, (f.life - f.t) / 30);
             c.save(); c.globalAlpha = a;
             if (f.kind === 'g2ally') { const st = CHARS.rook.style; c.globalAlpha = .55 * a; c.save(); c.translate(f.x, f.y); c.scale(f.facing * 1.05, 1.05); c.fillStyle = '#ff8a40'; c.fillRect(-9, -62, 18, 40); Paint.disc(c, 0, -68, 8, '#ff8a40'); c.fillRect(-3, -40, 26, 5); c.restore(); }

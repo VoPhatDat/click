@@ -246,7 +246,7 @@ Object.assign(CUTS, {
         c.tide = 0; for (let i = 0; i < 90; i++) { c.tide = i / 90; yield 1; }
         yield* c.say('', 'Each time he bowed his head, the sea rose a little higher.', 220);
         yield* c.say('', 'It was the first time she saw that he could be weak.', 220);
-        const g = c.actor('nyx', 420, 560, 1, 'walk', { scale: 2 }); g.rig.S = nyxStyle(8); g.vx = 2; yield 90; g.vx = 0; g.rig.play('idle');
+        const g = c.actor('nyx', 420, 560, 1, 'run', { scale: 2 }); g.rig.S = nyxStyle(8); g.vx = 2; yield 90; g.vx = 0; g.rig.play('idle');
         yield* c.say('NYX', 'Uncle? I can sing it too. The one you sing.', 160);
         yield* c.say('ZERO', 'Go back to sleep, Nyx.', 140);
         c.fade(1, 50); yield 56;

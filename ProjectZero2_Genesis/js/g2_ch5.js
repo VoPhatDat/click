@@ -38,7 +38,7 @@ Object.assign(ENEMIES, {
 
 /* ------------------------------ MINI-BOSSES ------------------------------ */
 const B_ANTELOPE = {
-    id: 'antelope', name: 'THE FIRE-HORNED ANTELOPE', title: 'IT RUNS FROM WHAT IT IS', hp: 2600, w: 120, h: 110, col: '#ff8a3a', mini: true, music: 'g2antelope', reward: { xp: 800, relic: 'ember', cells: 160 },
+    id: 'antelope', name: 'THE FIRE-HORNED ANTELOPE', title: 'IT RUNS FROM WHAT IT IS', hp: 2000, w: 120, h: 110, col: '#ff8a3a', mini: true, music: 'g2antelope', reward: { xp: 800, relic: 'ember', cells: 160 },
     init: b => ({}),
     aim: b => ({ x: b.x, y: b.y - 70 }),
     tick(b) { Light.add(b.x + b.facing * 40, b.y - 110, 200, '#ff8a3a', .8); },
@@ -60,7 +60,7 @@ const B_ANTELOPE = {
     }
 };
 const B_BEHEMOTH = {
-    id: 'behemoth', name: 'THE BEHEMOTH CALF', title: 'TOO YOUNG TO KNOW ITS SIZE', hp: 2400, w: 150, h: 120, col: '#c8a070', mini: true, music: 'g2antelope', reward: { xp: 600, cells: 120 },
+    id: 'behemoth', name: 'THE BEHEMOTH CALF', title: 'TOO YOUNG TO KNOW ITS SIZE', hp: 2400, w: 150, h: 120, col: '#c8a070', mini: true, music: 'g2desert', reward: { xp: 600, cells: 120 },
     init: b => ({}), aim: b => ({ x: b.x, y: b.y - 70 }),
     tick(b) { if (b.drowsy > 0 && !b.dead) { b.drowsy--; if (b.script) b.script.wait = 2; if (b.drowsy === 1) { b.hp = 1; b.beginDeath(); } } },
     phases: [{ moves: ['stomp', 'charge', 'roar'], rest: 50 }],

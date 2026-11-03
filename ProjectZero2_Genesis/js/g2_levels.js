@@ -81,7 +81,7 @@ Object.assign(LEVELS, {
     dawn() {
         const b = new LB('dawn', 320, 50, { name: 'THE CITY OF ETERNAL DAWN', sub: 'The First Day: the sun that never set', region: 'city', theme: THEMES.dawn, bg: 'dawn', next: 'cathedral', spawn: { x: 5, y: 36 }, weather: 'motes' });
         b.at(0, 36).flat(26).beacon(6, 36);
-        b.obj('npc', 20, 36, { id: 'citizen' }); b.say(4, 36, 'ZERO', 'Stay in the shadows, little one. Let me do the fighting. Press E to talk, and U to make a little night of your own.', 260);
+        b.obj('npc', 20, 36, { id: 'citizen' }); b.say(4, 36, 'ZERO', 'Stay in the shadows, little one. Let me do the fighting. Press E to talk, and 1 to make a little night of your own.', 260);
         b.deco('lamp', 14, 36, { lit: 1 }).deco('banner', 22, 36);
         b.upS(3).flat(10).es([['sleepless', b.cx - 4, 28], ['choir', b.cx - 2, 31]]).downS(3).flat(8);
         b.obj('lore', b.cx - 4, b.cy, { id: 'g2p1' });

@@ -204,7 +204,7 @@ Object.assign(VI, {
     "A SHADOW": "MỘT CÁI BÓNG",
     "The tower is cold. Nothing to cover yet.": "Ngọn tháp còn lạnh. Chưa có gì để che.",
     "This tower needs time to darken again": "Ngọn tháp này cần thời gian để tối lại",
-    "Stay in the shadows, little one. Let me do the fighting. Press E to talk, and U to make a little night of your own.": "Ở yên trong bóng tối nhé, nhóc. Để chú đánh. Bấm E để nói chuyện, và U để tạo một màn đêm nhỏ của riêng con.",
+    "Stay in the shadows, little one. Let me do the fighting. Press E to talk, and 1 to make a little night of your own.": "Ở yên trong bóng tối nhé, nhóc. Để chú đánh. Bấm E để nói chuyện, và U để tạo một màn đêm nhỏ của riêng con.",
     "The angels went mad without sleep. Anything that moves, they charge. Hide in your night when they come.": "Các thiên thần hóa điên vì không được ngủ. Cái gì động đậy là chúng lao vào. Khi chúng đến, hãy trốn vào màn đêm của con.",
     "Uncle, your armour is cracked. Does it hurt?": "Chú ơi, giáp của chú nứt rồi. Có đau không?",
     "Only when I stop.": "Chỉ khi chú dừng lại thôi.",
@@ -294,3 +294,40 @@ Object.assign(VI, {
 
 /* Seraphina's light */
 Object.assign(VI, { "SHADE": "BÓNG RÂM", "Hide in the violet shade, or make your own Little Night": "Núp vào vùng bóng tím, hoặc tự tạo Đêm Nhỏ", "Stand in a pillar's shadow": "Đứng vào bóng của cột" });
+
+/* Exact wording from the brief (Appendix A): Zero says "ta" and calls Nyx "em"; the glass speaks of "Người". */
+Object.assign(VI, {
+    "In the beginning there was the Void, and then the First Light: the stone Aocalyst.": "Thuở ban đầu có Hư Không, rồi có Ánh Sáng Đầu Tiên: viên đá Aocalyst.",
+    "Mankind dug into the earth to find God. They found a Throne, and the Throne required a lamb.": "Con người đào xuống lòng đất để tìm Chúa. Họ tìm thấy một cái Ngai, và cái Ngai đòi một con chiên.",
+    "They bound one without a name upon the altar, and they tore that one in two.": "Họ trói một người không tên lên bàn thờ, và xé người đó làm đôi.",
+    "Five seals broke. The Day of Judgment fell.": "Năm ấn vỡ. Ngày Phán Xét giáng xuống.",
+    "Thirty years later the nameless one woke, with four of the dead: War, Death, Plague and Famine.": "Ba mươi năm sau, kẻ không tên tỉnh dậy, cùng bốn người đã chết: Chiến Tranh, Tử Thần, Dịch Bệnh, Nạn Đói.",
+    "It crossed the five lands and met the other half of itself: the Beast, the Endbringer.": "Người đi qua năm vùng đất, và gặp lại nửa kia của chính mình: Con Thú, Endbringer.",
+    "It did not judge. It forgave. The two halves became one.": "Người không phán xét. Người tha thứ. Hai nửa hợp làm một.",
+    "It walked to the Throne, and closed it.": "Người ngồi lên Ngai, và khép nó lại.",
+    "On the sixth day, it made mankind.": "Ngày thứ sáu, Người tạo ra con người.",
+    "The new world had no night. No one truly rested. Where the light was brightest, no one could sleep at all.": "Thế giới mới không có đêm. Không ai thật sự được nghỉ. Nơi ánh sáng chói nhất, không ai còn ngủ được nữa.",
+    "You forgave everything. You made everything. But who gave you leave to leave it unfinished?": "Ngươi tha thứ cho tất cả. Ngươi tạo ra tất cả. Nhưng ai cho phép ngươi bỏ dở?",
+    "She... she is sleeping.": "Nó... đang ngủ.",
+    "She sleeps. How does she sleep? What is she?": "Nó ngủ được... nó là thứ gì vậy?",
+    "Then I will call you Nyx. It means Night. The only thing missing here.": "Vậy gọi em là Nyx. Nghĩa là Đêm. Thứ duy nhất ở đây còn thiếu.",
+    "What is your name?": "Em tên gì?", "You do not remember either.": "Em cũng không nhớ à.",
+    "Hold on to me. Do not let go.": "Bám chặt vào ta. Đừng buông ra.",
+    "Stay in the shadows, little one. Let me do the fighting. Press E to talk, and 1 to make a little night of your own.": "Ở yên trong bóng tối, nhóc. Để ta đánh. Bấm E để nói chuyện, và phím 1 để tạo một màn đêm nhỏ của riêng em.",
+    "The angels went mad without sleep. Anything that moves, they charge. Hide in your night when they come.": "Các thiên thần hóa điên vì không được ngủ. Cái gì động đậy là chúng lao vào. Khi chúng đến, trốn vào màn đêm của em.",
+    "Only when I stop.": "Chỉ khi ta dừng lại thôi.",
+    "Because this city forgot what night is for. Only light truly hurts them. Stay behind me.": "Vì thành phố này quên mất đêm để làm gì. Chỉ ánh sáng mới thật sự làm chúng đau. Đứng sau ta.",
+    "A gun judges from far away. I do not judge anyone any more. A sword means standing close. Right in front of you.": "Súng là để phán xét từ xa. Ta không phán xét ai nữa. Cầm kiếm thì phải đứng gần. Ngay trước mặt em.",
+    "Uncle, your arm has a hole in it, like a gun. Why do you carry a sword?": "Chú ơi, tay chú có cái lỗ giống khẩu súng. Sao chú lại cầm kiếm?",
+    "Because you were only tired.": "Vì cô chỉ mệt thôi.",
+    "Come, Nyx. There is a garden. You can sleep there.": "Đi nào, Nyx. Có một khu vườn. Em có thể ngủ ở đó.",
+    "I made it. Between the days. I have never sat down in it.": "Ta làm nó. Giữa những ngày. Ta chưa từng ngồi xuống đây.",
+    "Seven gates. Seven days. Every one of them is broken, and I broke them.": "Bảy cánh cổng. Bảy ngày. Ngày nào cũng hỏng, và chính ta làm hỏng.",
+    "It is nothing. Sleep, Nyx. I will keep watch.": "Không có gì. Ngủ đi, Nyx. Ta canh cho.",
+    "Someone I have not thanked. Go to sleep.": "Một người ta chưa kịp cảm ơn. Ngủ đi.",
+    "This was in my pocket. A ticket from Line 3. Keep it, Nyx.": "Cái này ở trong túi ta. Một tấm vé Tuyến 3. Giữ lấy, Nyx.",
+    "Nyx. The four towers. Cover her eyes. I will hold her here.": "Nyx. Bốn ngọn tháp. Che mắt cô ta lại. Ta sẽ giữ cô ta ở đây.",
+    "Yes. Do not look.": "Ừ. Đừng nhìn.",
+    '"No. She is only tired. Let her sleep."': '"Không. Cô ấy chỉ mệt thôi. Để cô ấy ngủ."', '"She hurt the whole city. I will end it."': '"Cô ta làm hại cả thành phố. Ta sẽ kết thúc chuyện này."',
+    "years old": "tuổi", "party": "đổi người"
+});

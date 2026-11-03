@@ -163,7 +163,7 @@ Object.assign(LEVELS, {
     }
 });
 // The memory tree shows Zero's past; then the path takes her away from him.
-(function () { const st = G2.station; G2.station = function (id) { if (id === 'memtree') { Game.state = 'play'; if (!Save.data.g2.seen.memtree) { Save.data.g2.seen.memtree = 1; G2.cut('g2memory'); } else G.toast('The tree is quiet now.', '#c8a060'); return; } return st(id); }; })();
+G2.stationExt = G2.stationExt || {}; G2.stationExt.memtree = () => { Game.state = 'play'; if (!Save.data.g2.seen.memtree) { Save.data.g2.seen.memtree = 1; G2.cut('g2memory'); } else G.toast('The tree is quiet now.', '#c8a060'); };
 Object.assign(LORE, {
     g2p9: { title: 'The Second Book, 3:1', region: 'forest2', text: 'On the third day the Lamb made the land and the tree. It buried what it could not bear under the land, and the tree grew up out of it.' },
     g2p10: { title: 'The Woodcutter’s Rule', region: 'forest2', text: 'Never cut a tree you have not touched. Never touch a tree you are not ready to remember.' },
