@@ -103,7 +103,7 @@ Object.assign(CUTS, {
         ];
         for (let i = 0; i < 8; i++) { c.shot(Stage.glass(i)); c.crack = false; c.fade(0, 24); if (i === 2) G.delay2(c, 90, () => { c.crack = true; Sound.sfx('ice_crack'); }); if (i === 3) { Sound.sfx('trumpet'); c.quake = 4; } yield* c.say('', lines[i], i === 0 ? 230 : 210); c.fade(1, 16); yield 18; }
         // Scene 2: the six days
-        c.shot(Stage.creation); c.day = 0; c.fade(0, 30); const z = c.actor('zero', 640, 590, 1, 'idle', { scale: 2 }); yield 50;
+        c.shot(Stage.creation); c.day = 0; c.fade(0, 30); const z = c.actor('zero', 640, 540, 1, 'idle', { scale: 2 }); yield 50;
         // The cannon that judged the world has nothing left to judge: Zero takes it apart and forges a blade to build with.
         yield* c.say('', 'There was no one left to judge. So it took apart the cannon that had judged the world, and from its light forged a blade to build with.', 250);
         z.rig.custom([[0, { aF: 100, fF: 60, aB: 40, fB: 80 }], [1, { aF: 96, fF: 70, aB: 44, fB: 86 }]], 40, 10, '_forge'); yield 30;

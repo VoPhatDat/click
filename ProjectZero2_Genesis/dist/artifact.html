@@ -7950,12 +7950,12 @@ Object.assign(VI, {
     "It crossed the five lands and met the other half of itself: the Beast, the Endbringer.": "Nó băng qua năm vùng đất và gặp nửa kia của chính mình: Con Thú, Kẻ Tận Thế.",
     "It did not judge. It forgave. The two halves became one.": "Nó không phán xét. Nó tha thứ. Hai nửa hợp làm một.",
     "It walked to the Throne, and closed it.": "Nó bước đến Ngai Vàng, và đóng nó lại.",
-    "On the first day, it made light.": "Ngày thứ nhất, nó tạo ra ánh sáng.",
-    "On the second day, it made the waters.": "Ngày thứ hai, nó tạo ra nước.",
-    "On the third day, it made land and tree.": "Ngày thứ ba, nó tạo ra đất và cây.",
-    "On the fourth day, it made the stars.": "Ngày thứ tư, nó tạo ra các vì sao.",
-    "On the fifth day, it made the beasts.": "Ngày thứ năm, nó tạo ra muông thú.",
-    "On the sixth day, it made mankind.": "Ngày thứ sáu, nó tạo ra loài người.",
+    "On the first day, it made light.": "Ngày thứ nhất, Người tạo ra ánh sáng.",
+    "On the second day, it made the waters.": "Ngày thứ hai, Người tạo ra nước.",
+    "On the third day, it made land and tree.": "Ngày thứ ba, Người tạo ra đất và cây.",
+    "On the fourth day, it made the stars.": "Ngày thứ tư, Người tạo ra các vì sao.",
+    "On the fifth day, it made the beasts.": "Ngày thứ năm, Người tạo ra muông thú.",
+    "On the sixth day, it made mankind.": "Ngày thứ sáu, Người tạo ra loài người.",
     "\"And it did not rest.\"": "\"Và Người đã không nghỉ.\"",
     "The one who did not rest": "Kẻ đã không nghỉ",
     "Raise the shadow": "Dựng bóng tối",
@@ -9170,7 +9170,7 @@ Object.assign(CUTS, {
         ];
         for (let i = 0; i < 8; i++) { c.shot(Stage.glass(i)); c.crack = false; c.fade(0, 24); if (i === 2) G.delay2(c, 90, () => { c.crack = true; Sound.sfx('ice_crack'); }); if (i === 3) { Sound.sfx('trumpet'); c.quake = 4; } yield* c.say('', lines[i], i === 0 ? 230 : 210); c.fade(1, 16); yield 18; }
         // Scene 2: the six days
-        c.shot(Stage.creation); c.day = 0; c.fade(0, 30); const z = c.actor('zero', 640, 590, 1, 'idle', { scale: 2 }); yield 50;
+        c.shot(Stage.creation); c.day = 0; c.fade(0, 30); const z = c.actor('zero', 640, 540, 1, 'idle', { scale: 2 }); yield 50;
         // The cannon that judged the world has nothing left to judge: Zero takes it apart and forges a blade to build with.
         yield* c.say('', 'There was no one left to judge. So it took apart the cannon that had judged the world, and from its light forged a blade to build with.', 250);
         z.rig.custom([[0, { aF: 100, fF: 60, aB: 40, fB: 80 }], [1, { aF: 96, fF: 70, aB: 44, fB: 86 }]], 40, 10, '_forge'); yield 30;
