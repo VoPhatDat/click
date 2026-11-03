@@ -117,7 +117,7 @@ Object.assign(LEVELS, {
         b.say(6, 40, 'ZERO', 'Each fallen star is a future someone wrote down. Do not read them.', 200);
         b.flat(10).es([['starshard', b.cx - 4, 34], ['faceless', b.cx - 2, b.cy - 2]]); b.obj('lore', b.cx - 6, b.cy, { id: 'g2p13' });
         // A broken stair of floating platforms between the domes.
-        let x = b.cx; b.gap(4); b.flat(4); b.gap(3); b.plat(x + 5, b.cy - 3, 3).plat(x + 9, b.cy - 6, 3); b.flat(6).up(4).flat(12).es([['starguard', b.cx - 5, b.cy - 3]]);
+        let x = b.cx; b.gap(4); b.flat(4); b.gap(4); b.plat(x, b.cy - 1, 4).plat(x + 8, b.cy - 1, 4).plat(x + 5, b.cy - 5, 3); b.flat(6).up(4).flat(12).es([['starguard', b.cx - 5, b.cy - 3]]);
         b.say(b.cx - 10, b.cy, 'NYX', 'This one says I will be alone. Uncle, it says I will be alone.', 180); b.say(b.cx - 4, b.cy, 'ZERO', 'Then do not read it.', 120);
         b.flat(10).beacon(b.cx - 4, b.cy); b.down(4).flat(12).es([['starshard', b.cx - 8, b.cy - 6], ['starshard', b.cx - 5, b.cy - 7], ['faceless', b.cx - 2, b.cy - 2]]);
         b.obj('lore', b.cx - 3, b.cy, { id: 'g2p14' });

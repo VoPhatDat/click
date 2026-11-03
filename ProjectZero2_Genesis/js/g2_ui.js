@@ -6,6 +6,7 @@ Object.assign(UI.screens, {
         return `<div class="title"><div class="logo"><span>PROJECT ZERO II</span><em>G E N E S I S</em><small>${Settings.lang === 'vi' ? 'SÁCH SÁNG THẾ THỨ HAI' : 'THE SECOND BOOK OF GENESIS'}</small></div>
         <nav>${can ? '<button data-do="continue" autofocus>CONTINUE</button>' : ''}
         <button data-do="newgame" ${can ? '' : 'autofocus'}>NEW GAME</button>
+        ${G2.ngAvailable() ? '<button data-do="g2ngplus">NEW GAME+</button>' : ''}<button data-do="g2music">${tr('MUSIC ROOM')}</button>
         <button data-do="settings">SETTINGS</button><button data-do="credits">CREDITS</button><button data-do="exit">EXIT</button></nav>
         <p class="hint">${p1 ? (Settings.lang === 'vi' ? 'Đã tìm thấy hành trình phần 1: bạn sẽ nhận một món quà ở Vườn Sáng Thế.' : 'A Part I journey was found: a gift waits in the Garden.') : ''} ${tr('Arrow keys or mouse to navigate. Click once if you hear nothing: browsers wait for a first input before playing audio.')}</p><p class="hint">v${G2.VERSION}</p></div>`;
     },
@@ -78,3 +79,35 @@ Scene.menuBg = function (c, t) {
     if (Settings.quality && t % 4 === 0) VFX.add(U.rand(0, VW), VH + 10, U.rand(-.3, .3), U.rand(-1.6, -.6), '#b48cff', 220, 2.6, 1, 0);
     VFX.tick(); VFX.draw(c);
 };
+
+/* ------------------------------ NEW GAME+, THE MUSIC ROOM, THE GARDEN THAT REMEMBERS ------------------------------ */
+G2.ngAvailable = function () { try { const raw = Store.read(Store.KEY); return !!raw && /"ngplus":1/.test(raw); } catch (e) { return false; } };
+G2.newGamePlus = function () {
+    const old = Save.data || (Save.load() && Save.data); if (!old) return Game.newGame('normal');
+    const keep = { unlocked: old.unlocked.slice(), chars: old.chars, relics: old.relics.slice(), cells: old.cells, ach: old.ach.slice(), lore: old.lore.slice(), endings: Object.assign({}, old.g2.endings), heard: Object.assign({}, old.g2.heard || {}), wTier: Object.assign({}, old.g2.wTier) };
+    Game.newGame(old.diff || 'normal'); const D = Save.data; Object.assign(D, { unlocked: keep.unlocked, chars: keep.chars, relics: keep.relics, cells: keep.cells, ach: keep.ach, lore: keep.lore });
+    Object.assign(D.g2, { ngplus: 1, endings: keep.endings, heard: keep.heard, wTier: keep.wTier }); Save.write();
+};
+const MUSIC_ROOM = ['g2title', 'g2garden', 'g2lul1', 'g2dawn', 'g2knight', 'g2sera', 'g2lul2', 'g2sea', 'g2whale', 'g2mareva', 'g2lul3', 'g2forest', 'g2scarecrow', 'g2gardener', 'g2lul4', 'g2observ', 'g2clock', 'g2astraea', 'g2lul5', 'g2desert', 'g2antelope', 'g2lilith', 'g2lul6', 'g2meridian', 'g2preacher', 'g2archon', 'g2architect', 'g2lul7', 'g2throne', 'g2zshadow', 'g2vesper', 'g2act0', 'g2act1', 'g2act2', 'g2act3', 'g2act4', 'g2end5a', 'g2end5b', 'g2end5cfight', 'g2end5c', 'g2end5d', 'g2credits'];
+Object.assign(UI.screens, {
+    g2music(a) {
+        const heard = (Save.data && Save.data.g2.heard) || {}, all = Save.data && Save.data.g2.ngplus; this.back = () => { Music.cut('g2title', 'calm'); this.show('title'); };
+        return `<div class="panel wide"><h2>${tr('MUSIC ROOM')}</h2><div class="grid">${MUSIC_ROOM.map((id, i) => { const T = TRACKS[id], open = all || heard[id] || i < 2; return `<button class="card" data-do="g2play" data-arg="${id}" ${open ? '' : 'disabled'}><b>${open ? tr(T.meta.genre) : '???'}</b><span>${open ? T.meta.meter + ' · ' + T.meta.key + ' · ' + T.meta.tempo + ' BPM' : tr('Not heard yet')}</span><em>${open ? tr(T.meta.lead) : ''}</em></button>`; }).join('')}</div>
+        <p class="hint">${tr('Every track is synthesised live in your browser. No one but you has listened to them yet: tell us which ones work.')}</p><nav class="row"><button data-do="title" autofocus>${tr('BACK')}</button></nav></div>`;
+    }
+});
+(function () {
+    const act = UI.act.bind(UI); UI.act = function (w, arg, el) {
+        if (w === 'g2music') { if (!Save.data) Save.load(); Sound.resume && Sound.resume(); return this.show('g2music'); }
+        if (w === 'g2play') { Sound.resume && Sound.resume(); Music.cut(arg, TRACKS[arg].meta.boss ? 'boss' : 'calm'); return; }
+        if (w === 'g2ngplus') { Sound.resume && Sound.resume(); G2.newGamePlus(); return; }
+        return act(w, arg, el);
+    };
+    // The Garden remembers: those Nyx spared rest here in light; the slain stand as broken stone.
+    const gl = LEVELS.garden; const floorY = (d, tx) => { for (let ty = 0; ty < d.h; ty++) if (d.grid[ty * d.w + tx] !== T.E) return ty * TILE; return 30 * TILE; };
+    LEVELS.garden = function () { const d = gl(); ['seraphina', 'mareva', 'gardener', 'astraea', 'lilith', 'archon'].forEach((k, i) => d.objs.push({ kind: 'exit', g2: 'witness', boss: k, x: (36 + i * 13) * TILE, y: floorY(d, 36 + i * 13), label: '' })); if (Save.data && Save.data.g2.spared.lilith) d.objs.push({ kind: 'npc', id: 'wolfpup', x: 104 * TILE, y: floorY(d, 104) }); return d; };
+    Object.assign(NPCS, { wolfpup: { name: 'A WOLF OF THE PACK', look: '#6a5a50', lines: [['A WOLF OF THE PACK', '...'], ['NYX', 'You came to guard the Garden? Good wolf.']] } });
+    // The party key, once there is a party.
+    const sk = HUD.skills; HUD.skills = function (c, P, d) { sk.call(this, c, P, d); if ((Save.data.g2.chapter || 1) >= 6 && G2.party().length > 1) { c.font = '11px "Palatino Linotype", serif'; c.textAlign = 'left'; c.fillStyle = '#e8d8ff'; c.fillText(tr('Switch') + ' [' + this.keyName(Settings.binds.party) + ']: ' + G2.party().map(id => CHARS[id].name).join(' · '), VW / 2 - 214, VH - 126); } };
+})();
+Object.assign(VI, { 'MUSIC ROOM': 'PHÒNG NHẠC', 'Not heard yet': 'Chưa nghe thấy', 'Every track is synthesised live in your browser. No one but you has listened to them yet: tell us which ones work.': 'Mọi bài nhạc được tổng hợp trực tiếp trong trình duyệt của bạn. Ngoài bạn ra chưa ai nghe chúng: hãy cho chúng tôi biết bài nào ổn.', 'BACK': 'QUAY LẠI', 'Switch': 'Đổi người', 'A WOLF OF THE PACK': 'MỘT CON SÓI TRONG BẦY', 'You came to guard the Garden? Good wolf.': 'Em đến canh Vườn à? Sói ngoan.', 'NEW GAME+': 'CHƠI LẠI+' });

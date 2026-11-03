@@ -60,7 +60,7 @@ const B_KNIGHT = {
     init: b => { const r = new Rig(Object.assign({}, enemyStyle(ENEMIES.dawnwarden), { scale: 1.75 })); r.owner = b; r.play('idle', 0); Object.defineProperty(b, 'P', { get: () => (G.ally && G2Night.nyxHidden() ? G.ally : G.player) }); return { rig: r, armorFront: true, pose: null }; },
     aim: b => ({ x: b.x, y: b.y - 90 }),
     box: b => ({ x: b.x - 30, y: b.y - 150, w: 60, h: 150 }),
-    tick(b) { if (!b._g2k) { b._g2k = true; if (G.player && G.player.id !== 'nyx') { b.dmgK *= .7; b.maxHp = b.hp = Math.round(b.hp * .8); } } if (G2Night.shadeAt(b.x, b.y - 60)) { if (b.armorFront) VFX.text(b.x, b.y - 170, 'A SHADOW', '#b48cff', 14, 30); b.armorFront = false; } const R = b.rig; R.ground = true; R.gaitAmt = 1; R.phase += Math.abs(b.vx) / 11; if (!b.pose) R.play(Math.abs(b.vx) > .5 ? 'run' : 'idle', 6); R.tick(); R.updateChain(b.x, b.y, b.facing); b.vx *= .8; },
+    tick(b) { if (!b._g2k) { b._g2k = true; if (G.player && G.player.id !== 'nyx') { b.dmgK *= .6; b.maxHp = b.hp = Math.round(b.hp * .75); } } if (G2Night.shadeAt(b.x, b.y - 60)) { if (b.armorFront) VFX.text(b.x, b.y - 170, 'A SHADOW', '#b48cff', 14, 30); b.armorFront = false; } const R = b.rig; R.ground = true; R.gaitAmt = 1; R.phase += Math.abs(b.vx) / 11; if (!b.pose) R.play(Math.abs(b.vx) > .5 ? 'run' : 'idle', 6); R.tick(); R.updateChain(b.x, b.y, b.facing); b.vx *= .8; },
     phases: [
         { moves: ['charge', 'combo', 'slam', 'combo'], rest: 40 },
         { at: .5, moves: ['charge', 'blink', 'combo', 'slam', 'blink'], rest: 26, say: ['THE SHADOWLESS KNIGHT', 'The sun took my shadow. I will take yours.'], enter: function* (b) { G.flash = .5; Sound.sfx('roar'); G.addShake(12); yield 50; b.dmgK *= 1.15; } }

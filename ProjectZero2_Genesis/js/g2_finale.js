@@ -308,7 +308,7 @@ Object.assign(LEVELS, {
         for (let tier = 0; tier < 6; tier++) { b.flat(4); for (let k = 0; k < 4; k++) b.up(3).flat(3); b.flat(6); const boss = order[tier]; b.obj('exit', b.cx - 3, b.cy, { g2: 'witness', boss, label: tr(BOSSES[boss].name) }); b.deco('lamp', b.cx - 6, b.cy, { lit: 1 }); }
         b.trig(b.cx - 3, b.cy - 12, 2, 13, () => { if (!G.flags.lastStep) { G.flags.lastStep = 1; G2.cut('g2act0top'); } });
         b.flat(4).beacon(b.cx - 2, b.cy);
-        const ar = b.cx, y = b.cy; b.flat(60); b.fill(ar + 58, 0, ar + 61, 119); b.fill(ar - 1, y - 14, ar, y - 1);
+        const ar = b.cx, y = b.cy; b.flat(60); b.fill(ar + 58, 0, ar + 61, 119);
         b.gate(ar + 2, y - 10, 10, 'arena_l');
         b.bossArena('vesper', ar + 2, ar + 58, y, ar + 44, y, { trigger: ar + 8 }); b.obj('exit', ar + 4, y, { g2: 'throneSeat', label: '' });
         return b.done();
