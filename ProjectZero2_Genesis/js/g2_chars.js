@@ -56,6 +56,7 @@ const WEAPONS2 = {
           heavy: AT('slam', 12, 5, 18, [2, -90, 104, 92], 2.4, { kb: 11, kby: -5, stag: 50, hit: 'hit_h', sfx: 'swing_h', slam: true, col: '#e8fbff', shake: 7 }) },
         { id: 'judgment', name: 'Greatblade of Judgment', desc: 'Slow and heavy. Breaks armour and guards.', gear: 'greatblade', len: 76, armorBreak: true,
           atks: chain3([AT('down', 12, 5, 16, [2, -88, 104, 88], 1.9, { kb: 9, stag: 40, hit: 'hit_h', sfx: 'swing_h', col: '#ffd86b', shake: 5 }), AT('up', 13, 5, 16, [2, -96, 108, 96], 2.1, { kb: 9, stag: 44, hit: 'hit_h', sfx: 'swing_h', col: '#ffd86b' }), AT('slam', 18, 6, 24, [0, -110, 126, 110], 3.4, { kb: 14, kby: -6, stag: 80, hit: 'hit_h', sfx: 'swing_h', slam: true, col: '#ffffff', shake: 10 })]) },
+        { id: 'cannon', name: 'Line 3 Arm Cannon', desc: 'The arm cannon from the Day of Judgment, put back together. Long range. Zero rarely draws it now: a gun judges from far away.', gear: 'cannon', len: 28, ranged: true, rate: 9, shot: { kind: 'bolt', spd: 21, dmg: .6, r: 4, len: 18, life: 44, col: '#00ffff', sfx: 'gun' } },
         { id: 'chain', name: 'Chain of Genesis', desc: 'Mid range. Hooks foes and drags them in; with nothing to catch, it drags you.', gear: 'chainG', len: 40,
           atks: chain3([AT('thrust', 8, 4, 12, [8, -58, 170, 30], .8, { pull: true, col: '#bff8ff', sfx: 'swing_m' }), AT('thrust', 8, 4, 12, [8, -58, 170, 30], .8, { pull: true, col: '#bff8ff', sfx: 'swing_m' }), AT('thrust', 10, 5, 16, [8, -62, 210, 36], 1.4, { pull: true, hook: true, col: '#ffffff', sfx: 'swing_h', hit: 'hit_h', stag: 36 })]) }
     ],
@@ -304,9 +305,9 @@ Player = class extends _PlayerP1 {
         const mx = this.x + Math.cos(a) * 24, my = this.y - 42 + Math.sin(a) * 24;
         let vx = Math.cos(a) * s.spd, vy = Math.sin(a) * s.spd;
         if (s.lob) { const t = Combat.nearest(this.x, this.y - 40, 620, 0, true); if (t) { const T = 34; vx = (t.x - mx) / T; vy = (t.y - t.h / 2 - my) / T - .5 * s.grav * T; } else { vx = this.facing * 7; vy = -7; } }
-        const pr = Combat.shoot(this, s.kind, mx, my, vx, vy, { dmg: s.dmg, r: s.r, pierce: s.pierce || 0, life: s.life, col: s.col, grav: s.grav || 0, explode: s.explode || 0, stag: 10, poison: s.poison });
+        const pr = Combat.shoot(this, s.kind, mx, my, vx, vy, { len: s.len, dmg: s.dmg, r: s.r, pierce: s.pierce || 0, life: s.life, col: s.col, grav: s.grav || 0, explode: s.explode || 0, stag: 10, poison: s.poison });
         if (s.home) pr.g2home = s.home; pr.g2poison = s.poison;
-        Sound.sfx(this.id === 'sable' ? 'knife' : 'squish', { v: .5 });
+        Sound.sfx(s.sfx || (this.id === 'sable' ? 'knife' : 'squish'), { v: .5 });
     }
     hurt(dmg, src = {}) {
         if (this.state === 'dead') return false;

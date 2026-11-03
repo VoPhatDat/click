@@ -10,18 +10,20 @@
 - Chương 1: Thành Phố Bình Minh Vĩnh Cửu, cảnh đặt tên, Hiệp Sĩ Không Bóng, Thánh Đường Không Bóng với Seraphina (4 tháp, 3 pha, pha mù có chuông định hướng), lựa chọn tha/giết, cảnh sau.
 - Vườn Sáng Thế (hub) với các trạm: bàn thờ (khóa tới Ngày Thứ Năm), cây kỹ năng, lò rèn, thư khố, tượng, cổng Bảy Ngày.
 - 7 bản nhạc mới, "Bài Ru Của Zero" là leitmotif. Boss Seraphina có 3 đoạn theo pha.
-- Tiếng Việt mặc định, 609/616 chuỗi đã dịch (7 chuỗi còn lại là tên riêng và mã màu).
+- Tiếng Việt mặc định, 612/619 chuỗi đã dịch (7 chuỗi còn lại là tên riêng và mã màu).
 - Credits: VoPhatDat + Claude.
 
 **Sửa sau phản hồi**
 - Nền menu núi lửa là phần còn sót của phần 1 (cảnh trận cuối), không liên quan phần 2: đã thay bằng thành phố bình minh dưới màn đêm tím.
 - Bối cảnh quá sáng, chói mắt: Thành Phố Bình Minh chuyển sang tông mặt trời sát chân trời trên nền trời tím bầm. Thánh Đường tối, chỉ còn kính màu và Seraphina phát sáng. Vườn chuyển sang chiều muộn dịu. Font đổi sang Palatino.
 
+- Zero dùng pháo tay ở phần 1 mà sang phần 2 lại cầm kiếm, không có lời giải thích. Đã thêm vào đoạn mở đầu cảnh Zero tháo khẩu pháo và rèn thành kiếm ("không còn ai để phán xét nữa"). Ở Chương 1 thêm đoạn Nyx hỏi, Zero đáp: "Súng là để phán xét từ xa... Cầm kiếm thì phải đứng gần. Ngay trước mặt con." Khẩu pháo vẫn giữ lại thành vũ khí thứ 3 của Zero (Pháo Tay Tuyến 3, phím Q khi chơi Zero). Zero đồng hành do AI điều khiển luôn dùng kiếm.
+
 **Kiểm thử (đều do bot, chưa có người chơi thật)**
 - `node tools/e2e2.js`: toàn bộ chiến dịch chương 1 bằng Nyx (cả nhánh tha và giết), các trạm, lưu/tải, 5 nhân vật đánh trực tiếp với 2 boss: PASS.
 - `node tools/smoke.js`: mọi cutscene chạy hết: PASS.
 - `node tools/music_check.js`: 7 track, mỗi cặp chung tối đa 2/5 yếu tố, không dùng lại arranger/vòng hợp âm phần 1: PASS.
-- `node tools/i18n.js`: 609/616.
+- `node tools/i18n.js`: 612/619.
 - Phần 1 (`../ProjectZero_Aocalyst`, `node tools/e2e.js`): CAMPAIGN COMPLETED.
 - Ảnh chụp: `node tools/shots2.js` lưu vào `shots/`.
 

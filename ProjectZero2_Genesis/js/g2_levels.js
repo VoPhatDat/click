@@ -85,6 +85,7 @@ Object.assign(LEVELS, {
         b.deco('lamp', 14, 36, { lit: 1 }).deco('banner', 22, 36);
         b.upS(3).flat(10).es([['sleepless', b.cx - 4, 28], ['choir', b.cx - 2, 31]]).downS(3).flat(8);
         b.obj('lore', b.cx - 4, b.cy, { id: 'g2p1' });
+        b.say(b.cx - 2, b.cy, 'NYX', 'Uncle, your arm has a hole in it, like a gun. Why do you carry a sword?', 200); b.say(b.cx + 4, b.cy, 'ZERO', 'A gun judges from far away. I do not judge anyone any more. A sword means standing close. Right in front of you.', 260);
         b.gap(7, 'wire', { period: 120, on: 40 }); b.plat(b.cx - 5, b.cy - 1, 3);
         b.flat(16).es([['sleepless', b.cx - 10, 26], ['lantern', b.cx - 4, 28], ['forbidden', b.cx - 6, 34]]);
         b.say(b.cx - 14, b.cy, 'ZERO', 'The angels went mad without sleep. Anything that moves, they charge. Hide in your night when they come.', 220); b.trig(b.cx - 6, b.cy - 12, 2, 13, () => { if (!Save.data.g2.named) { Save.data.g2.named = true; G2.cut('g2naming'); } });

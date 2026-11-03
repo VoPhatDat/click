@@ -103,7 +103,12 @@ Object.assign(CUTS, {
         ];
         for (let i = 0; i < 8; i++) { c.shot(Stage.glass(i)); c.crack = false; c.fade(0, 24); if (i === 2) G.delay2(c, 90, () => { c.crack = true; Sound.sfx('ice_crack'); }); if (i === 3) { Sound.sfx('trumpet'); c.quake = 4; } yield* c.say('', lines[i], i === 0 ? 230 : 210); c.fade(1, 16); yield 18; }
         // Scene 2: the six days
-        c.shot(Stage.creation); c.day = 0; c.fade(0, 30); const z = c.actor('zero', 640, 590, 1, 'idle', { scale: 2 }); z.rig.custom([[0, { aF: 140, fF: 10, aB: -140, fB: -10 }], [1, { aF: 150, fF: 10, aB: -150, fB: -10 }]], 60, 20, '_open'); yield 40;
+        c.shot(Stage.creation); c.day = 0; c.fade(0, 30); const z = c.actor('zero', 640, 590, 1, 'idle', { scale: 2 }); yield 50;
+        // The cannon that judged the world has nothing left to judge: Zero takes it apart and forges a blade to build with.
+        yield* c.say('', 'There was no one left to judge. So it took apart the cannon that had judged the world, and from its light forged a blade to build with.', 250);
+        z.rig.custom([[0, { aF: 100, fF: 60, aB: 40, fB: 80 }], [1, { aF: 96, fF: 70, aB: 44, fB: 86 }]], 40, 10, '_forge'); yield 30;
+        Sound.sfx('parry'); G.flash = .4; c.flashA = .7; VFX.ring(z.x, z.y - 70, 120, '#bff8ff', 18, 8); G2.bladeZero(z); yield 50;
+        z.rig.custom([[0, { aF: 140, fF: 10, aB: -140, fB: -10 }], [1, { aF: 150, fF: 10, aB: -150, fB: -10 }]], 60, 20, '_open'); yield 40;
         const days = ['On the first day, it made light.', 'On the second day, it made the waters.', 'On the third day, it made land and tree.', 'On the fourth day, it made the stars.', 'On the fifth day, it made the beasts.', 'On the sixth day, it made mankind.'];
         for (let i = 0; i < 6; i++) { c.day = i + 1; c.st2 = 0; c.flashA = .5; Sound.sfx('toll', { v: .5 }); z.alpha = 1 - i * .04; for (let k = 0; k < 150; k++) { c.st2++; if (k === 0) c.sub = { name: '', text: tr(days[i]), t: 0, life: 150 }; yield 1; } }
         c.sub = null;
@@ -139,7 +144,7 @@ Object.assign(CUTS, {
         yield* c.say('SLEEPLESS CITIZEN', 'She sleeps. How does she sleep? What is she?', 170);
         yield* c.say('SLEEPLESS CITIZEN', 'Take her to Seraphina. The goddess will know what to do with her.', 190);
         crowd.forEach(a => { a.vx = a.x < 640 ? .6 : -.6; a.rig.play('run', 10); }); yield 50; crowd.forEach(a => { a.vx = 0; a.rig.play('idle', 10); });
-        Sound.sfx('dash'); const z = c.actor('zero', -60, 560, 1, 'run', { scale: 2 }); z.vx = 14; yield 42; z.vx = 0; z.rig.play('idle', 6); c.quake = 4; Sound.sfx('slam');
+        Sound.sfx('dash'); const z = c.actor('zero', -60, 560, 1, 'run', { scale: 2 }); G2.bladeZero(z); z.vx = 14; yield 42; z.vx = 0; z.rig.play('idle', 6); c.quake = 4; Sound.sfx('slam');
         yield* c.say('ZERO', 'Step back.', 110);
         yield* c.say('ZERO', 'Hold on to me. Do not let go.', 140);
         z.facing = -1; girl.facing = -1; z.vx = -9; girl.vx = -9; z.rig.play('run', 6); girl.rig.play('run', 6); c.fade(1, 50); yield 56;
@@ -147,7 +152,7 @@ Object.assign(CUTS, {
     },
     *g2naming(c) {
         Music.play('g2hum', 'calm'); c.lb = 1; c.shot(Stage.plaza); c.fade(0, 40);
-        const z = c.actor('zero', 560, 560, 1, 'kneel', { scale: 2 }), g = c.actor('nyx', 700, 560, -1, 'idle', { scale: 2 }); g.rig.S = nyxStyle(6); yield 40;
+        const z = c.actor('zero', 560, 560, 1, 'kneel', { scale: 2 }), g = c.actor('nyx', 700, 560, -1, 'idle', { scale: 2 }); G2.bladeZero(z); g.rig.S = nyxStyle(6); yield 40;
         yield* c.say('ZERO', 'What is your name?', 130);
         g.rig.custom([[0, { head: -14 }], [.5, { head: 14 }], [1, { head: -14 }]], 50, 6, '_shake'); yield 50;
         yield* c.say('ZERO', 'You do not remember either.', 140);
@@ -174,7 +179,7 @@ Object.assign(CUTS, {
     },
     *g2garden(c) {
         Music.play('g2garden', 'calm'); c.shot(Stage.garden); c.fade(0, 60);
-        const z = c.actor('zero', 520, 560, 1), g = c.actor('nyx', 640, 560, -1); g.rig.S = nyxStyle(6); yield 40;
+        const z = c.actor('zero', 520, 560, 1), g = c.actor('nyx', 640, 560, -1); G2.bladeZero(z); g.rig.S = nyxStyle(6); yield 40;
         yield* c.say('NYX', 'Is this your garden?', 120);
         yield* c.say('ZERO', 'I made it. Between the days. I have never sat down in it.', 190);
         yield* c.say('ZERO', 'Seven gates. Seven days. Every one of them is broken, and I broke them.', 210);
@@ -194,6 +199,7 @@ Object.assign(CUTS, {
     }
 });
 
+G2.bladeZero = a => { a.rig.S = Object.assign({}, a.rig.S, { weaponF: Gear.aocalyst, weaponLen: 54 }); return a; };
 G2.cut = function (id, after) { Game.state = 'cine'; Cine.play(CUTS[id], () => { Game.state = 'play'; Music.play(G.level.theme.music, 'calm'); if (after) after(); }); };
 G2.enterGarden = function () {
     const g = Save.data.g2;

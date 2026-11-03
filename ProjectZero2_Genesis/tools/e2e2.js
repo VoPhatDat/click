@@ -117,6 +117,11 @@ for (const choice of ['spare', 'kill']) {
 }
 must(Save.data.g2.intro && Save.data.g2.seen.after1, 'the Garden scene and Vesper\u2019s message play');
 for (const st of ['tree', 'forge', 'archive', 'portal']) { G2.station(st); must(screen && screen.n === ({ tree: 'skills', forge: 'g2forge', archive: 'archive', portal: 'hub' })[st], 'station ' + st + ' opens its screen'); UI.act('g2close'); }
+{ // Zero still has the Part I arm cannon; the AI ally always carries the blade.
+    const ul = Save.data.unlocked.slice(); Save.data.unlocked.push('zero'); Save.data.activeChar = 'zero'; Game.loadLevel('garden'); const P = G.player, i = P.def.weapons.findIndex(w => w.id === 'cannon');
+    must(i >= 0, 'Zero keeps the Line 3 arm cannon'); P.wIdx = i; P.applyWeapon(); const n0 = X.Proj ? G.projs.length : 0; P.shotCd = 0; P.fireBasic();
+    must(P.def.ranged && G.projs.length > n0, 'the cannon fires bolts'); P.wIdx = 0; P.applyWeapon(); Save.data.g2.wIdx.zero = i;
+    Save.data.activeChar = 'nyx'; Game.loadLevel('dawn'); must(G.ally && G.ally.weapon.id === 'aocalyst', 'Zero the ally fights with the blade'); Save.data.g2.wIdx.zero = 0; Save.data.unlocked = ul; }
 const before = JSON.stringify(Save.data); Save.write(); Save.data = null; must(Save.load() && JSON.stringify(Save.data) === before, 'save and load round trip is lossless');
 
 /* --------------- every operator against both bosses --------------- */

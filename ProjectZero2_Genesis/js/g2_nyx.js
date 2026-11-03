@@ -67,7 +67,7 @@ G2.spawnAlly = function () {
     G.ally = null;
     const P = G.player; if (!P || P.id !== 'nyx' || (Save.data.g2.chapter || 1) >= 5 || G.level.noAlly) return;
     const z = new Player('zero'); z.isAlly = true; z.x = P.x - 60; z.y = P.y; z.safe = { x: z.x, y: z.y }; z.grounded = true; z.facing = 1;
-    z.aiMode = Save.data.g2.zeroMode || 'follow'; z.holdX = z.x; G.ally = z;
+    z.wIdx = 0; z.applyWeapon(); z.aiMode = Save.data.g2.zeroMode || 'follow'; z.holdX = z.x; G.ally = z;
 };
 G2.commandZero = function () {
     const z = G.ally; if (!z) return; z.aiMode = G2.ZERO_MODES[(G2.ZERO_MODES.indexOf(z.aiMode) + 1) % 3]; z.holdX = z.x; Save.data.g2.zeroMode = z.aiMode;

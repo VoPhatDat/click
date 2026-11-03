@@ -282,3 +282,12 @@ Object.assign(VI, {
     "There! A little night!": "Đó! Một chút đêm!",
     "Six years old. Nothing to hold yet.": "Sáu tuổi. Chưa cầm được gì."
 });
+
+/* The cannon and the blade */
+Object.assign(VI, {
+    "There was no one left to judge. So it took apart the cannon that had judged the world, and from its light forged a blade to build with.": "Không còn ai để phán xét nữa. Nên Người tháo khẩu pháo đã từng phán xét cả thế giới, và lấy ánh sáng của nó rèn thành một lưỡi kiếm để xây dựng.",
+    "Uncle, your arm has a hole in it, like a gun. Why do you carry a sword?": "Chú ơi, tay chú có cái lỗ giống khẩu súng. Sao chú lại cầm kiếm?",
+    "A gun judges from far away. I do not judge anyone any more. A sword means standing close. Right in front of you.": "Súng là để phán xét từ xa. Chú không phán xét ai nữa. Cầm kiếm thì phải đứng gần. Ngay trước mặt con.",
+    "Line 3 Arm Cannon": "Pháo Tay Tuyến 3",
+    "The arm cannon from the Day of Judgment, put back together. Long range. Zero rarely draws it now: a gun judges from far away.": "Khẩu pháo tay từ Ngày Phán Xét, được lắp lại. Bắn xa. Giờ Zero hiếm khi dùng: súng là để phán xét từ xa."
+});
