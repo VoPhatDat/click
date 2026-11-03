@@ -161,7 +161,8 @@ Object.assign(Inst, {
         // Master EQ for Part II music: less low-mid mud, more presence and air, a little more sub.
         const B = Sound.buses, eq = (type, f, g, q) => { const n = c.createBiquadFilter(); n.type = type; n.frequency.value = f; n.gain.value = g; if (q) n.Q.value = q; return n; };
         const lo = eq('lowshelf', 70, 3), mud = eq('peaking', 330, -4, .8), pres = eq('peaking', 3800, 4, .7), air = eq('highshelf', 8500, 5);
-        try { B.music.disconnect(); } catch (e) { } B.music.connect(lo); lo.connect(mud); mud.connect(pres); pres.connect(air); air.connect(B.master);
+        try { B.music.disconnect(); } catch (e) { } const lim = c.createDynamicsCompressor(); lim.threshold.value = -4; lim.knee.value = 2; lim.ratio.value = 20; lim.attack.value = .001; lim.release.value = .12;
+        B.music.connect(lo); lo.connect(mud); mud.connect(pres); pres.connect(air); air.connect(lim); lim.connect(B.master);
     };
     Music.setReverb = function (kind) {
         if (!Sound.ok || !this.revIn || this.revKind === kind) return; this.revKind = kind;
