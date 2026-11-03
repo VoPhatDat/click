@@ -9,19 +9,6 @@ Object.assign(UI.screens, {
         <button data-do="settings">SETTINGS</button><button data-do="credits">CREDITS</button><button data-do="exit">EXIT</button></nav>
         <p class="hint">${p1 ? (Settings.lang === 'vi' ? 'Đã tìm thấy hành trình phần 1: bạn sẽ nhận một món quà ở Vườn Sáng Thế.' : 'A Part I journey was found: a gift waits in the Garden.') : ''} ${tr('Arrow keys or mouse to navigate. Click once if you hear nothing: browsers wait for a first input before playing audio.')}</p><p class="hint">v${G2.VERSION}</p></div>`;
     },
-    hub() {
-        const D = Save.data; this.back = () => G2.closeStation();
-        return `<div class="panel wide"><h2>THE GATE OF SEVEN DAYS</h2><div class="hub"><div class="line">${REGIONS.map((r, i) => {
-            const open = !!r.level && (i === 0 || D.cleared[REGIONS[i - 1].level]), cleared = r.level && D.cleared.seraphina && i === 0;
-            return `<button class="stop ${cleared ? 'done' : ''}" data-do="deploy" data-arg="${r.id}" ${open ? '' : 'disabled'} style="--c:${r.col}"><b>${tr(r.name)}</b><span>${tr(open ? r.desc : 'Not yet written. Coming in a later milestone.')}</span><em>${tr(cleared ? 'CLEARED, REPLAY' : open ? 'ENTER' : '')}</em></button>`;
-        }).join('')}</div>
-        <div class="side"><div class="op">${tr('OPERATOR')}<br><b>${CHARS[D.activeChar].name}</b><small>${tr('LV')} ${Save.charData(D.activeChar).level}  ·  ${D.cells} ✿</small></div>
-        <p>${tr('Shards of Peace')}: ${Object.keys(D.g2.shards).length}/7<br>${tr('Spared')}: ${Object.keys(D.g2.spared).length} · ${tr('Slain')}: ${Object.keys(D.g2.killed).length}</p>
-        <button data-do="g2close">BACK TO THE GARDEN</button><button data-do="settings">SETTINGS</button><button data-do="title">MAIN MENU</button></div></div></div>`;
-    },
-    g2choice(a) {
-        return `<div class="panel small"><h2>${tr('"Uncle, is she bad?"')}</h2><p>${tr('Seraphina kneels. She has not slept since the first day. What Zero answers will be remembered on the Seventh Day.')}</p><nav><button data-do="g2spare" autofocus>${tr('"No. She is only tired. Let her sleep."')}</button><button data-do="g2kill">${tr('"She hurt the whole city. I will end it."')}</button></nav></div>`;
-    },
     g2forge() {
         const D = Save.data, P = G.player; this.back = () => G2.closeStation();
         return `<div class="panel wide"><h2>THE ASH FORGE</h2><p class="center">✿ ${D.cells} ${tr('Seeds of Genesis')}</p><div class="grid">${CHARS[P.id].weapons.map(w => { const k = P.id + ':' + w.id, tier = D.g2.wTier[k] || 0, nx = W_TIERS[tier + 1]; return `<button class="card" data-do="g2forge" data-arg="${w.id}" ${!nx || D.cells < nx.cost ? 'disabled' : ''}><b style="color:${W_TIERS[tier].col}">${tr(w.name)}: ${tr(W_TIERS[tier].name)}</b><span>${tr(w.desc)}</span><em>${nx ? tr('FORGE') + ' → ' + tr(nx.name) + ' (' + nx.cost + ' ✿)' : tr('MAXED')}</em></button>`; }).join('')}</div>

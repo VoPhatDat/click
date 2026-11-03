@@ -1,0 +1,310 @@
+{
+ "g2title": {
+  "rmsDb": -18.04,
+  "peakDb": -4.07,
+  "clip": 0,
+  "state": "calm",
+  "phase": 0
+ },
+ "g2garden": {
+  "rmsDb": -18.24,
+  "peakDb": -2.21,
+  "clip": 0,
+  "state": "calm",
+  "phase": 0
+ },
+ "g2dawn": {
+  "rmsDb": -18.13,
+  "peakDb": -5.42,
+  "clip": 0,
+  "state": "calm",
+  "phase": 0
+ },
+ "g2knight": {
+  "rmsDb": -17.87,
+  "peakDb": -0.18,
+  "clip": 0,
+  "state": "boss",
+  "phase": 0
+ },
+ "g2sera": {
+  "rmsDb": -17.88,
+  "peakDb": -4,
+  "clip": 0,
+  "state": "boss",
+  "phase": 0
+ },
+ "g2sea": {
+  "rmsDb": -18.02,
+  "peakDb": -6.07,
+  "clip": 0,
+  "state": "calm",
+  "phase": 0
+ },
+ "g2whale": {
+  "rmsDb": -17.76,
+  "peakDb": -2.86,
+  "clip": 0,
+  "state": "boss",
+  "phase": 0
+ },
+ "g2mareva": {
+  "rmsDb": -18.01,
+  "peakDb": -4.88,
+  "clip": 0,
+  "state": "boss",
+  "phase": 0
+ },
+ "g2forest": {
+  "rmsDb": -18.07,
+  "peakDb": -4.13,
+  "clip": 0,
+  "state": "calm",
+  "phase": 0
+ },
+ "g2scarecrow": {
+  "rmsDb": -18.15,
+  "peakDb": 0.01,
+  "clip": 3,
+  "state": "boss",
+  "phase": 0
+ },
+ "g2gardener": {
+  "rmsDb": -18.2,
+  "peakDb": -1.68,
+  "clip": 0,
+  "state": "boss",
+  "phase": 0
+ },
+ "g2observ": {
+  "rmsDb": -18.03,
+  "peakDb": -7.3,
+  "clip": 0,
+  "state": "calm",
+  "phase": 0
+ },
+ "g2clock": {
+  "rmsDb": -17.85,
+  "peakDb": -0.03,
+  "clip": 0,
+  "state": "boss",
+  "phase": 0
+ },
+ "g2astraea": {
+  "rmsDb": -18.01,
+  "peakDb": 1.99,
+  "clip": 3,
+  "state": "boss",
+  "phase": 0
+ },
+ "g2desert": {
+  "rmsDb": -17.72,
+  "peakDb": -3.31,
+  "clip": 0,
+  "state": "calm",
+  "phase": 0
+ },
+ "g2antelope": {
+  "rmsDb": -16.89,
+  "peakDb": -2.3,
+  "clip": 0,
+  "state": "boss",
+  "phase": 0
+ },
+ "g2lilith": {
+  "rmsDb": -16.65,
+  "peakDb": -3.18,
+  "clip": 0,
+  "state": "boss",
+  "phase": 0
+ },
+ "g2meridian": {
+  "rmsDb": -17.79,
+  "peakDb": -5.64,
+  "clip": 0,
+  "state": "calm",
+  "phase": 0
+ },
+ "g2preacher": {
+  "rmsDb": -16.67,
+  "peakDb": -4.88,
+  "clip": 0,
+  "state": "boss",
+  "phase": 0
+ },
+ "g2archon": {
+  "rmsDb": -17.58,
+  "peakDb": -3.31,
+  "clip": 0,
+  "state": "boss",
+  "phase": 0
+ },
+ "g2architect": {
+  "rmsDb": -18.04,
+  "peakDb": -2.51,
+  "clip": 0,
+  "state": "boss",
+  "phase": 0
+ },
+ "g2throne": {
+  "rmsDb": -18.2,
+  "peakDb": -2.53,
+  "clip": 0,
+  "state": "calm",
+  "phase": 0
+ },
+ "g2zshadow": {
+  "rmsDb": -17.87,
+  "peakDb": 0.09,
+  "clip": 4,
+  "state": "boss",
+  "phase": 0
+ },
+ "g2vesper": {
+  "rmsDb": -17.8,
+  "peakDb": -5.09,
+  "clip": 0,
+  "state": "boss",
+  "phase": 0
+ },
+ "g2act1": {
+  "rmsDb": -17.45,
+  "peakDb": -3.95,
+  "clip": 0,
+  "state": "boss",
+  "phase": 0
+ },
+ "g2act2": {
+  "rmsDb": -18.19,
+  "peakDb": -6.44,
+  "clip": 0,
+  "state": "calm",
+  "phase": 0
+ },
+ "g2act3": {
+  "rmsDb": -17.22,
+  "peakDb": -4.03,
+  "clip": 0,
+  "state": "boss",
+  "phase": 0
+ },
+ "g2act4": {
+  "rmsDb": -25.06,
+  "peakDb": -6.72,
+  "clip": 0,
+  "state": "calm",
+  "phase": 0
+ },
+ "g2end5b": {
+  "rmsDb": -18.1,
+  "peakDb": -4.79,
+  "clip": 0,
+  "state": "calm",
+  "phase": 0
+ },
+ "g2end5c": {
+  "rmsDb": -17.81,
+  "peakDb": -7.33,
+  "clip": 0,
+  "state": "calm",
+  "phase": 0
+ },
+ "g2credits": {
+  "rmsDb": -18.14,
+  "peakDb": -5.21,
+  "clip": 0,
+  "state": "calm",
+  "phase": 0
+ },
+ "g2lul1": {
+  "rmsDb": -18.07,
+  "peakDb": -8.43,
+  "clip": 0,
+  "state": "calm",
+  "phase": 0
+ },
+ "g2lul2": {
+  "rmsDb": -18.24,
+  "peakDb": -3.69,
+  "clip": 0,
+  "state": "calm",
+  "phase": 0
+ },
+ "g2lul3": {
+  "rmsDb": -17.96,
+  "peakDb": -8.25,
+  "clip": 0,
+  "state": "calm",
+  "phase": 0
+ },
+ "g2lul4": {
+  "rmsDb": -18.13,
+  "peakDb": -4.83,
+  "clip": 0,
+  "state": "calm",
+  "phase": 0
+ },
+ "g2lul5": {
+  "rmsDb": -25.82,
+  "peakDb": -6.76,
+  "clip": 0,
+  "state": "calm",
+  "phase": 0
+ },
+ "g2lul6": {
+  "rmsDb": -17.84,
+  "peakDb": -3.76,
+  "clip": 0,
+  "state": "calm",
+  "phase": 0
+ },
+ "g2lul7": {
+  "rmsDb": -18.16,
+  "peakDb": -3.27,
+  "clip": 0,
+  "state": "calm",
+  "phase": 0
+ },
+ "g2act0": {
+  "rmsDb": -18.18,
+  "peakDb": -4.23,
+  "clip": 0,
+  "state": "calm",
+  "phase": 0
+ },
+ "g2end5a": {
+  "rmsDb": -18.05,
+  "peakDb": -8.55,
+  "clip": 0,
+  "state": "calm",
+  "phase": 0
+ },
+ "g2end5cfight": {
+  "rmsDb": -18.24,
+  "peakDb": -2.47,
+  "clip": 0,
+  "state": "calm",
+  "phase": 0
+ },
+ "g2end5d": {
+  "rmsDb": -18.1,
+  "peakDb": -6.15,
+  "clip": 0,
+  "state": "calm",
+  "phase": 0
+ },
+ "g2hum": {
+  "rmsDb": -17.98,
+  "peakDb": -8.32,
+  "clip": 0,
+  "state": "calm",
+  "phase": 0
+ },
+ "g2ash": {
+  "rmsDb": -18.1,
+  "peakDb": -5.62,
+  "clip": 0,
+  "state": "calm",
+  "phase": 0
+ }
+}

@@ -238,7 +238,7 @@ G2.raiseTower = function (o) {
         Save.addXP(R.xp); D.cells += R.cells; if (R.relic && !D.relics.includes(R.relic)) { D.relics.push(R.relic); G.toast(tr('Relic') + ': ' + tr(RELICS[R.relic].name), '#ffdd33'); }
         D.cleared[def.id] = true; Sound.sfx('victory'); Music.play(G.level.theme.music, 'calm');
         G.setGates(['arena_l', 'arena_r'], true); G.level.objs.forEach(o => { if (o.kind === 'exit') o.hidden = false; }); Save.write();
-        G.say('THE SHADOWLESS KNIGHT', 'At last... some shade.', 160);
+        if (def.id === 'knight') G.say('THE SHADOWLESS KNIGHT', 'At last... some shade.', 160);
     };
     const ar = Game.afterResults.bind(Game);
     Game.afterResults = function (def) {
