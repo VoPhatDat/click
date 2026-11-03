@@ -6,6 +6,9 @@ const ROOT = path.join(__dirname, '..');
 let html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 html = html.replace('<link rel="stylesheet" href="css/style.css">', () => `<style>\n${fs.readFileSync(path.join(ROOT, 'css/style.css'), 'utf8')}\n</style>`);
 html = html.replace(/<script src="(js\/[a-z_0-9]+\.js)"><\/script>\n?/g, (m, f) => `<script>\n${fs.readFileSync(path.join(ROOT, f), 'utf8').replace(/<\/script/g, '<\/script')}\n</script>\n`);
+// The final boss track (Photon Arts and Carameii, non-profit use with credit) travels inside the single file.
+const mp3 = path.join(ROOT, 'assets', 'boss_final.mp3');
+if (fs.existsSync(mp3)) html = html.replace('<script>', () => `<script>var G2_BOSS_MP3 = "data:audio/mpeg;base64,${fs.readFileSync(mp3).toString('base64')}";</script>\n<script>`);
 fs.mkdirSync(path.join(ROOT, 'dist'), { recursive: true });
 const out = path.join(ROOT, 'dist', 'ProjectZero2_Genesis.html');
 fs.writeFileSync(out, html);

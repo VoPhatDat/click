@@ -179,7 +179,7 @@ const ASSISTS = {
     archon: { line: ['ARCHON VEIL', 'Every machine in Meridian: stand down.'], fx() { if (G.boss) { G.boss.silenced = 420; G.boss.hurt(200, {}); } } }
 };
 const B_ARCHITECT2 = Object.assign({}, B_ARCHITECT, {
-    id: 'architect2', name: 'THE ARCHITECT', title: 'WHAT HE FORGAVE AND NEVER HEALED', hp: 13000, music: 'g2act3', choice: false,
+    id: 'architect2', name: 'THE ARCHITECT', title: 'WHAT HE FORGAVE AND NEVER HEALED', hp: 11000, music: 'g2act3', choice: false,
     phases: [
         { moves: ['triangles', 'grid', 'eyes'], rest: 26, enter: null },
         { at: .8, moves: ['triangles', 'grid', 'eyes', 'rain'], rest: 22, enter: function* (b) { G.say('THE ARCHITECT', 'FIRST LAW: UP IS DOWN.', 140); G.g2xf = { flip: 1 }; G.g2grav = .5; yield 50; G2.assist(b); } },

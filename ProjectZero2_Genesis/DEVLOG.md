@@ -63,6 +63,32 @@ Người chơi gửi một bài tham khảo ("I wrote EPIC Boss Fight music for 
 - Boss nhanh hơn (120–168 BPM). Hồi 1 chạy 164 BPM nhịp 7/4, hồi 3 chạy 172 BPM giọng La thứ như bài tham khảo.
 - `music_check` được nới cho phong cách chung: các bài epic phải khác nhau ít nhất 2 trong 4 yếu tố (nhịp, giọng, nhạc cụ chính, tempo), thay cho quy tắc cũ "khác thể loại".
 
+
+### Con Bài Cuối Cùng (boss mạnh nhất game)
+Khi The Architect ở hồi 3 còn 12% máu, nó nuốt cái Ngai và hóa thần. Từ lúc đó nhạc chuyển sang bài thu sẵn **"GameChanger" boss theme của Photon Arts và Carameii** (https://www.youtube.com/watch?v=K_9j1k3jH-Q). Điều khoản của tác giả cho phép dùng trong dự án phi lợi nhuận nếu ghi nhận họ là chủ sở hữu; credit có trong màn Credits, Phòng Nhạc và file này. Không được dùng cho mục đích thương mại.
+
+Cấu trúc bài được đo bằng FFT: 172.27 BPM, phách đầu ở 0.232 giây, mỗi ô nhịp 1.393 giây. Mọi thứ được cắt theo nhạc (`js/g2_ascend.js`):
+
+| Ô nhịp | Thời gian | Trong game |
+|---|---|---|
+| 0–6 | 0–8.6s | Nó nuốt cái Ngai, các vòng sụp vào trong, mỗi ô nhịp một nhịp đập |
+| 7 | 10s | Cú đánh đầu tiên: con mắt đỏ mở ra |
+| 8–15 | 11–22s | Mỗi ô nhịp xòe thêm một cánh ánh sáng; tên "THE ARCHITECT HÓA THẦN" hiện ở ô nhịp 12 |
+| 16 | 22.5s | DROP: trả quyền điều khiển, bắt đầu đánh |
+| 16–31 | | Thương rơi ở phách 1, mắt bắn ở phách 3, vòng đạn mỗi 4 ô nhịp |
+| 32–33 | | Tụ lực: tia chữ thập dài 2 ô nhịp |
+| 34–59 | | Cánh quét ở phách 1 và 3, tam giác ở phách 2 và 4 |
+| 60–101 | | Đoạn chính, **lặp lại** chừng nào boss còn sống |
+| 102 | | Boss gục, nhạc nhảy tới ô nhịp 102 đúng vạch nhịp: lộ mặt Zero lúc bị hiến tế |
+| 104 | | "Ngày và Đêm": nhát vàng ở phách 1, nhát tím ở phách 3 |
+| 105–119 | | Mưa kính mỗi phách, camera lùi dần |
+| 120, 121 | | BÙM, BÙM |
+| 122 | | Trắng màn, rồi tới lựa chọn trước Ngai |
+
+- Cảnh báo đòn hiện trước 2 phách, đòn rơi đúng phách.
+- Ai gục thì đổi sang người tiếp theo trong đội; nếu cả đội gục, trận quay lại ngay trước đoạn drop (checkpoint).
+- Bài nhạc được nhúng trong bản build một file (khoảng 5.4 MB). Nếu không tải được bài, game dùng nhạc epic tổng hợp với cùng mốc thời gian.
+
 ### Kiểm thử (đều do bot)
 - `node tools/e2e2.js`: chương 1 bằng Nyx (cả tha và giết), 7 nhân vật đánh thật Hiệp Sĩ và Seraphina: PASS.
 - `node tools/e2e3.js`: chiến dịch từ ngày 2 tới cả 4 kết thúc (cutscene, chương, lựa chọn, mở khóa, các hồi, NG+, lưu/tải). Người chơi được giữ sống, bài này kiểm tra mạch truyện, không kiểm tra độ khó: **CAMPAIGN II COMPLETE**.

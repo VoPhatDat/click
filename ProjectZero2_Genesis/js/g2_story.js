@@ -216,7 +216,7 @@ G2.enterGarden = function () {
     const cr = UI.screens.credits;
     UI.screens.credits = function (a) {
         this.back = a.ending ? null : () => this.act('creditsdone');
-        const roles = [['PROJECT ZERO II: GENESIS', 'THE SECOND BOOK OF GENESIS'], ['Created by', 'VoPhatDat + Claude'], ['Story, direction and design', 'VoPhatDat'], ['Code, art, music and sound', 'Claude, generated procedurally in the browser'], ['Built on', 'PROJECT ZERO: AOCALYST'], ['Engine', 'HTML5 Canvas and Web Audio, no external assets'], ['NYX', 'Night'], ['ZERO', 'The one who did not rest'], ['Thank you for playing', 'Sleep well.']];
+        const roles = [['PROJECT ZERO II: GENESIS', 'THE SECOND BOOK OF GENESIS'], ['Created by', 'VoPhatDat + Claude'], ['Final boss theme', '"GameChanger" boss theme by Photon Arts and Carameii, used with their permission for non-profit projects'], ['', 'youtube.com/watch?v=K_9j1k3jH-Q'], ['Story, direction and design', 'VoPhatDat'], ['Code, art, music and sound', 'Claude, generated procedurally in the browser'], ['Built on', 'PROJECT ZERO: AOCALYST'], ['Engine', 'HTML5 Canvas and Web Audio, no external assets'], ['NYX', 'Night'], ['ZERO', 'The one who did not rest'], ['Thank you for playing', 'Sleep well.']];
         return `<div class="credits"><div class="roll" id="roll">${roles.map(r => `<h3>${tr(r[0])}</h3><p>${tr(r[1])}</p>`).join('')}</div><button data-do="creditsdone">${a.ending ? 'CONTINUE' : 'BACK'}</button></div>`;
     };
 })();

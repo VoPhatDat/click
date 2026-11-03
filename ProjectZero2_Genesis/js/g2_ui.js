@@ -93,6 +93,7 @@ Object.assign(UI.screens, {
     g2music(a) {
         const heard = (Save.data && Save.data.g2.heard) || {}, all = Save.data && Save.data.g2.ngplus; this.back = () => { Music.cut('g2title', 'calm'); this.show('title'); };
         return `<div class="panel wide"><h2>${tr('MUSIC ROOM')}</h2><div class="grid">${MUSIC_ROOM.map((id, i) => { const T = TRACKS[id], open = all || heard[id] || i < 2; return `<button class="card" data-do="g2play" data-arg="${id}" ${open ? '' : 'disabled'}><b>${open ? tr(T.meta.genre) : '???'}</b><span>${open ? T.meta.meter + ' · ' + T.meta.key + ' · ' + T.meta.tempo + ' BPM' : tr('Not heard yet')}</span><em>${open ? tr(T.meta.lead) : ''}</em></button>`; }).join('')}</div>
+        <button class="card" data-do="g2lastcard"><b>THE LAST CARD</b><span>Photon Arts &amp; Carameii · 172 BPM</span><em>${tr('Final boss theme')}</em></button>
         <p class="hint">${tr('Every track is synthesised live in your browser. No one but you has listened to them yet: tell us which ones work.')}</p><nav class="row"><button data-do="title" autofocus>${tr('BACK')}</button></nav></div>`;
     }
 });
@@ -100,6 +101,8 @@ Object.assign(UI.screens, {
     const act = UI.act.bind(UI); UI.act = function (w, arg, el) {
         if (w === 'g2music') { if (!Save.data) Save.load(); Sound.resume && Sound.resume(); return this.show('g2music'); }
         if (w === 'g2play') { Sound.resume && Sound.resume(); Music.cut(arg, TRACKS[arg].meta.boss ? 'boss' : 'calm'); return; }
+        if (w === 'g2lastcard') { Sound.resume && Sound.resume(); G2.song.load(); const go = (n = 0) => { if (G2.song.buf) { G2.song.start(0); G2.song.looping = false; } else if (n < 50) setTimeout(() => go(n + 1), 100); }; go(); return; }
+        if (w === 'title' && G2.song.active && !G.boss) G2.song.stop(.5);
         if (w === 'g2ngplus') { Sound.resume && Sound.resume(); G2.newGamePlus(); return; }
         return act(w, arg, el);
     };
