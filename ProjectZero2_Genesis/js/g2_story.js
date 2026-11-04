@@ -194,7 +194,6 @@ Object.assign(CUTS, {
         c.shot(Stage.garden); Music.play('g2garden', 'calm');
         yield* c.say('NYX', 'Who was that?', 110);
         yield* c.say('ZERO', 'Someone I have not thanked. Go to sleep.', 160);
-        yield* c.say('', 'End of the M1 test build. The Sea of Tears and Mareva arrive in the next milestone.', 220);
         c.fade(1, 60); yield 66;
     }
 });

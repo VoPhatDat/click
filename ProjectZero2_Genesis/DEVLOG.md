@@ -164,6 +164,14 @@ Toàn bộ khoảng 300 câu thoại tiếng Việt của Phần II được vi�
 - Tứ Kỵ Sĩ với Nyx: "tôi/nhóc", Nyx đáp lại "em".
 - Thần và boss: "ta/ngươi".
 
+### Rà soát Zero AI trong các trận boss (ngày 1–4)
+Công cụ mới `node tools/zerowatch.js` theo dõi Zero trong từng trận: số đòn trúng, quãng dài nhất không đánh trúng, bị kẹt, ra ngoài đấu trường, rơi khỏi màn, lỗi. Đã sửa:
+- **Mareva:** Zero có thể bị văng qua tường phải của đấu trường và kẹt luôn. Một lần trận kéo dài 151 giây không ai đánh, rồi hết giờ khi boss còn 20%. Giờ Zero bị đẩy ra ngoài đấu trường thì quay lại ngay. Ngoài trận boss, nếu Zero bị tách khỏi Nyx quá 3 giây thì dịch chuyển về cạnh Nyx.
+- **Mareva:** khi bơi, Zero chỉ ngoi theo độ cao của Nyx nên bơi ngay dưới Mareva (đang nổi nửa người) mà không chém tới. Giờ khi đánh boss, Zero ngoi theo độ cao của boss.
+- **Mareva:** phần lớn sát thương của Nyx là do hết hơi khi thủy triều dâng. Trong trận này tốc độ mất hơi và sát thương chết đuối giảm một nửa.
+- Kết quả sau khi sửa: Mareva 6/6 trận thắng (trước đó 1/2). Các trận còn lại 2/2, không kẹt, không ra ngoài đấu trường, không lỗi.
+- Đã xóa dòng "Hết bản thử M1" ở cuối Ngày Thứ Nhất.
+
 ### Kiểm thử (đều do bot)
 - `node tools/e2e2.js`: chương 1 bằng Nyx (cả tha và giết), 7 nhân vật đánh thật Hiệp Sĩ và Seraphina: PASS.
 - `node tools/e2e3.js`: chiến dịch từ ngày 2 tới cả 4 kết thúc (cutscene, chương, lựa chọn, mở khóa, các hồi, NG+, lưu/tải). Người chơi được giữ sống, bài này kiểm tra mạch truyện, không kiểm tra độ khó: **CAMPAIGN II COMPLETE**.

@@ -104,6 +104,16 @@ G2.zeroBrain = function (z) {
     if (z.form === 'light' && (z.balance < 20 || wantWrath)) S['!form'] = true; else if (z.form === 'wrath' && (z.balance > 80 || (!wantWrath && z.balance > 60))) S['!form'] = true;
     return S;
 };
+// Zero must never be lost: in a boss fight he is kept inside the arena, and if he is cut off from Nyx
+// (stuck behind a wall, knocked out of the arena, fallen somewhere) for three seconds he comes back to her.
+G2.allyLeash = function (z) {
+    const N = G.player, A = G.boss && G.arena; if (!N || z.captured || z.script || G.lockInput) { z.leashT = 0; return; }
+    const back = (why) => { const x = A ? U.clamp(N.x - 50 * (N.facing || 1), A.x0 + 40, A.x1 - 40) : N.x - 50; z.x = x; z.y = N.y; z.vx = z.vy = 0; z.safe = { x, y: N.y }; z.state = 'move'; z.leashT = 0; VFX.burst(x, N.y - 34, '#00ffff', 16, 5, 24, 5, 1); VFX.ring(x, N.y - 34, 70, '#9ff', 14, 5); };
+    if (A && (z.x < A.x0 - 20 || z.x > A.x1 + 20)) return back('arena');
+    // in a boss fight he may go wherever the boss is; outside one, he stays within reach of Nyx
+    const far = !A && Math.hypot(z.x - N.x, z.y - N.y) > 900;
+    z.leashT = far ? (z.leashT || 0) + 1 : 0; if (z.leashT > 180) back('far');
+};
 (function () {
     const P2 = Player, base = P2.prototype;
     const upd = base.update, hurt = base.hurt, draw = base.draw, tc = base.tryCombat, fo = base.fallOut, rts = base.returnToSafe;
@@ -111,7 +121,7 @@ G2.zeroBrain = function (z) {
         if (this.isAlly) {
             const keep = Input.simulated, lock = G.lockInput; Input.simulated = G.lockInput ? {} : (this.brain || G2.zeroBrain)(this);
             try { upd.call(this); } finally { Input.simulated = keep; }
-            if (!this.isTeam) Light.add(this.x, this.y - 30, 200, '#00ffff', .5); return;
+            if (!this.isTeam) { Light.add(this.x, this.y - 30, 200, '#00ffff', .5); G2.allyLeash(this); } return;
         }
         upd.call(this);
         // A child heals quickly once the danger passes; Zero keeps her safe in the meantime.

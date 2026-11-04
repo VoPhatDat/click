@@ -82,6 +82,8 @@ G2.swapParty = function (to) {
 })();
 
 /* ------------------------------ WATER ------------------------------ */
+// how high a companion swims: up to the boss he is fighting (Mareva floats half out of the water), else to Nyx
+G2.swimGoal = function (z) { const b = G.boss; if (b && !b.dead && !b.untargetable && !b.intro && b.aim) return b.aim().y + 30; return G.player ? G.player.y : z.y; };
 G2.waterAt = function (x, y) { const W = G.level && G.level.g2water; if (!W) return null; for (const w of W) if (x >= w.x0 && x <= w.x1 && y > w.y - (G.g2tide || 0)) return w; return null; };
 (function () {
     const upd = Player.prototype.update;
@@ -93,9 +95,9 @@ G2.waterAt = function (x, y) { const W = G.level && G.level.g2water; if (!W) ret
         upd.call(this);
         this.vy = U.clamp(this.vy + .16, -6, 2.4); this.vx *= .92;
         if (this === G.player || this.isAlly) {
-            const In = this.isAlly ? Input : Input; if (In.pressed('jump') || (this.isAlly && G.player && G.player.y < this.y - 40)) { this.vy = -5.2; Sound.sfx('swim', { v: .25 }); VFX.burst(this.x, this.y - 10, '#cfeaff', 5, 2, 16, 3, 1); }
+            const In = this.isAlly ? Input : Input; if (In.pressed('jump') || (this.isAlly && G2.swimGoal(this) < this.y - 40)) { this.vy = -5.2; Sound.sfx('swim', { v: .25 }); VFX.burst(this.x, this.y - 10, '#cfeaff', 5, 2, 16, 3, 1); }
             if (In.down('down')) this.vy = Math.min(3.4, this.vy + .3);
-            if (this === G.player) { const under = G2.waterAt(this.x, this.y - 58); G.g2breath = U.clamp((G.g2breath === undefined ? 100 : G.g2breath) + (under ? -.14 : 1.2), 0, 100); if (G.g2breath <= 0 && G.time % 30 === 0) this.hurt(4, { tick: true, absDmg: 4 }); }
+            if (this === G.player) { const under = G2.waterAt(this.x, this.y - 58); const kind = G.boss && G.boss.def.id === 'mareva' && !G.boss.dead; G.g2breath = U.clamp((G.g2breath === undefined ? 100 : G.g2breath) + (under ? (kind ? -.07 : -.14) : 1.2), 0, 100); if (G.g2breath <= 0 && G.time % 30 === 0) this.hurt(kind ? 2 : 4, { tick: true, absDmg: kind ? 2 : 4 }); }
         }
         this.def.speed = keepSpd;
     };

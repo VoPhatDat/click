@@ -7831,7 +7831,6 @@ Object.assign(VI, {
     'You see. Your forgiveness always has a price, and someone else always pays it.': 'Thấy chưa. Sự tha thứ của ngươi luôn có giá, và luôn là người khác trả.',
     'The first day has its night. Do you think that is enough? Six days remain. And the seventh has never existed.': 'Ngày thứ nhất đã có đêm. Ngươi nghĩ thế là đủ sao? Còn sáu ngày. Và ngày thứ bảy chưa từng tồn tại.',
     'The Gate of the Second Day is leaking. It tastes of salt, like tears.': 'Cổng Ngày Thứ Hai đang rỉ nước. Mặn như nước mắt.',
-    'End of the M1 test build. The Sea of Tears and Mareva arrive in the next milestone.': 'Hết bản thử M1. Biển Lệ và Mareva sẽ có ở mốc tiếp theo.',
     'You kept your ticket from Line 3. All aboard, then. All of you.': 'Ngươi vẫn giữ vé Tuyến 3. Vậy thì lên tàu thôi. Tất cả các ngươi.',
     'Seraphina sleeps here, under the first night.': 'Seraphina ngủ ở đây, dưới đêm đầu tiên.', 'A broken statue. The first day ended by the blade.': 'Một bức tượng vỡ. Ngày thứ nhất kết thúc bằng lưỡi kiếm.', 'An empty pedestal.': 'Một bệ tượng trống.',
     // UI
@@ -8899,6 +8898,16 @@ G2.zeroBrain = function (z) {
     if (z.form === 'light' && (z.balance < 20 || wantWrath)) S['!form'] = true; else if (z.form === 'wrath' && (z.balance > 80 || (!wantWrath && z.balance > 60))) S['!form'] = true;
     return S;
 };
+// Zero must never be lost: in a boss fight he is kept inside the arena, and if he is cut off from Nyx
+// (stuck behind a wall, knocked out of the arena, fallen somewhere) for three seconds he comes back to her.
+G2.allyLeash = function (z) {
+    const N = G.player, A = G.boss && G.arena; if (!N || z.captured || z.script || G.lockInput) { z.leashT = 0; return; }
+    const back = (why) => { const x = A ? U.clamp(N.x - 50 * (N.facing || 1), A.x0 + 40, A.x1 - 40) : N.x - 50; z.x = x; z.y = N.y; z.vx = z.vy = 0; z.safe = { x, y: N.y }; z.state = 'move'; z.leashT = 0; VFX.burst(x, N.y - 34, '#00ffff', 16, 5, 24, 5, 1); VFX.ring(x, N.y - 34, 70, '#9ff', 14, 5); };
+    if (A && (z.x < A.x0 - 20 || z.x > A.x1 + 20)) return back('arena');
+    // in a boss fight he may go wherever the boss is; outside one, he stays within reach of Nyx
+    const far = !A && Math.hypot(z.x - N.x, z.y - N.y) > 900;
+    z.leashT = far ? (z.leashT || 0) + 1 : 0; if (z.leashT > 180) back('far');
+};
 (function () {
     const P2 = Player, base = P2.prototype;
     const upd = base.update, hurt = base.hurt, draw = base.draw, tc = base.tryCombat, fo = base.fallOut, rts = base.returnToSafe;
@@ -8906,7 +8915,7 @@ G2.zeroBrain = function (z) {
         if (this.isAlly) {
             const keep = Input.simulated, lock = G.lockInput; Input.simulated = G.lockInput ? {} : (this.brain || G2.zeroBrain)(this);
             try { upd.call(this); } finally { Input.simulated = keep; }
-            if (!this.isTeam) Light.add(this.x, this.y - 30, 200, '#00ffff', .5); return;
+            if (!this.isTeam) { Light.add(this.x, this.y - 30, 200, '#00ffff', .5); G2.allyLeash(this); } return;
         }
         upd.call(this);
         // A child heals quickly once the danger passes; Zero keeps her safe in the meantime.
@@ -9322,7 +9331,6 @@ Object.assign(CUTS, {
         c.shot(Stage.garden); Music.play('g2garden', 'calm');
         yield* c.say('NYX', 'Who was that?', 110);
         yield* c.say('ZERO', 'Someone I have not thanked. Go to sleep.', 160);
-        yield* c.say('', 'End of the M1 test build. The Sea of Tears and Mareva arrive in the next milestone.', 220);
         c.fade(1, 60); yield 66;
     }
 });
@@ -9435,6 +9443,8 @@ G2.swapParty = function (to) {
 })();
 
 /* ------------------------------ WATER ------------------------------ */
+// how high a companion swims: up to the boss he is fighting (Mareva floats half out of the water), else to Nyx
+G2.swimGoal = function (z) { const b = G.boss; if (b && !b.dead && !b.untargetable && !b.intro && b.aim) return b.aim().y + 30; return G.player ? G.player.y : z.y; };
 G2.waterAt = function (x, y) { const W = G.level && G.level.g2water; if (!W) return null; for (const w of W) if (x >= w.x0 && x <= w.x1 && y > w.y - (G.g2tide || 0)) return w; return null; };
 (function () {
     const upd = Player.prototype.update;
@@ -9446,9 +9456,9 @@ G2.waterAt = function (x, y) { const W = G.level && G.level.g2water; if (!W) ret
         upd.call(this);
         this.vy = U.clamp(this.vy + .16, -6, 2.4); this.vx *= .92;
         if (this === G.player || this.isAlly) {
-            const In = this.isAlly ? Input : Input; if (In.pressed('jump') || (this.isAlly && G.player && G.player.y < this.y - 40)) { this.vy = -5.2; Sound.sfx('swim', { v: .25 }); VFX.burst(this.x, this.y - 10, '#cfeaff', 5, 2, 16, 3, 1); }
+            const In = this.isAlly ? Input : Input; if (In.pressed('jump') || (this.isAlly && G2.swimGoal(this) < this.y - 40)) { this.vy = -5.2; Sound.sfx('swim', { v: .25 }); VFX.burst(this.x, this.y - 10, '#cfeaff', 5, 2, 16, 3, 1); }
             if (In.down('down')) this.vy = Math.min(3.4, this.vy + .3);
-            if (this === G.player) { const under = G2.waterAt(this.x, this.y - 58); G.g2breath = U.clamp((G.g2breath === undefined ? 100 : G.g2breath) + (under ? -.14 : 1.2), 0, 100); if (G.g2breath <= 0 && G.time % 30 === 0) this.hurt(4, { tick: true, absDmg: 4 }); }
+            if (this === G.player) { const under = G2.waterAt(this.x, this.y - 58); const kind = G.boss && G.boss.def.id === 'mareva' && !G.boss.dead; G.g2breath = U.clamp((G.g2breath === undefined ? 100 : G.g2breath) + (under ? (kind ? -.07 : -.14) : 1.2), 0, 100); if (G.g2breath <= 0 && G.time % 30 === 0) this.hurt(kind ? 2 : 4, { tick: true, absDmg: kind ? 2 : 4 }); }
         }
         this.def.speed = keepSpd;
     };

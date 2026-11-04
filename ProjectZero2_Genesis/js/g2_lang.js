@@ -140,7 +140,6 @@ Object.assign(VI, {
     'You see. Your forgiveness always has a price, and someone else always pays it.': 'Thấy chưa. Sự tha thứ của ngươi luôn có giá, và luôn là người khác trả.',
     'The first day has its night. Do you think that is enough? Six days remain. And the seventh has never existed.': 'Ngày thứ nhất đã có đêm. Ngươi nghĩ thế là đủ sao? Còn sáu ngày. Và ngày thứ bảy chưa từng tồn tại.',
     'The Gate of the Second Day is leaking. It tastes of salt, like tears.': 'Cổng Ngày Thứ Hai đang rỉ nước. Mặn như nước mắt.',
-    'End of the M1 test build. The Sea of Tears and Mareva arrive in the next milestone.': 'Hết bản thử M1. Biển Lệ và Mareva sẽ có ở mốc tiếp theo.',
     'You kept your ticket from Line 3. All aboard, then. All of you.': 'Ngươi vẫn giữ vé Tuyến 3. Vậy thì lên tàu thôi. Tất cả các ngươi.',
     'Seraphina sleeps here, under the first night.': 'Seraphina ngủ ở đây, dưới đêm đầu tiên.', 'A broken statue. The first day ended by the blade.': 'Một bức tượng vỡ. Ngày thứ nhất kết thúc bằng lưỡi kiếm.', 'An empty pedestal.': 'Một bệ tượng trống.',
     // UI
