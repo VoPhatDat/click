@@ -28,9 +28,17 @@ const CUE = { eye: 7, eyeT: SONG.t(7) + SONG.beat * 2, build: 8, drop: 16, name:
 G2.song = {
     buf: null, src: null, gain: null, active: false, useAudio: false, last: 0, loop: null, jump: null, p: 0,
     load() {
-        if (this.buf || this.loading || !Sound.ok || typeof fetch === 'undefined') return; this.loading = true;
-        const url = typeof G2_BOSS_MP3 !== 'undefined' ? G2_BOSS_MP3 : 'assets/boss_final.mp3';
-        fetch(url).then(r => r.arrayBuffer()).then(a => Sound.ctx.decodeAudioData(a)).then(b => { this.buf = b; }).catch(e => console.warn('final boss track unavailable', e));
+        if (this.buf || this.loading || !Sound.ctx) return; this.loading = true;
+        const done = ab => Sound.ctx.decodeAudioData(ab).then(b => { this.buf = b; this.loading = false; }).catch(e => { this.loading = false; this.failed = true; console.warn('final boss track could not be decoded', e); });
+        // The track is embedded in the single-file build. It is decoded right here, not fetched: a page that
+        // forbids fetch (as the hosted page does) refused the data: URL and the fight fell back to synth music.
+        if (typeof G2_BOSS_MP3 !== 'undefined' && G2_BOSS_MP3.startsWith('data:')) {
+            try { const bin = atob(G2_BOSS_MP3.slice(G2_BOSS_MP3.indexOf(',') + 1)), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); done(u.buffer); }
+            catch (e) { this.loading = false; this.failed = true; console.warn('final boss track unreadable', e); }
+            return;
+        }
+        if (typeof fetch === 'undefined') { this.loading = false; return; }
+        fetch('assets/boss_final.mp3').then(r => r.arrayBuffer()).then(done).catch(e => { this.loading = false; this.failed = true; console.warn('final boss track unavailable', e); });
     },
     now() { return this.useAudio ? Sound.ctx.currentTime : (G.time || 0) / 60; },
     start(at = 0) {
@@ -201,6 +209,7 @@ G2.ascendIntro = function* (b) {
     G.lockInput = true; G.letterbox = 1; G.cineCam = { x: cx, y: b.A.y - 300, zoom: .9 };
     G2.sayNow('THE ARCHITECT', 'THEN BEHOLD WHAT I TRULY AM.', 150);
     G2.team.arrive();
+    if (!S.buf && !HEADLESS) { S.load(); for (let i = 0; i < 240 && !S.buf && !S.failed; i++) yield 1; }
     S.start(0); b.ascended = 1; b.wings = 0; b.eye = 0; b.absorb = 0; b.open = 0; b.wingS = null; b.lb = -1; b.scale = .8; b.form2 = 0; G.g2fx = { sky: 0, motes: 0, cracks: 0, mode: 'pull' };
     yield* b.moveTo(cx, b.A.y + 40, 60);
     // 0:00-0:10 it swallows the Throne: the light, the rings, the walls are drawn into it

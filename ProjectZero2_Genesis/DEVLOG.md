@@ -115,7 +115,7 @@ Cấu trúc bài được đo bằng FFT: 172.27 BPM, phách đầu ở 0.232 gi
 - Trong game không dùng chữ "con bài cuối"; boss nói "Vậy thì hãy chiêm ngưỡng hình thái tối thượng của ta."
 - Cảnh báo đòn hiện trước 2 phách, đòn rơi đúng phách.
 - Màn cuối được làm cao hơn để boss lớn vẫn nằm trọn trong khung hình.
-- Bài nhạc được nhúng trong bản build một file (khoảng 5.4 MB). Nếu không tải được bài, game dùng nhạc epic tổng hợp với cùng mốc thời gian.
+- Bài nhạc được nhúng trong bản build một file (khoảng 5,4 MB) và giải mã ngay trong trang. Trước đây game đọc bài bằng `fetch`; trang online có chính sách bảo mật chặn `fetch`, nên trên link online trận cuối âm thầm chuyển sang nhạc tổng hợp dự phòng. Đã kiểm tra lại dưới đúng chính sách đó: bài thật được phát. Nếu vẫn không giải mã được, game mới dùng nhạc epic tổng hợp với cùng mốc thời gian.
 
 ### Cùng Chiến Đấu (Team Up) và Bài Ru Gọi Về
 - Vào màn cuối, game hiện bảng hỏi trước khi đánh, nên trận đấu không bị dừng giữa chừng: **Cùng chiến đấu** (cả 7 người) hoặc **Chỉ Nyx và Zero**.
