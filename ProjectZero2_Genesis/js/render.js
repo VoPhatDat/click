@@ -200,6 +200,12 @@ const Terrain = {
         if (L.chunks.size > 42) { const k = L.chunks.keys().next().value; L.chunks.delete(k); }
         L.chunks.set(key, c); return c;
     },
+    // A far view: with the camera pulled back, a chunk covers few screen pixels, so a quarter-size copy looks the
+    // same and costs a fraction to draw (the full-size ones were the slowest thing in the final fight).
+    chunkLo(L, cx, cy) {
+        const key = cx + cy * 4096, M = L.chunksLo || (L.chunksLo = new Map()); let c = M.get(key); if (c) return c;
+        const n = CHUNK * TILE * .5; c = U.canvas(n, n); const x = c.getContext('2d'); x.imageSmoothingQuality = 'high'; x.drawImage(this.chunk(L, cx, cy), 0, 0, n, n); M.set(key, c); return c;
+    },
     paint(L, x, cx, cy) {
         const P = L.theme.tile, reg = L.region, sx = cx * CHUNK, sy = cy * CHUNK, TT = TILE;
         for (let ty = sy; ty < sy + CHUNK; ty++) for (let tx = sx; tx < sx + CHUNK; tx++) {
@@ -301,7 +307,7 @@ const Terrain = {
         const y0 = Math.floor(cam.y / (CHUNK * TILE)), y1 = Math.floor((cam.y + VH / z) / (CHUNK * TILE));
         for (let cy = y0; cy <= y1; cy++) for (let cx = x0; cx <= x1; cx++) {
             if (cx < 0 || cy < 0 || cx * CHUNK >= L.w || cy * CHUNK >= L.h) continue;
-            ctx.drawImage(this.chunk(L, cx, cy), cx * CHUNK * TILE, cy * CHUNK * TILE, CHUNK * TILE + .5, CHUNK * TILE + .5);
+            ctx.drawImage(z < .75 ? this.chunkLo(L, cx, cy) : this.chunk(L, cx, cy), cx * CHUNK * TILE, cy * CHUNK * TILE, CHUNK * TILE + .5, CHUNK * TILE + .5);
         }
         // Paint one neighbouring chunk per frame so scrolling never pays for a burst at once.
         for (let cy = y0 - 1; cy <= y1 + 1; cy++) for (let cx = x0 - 1; cx <= x1 + 1; cx++) {

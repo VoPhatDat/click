@@ -255,7 +255,7 @@ G2.heaven = function (c, k) {
     // the skill being cast, under the god's health bar
     const hd = HUD.draw.bind(HUD); HUD.draw = function (c) {
         hd(c); const S = G2.skillCap; if (!S || Game.state !== 'play' || G.letterbox) return; S.t++; if (S.t > 130) { G2.skillCap = null; return; }
-        const a = Math.min(1, S.t / 10, (130 - S.t) / 20); c.save(); c.globalAlpha = a; c.textAlign = 'center'; c.font = 'italic bold 20px "Palatino Linotype", "Times New Roman", serif'; c.lineWidth = 4; c.strokeStyle = 'rgba(10,6,20,.85)'; c.strokeText('✦ ' + S.name + ' ✦', VW / 2, 104); c.fillStyle = S.col; c.fillText('✦ ' + S.name + ' ✦', VW / 2, 104); c.restore();
+        const a = Math.min(1, S.t / 10, (130 - S.t) / 20); c.save(); c.globalAlpha = a; c.textAlign = 'center'; c.font = 'italic bold 20px "Palatino Linotype", "Times New Roman", serif'; c.lineWidth = 4; c.strokeStyle = 'rgba(10,6,20,.85)'; c.strokeText('✦ ' + S.name + ' ✦', VW / 2, 134); c.fillStyle = S.col; c.fillText('✦ ' + S.name + ' ✦', VW / 2, 134); c.restore();
     };
     // melee fighters jump higher against the god, just enough to reach its core
     const dj = Player.prototype.doJump; Player.prototype.doJump = function (air) { dj.call(this, air); const b = G.boss; if (b && b.ascended && !b.dying && !this.def.ranged) this.vy *= 1.22; };
@@ -276,3 +276,93 @@ Object.assign(VI, {
     'JUDGEMENT RAY': 'THÁNH QUANG PHÁN XÉT', 'TWIN RAY': 'SONG QUANG PHÁN XÉT', 'FINAL VERDICT': 'PHÁN QUYẾT CUỐI CÙNG', 'WAVE OF LIGHT': 'SÓNG ÁNH SÁNG', 'SEARING GAZE': 'ÁNH NHÌN THIÊU ĐỐT', 'FEATHER RAIN': 'MƯA LÔNG VŨ', 'TURNING CROWN': 'VƯƠNG MIỆN XOAY', 'PILLARS OF DAWN': 'CỘT BÌNH MINH', 'RISE. EVERYONE SHE EVER FACED, RISE.': 'TRỖI DẬY. TẤT CẢ NHỮNG KẺ CON BÉ TỪNG ĐỐI MẶT, TRỖI DẬY.', 'YOUR OLD ENEMIES REMEMBER YOU.': 'KẺ THÙ CŨ CỦA NGƯƠI VẪN CÒN NHỚ NGƯƠI ĐẤY.', 'COME BACK. ALL OF YOU. FIGHT FOR ME.': 'QUAY VỀ ĐÂY. TẤT CẢ CÁC NGƯƠI. CHIẾN ĐẤU VÌ TA.', 'DAWN SCYTHE': 'LƯỠI HÁI BÌNH MINH', 'ECHOES OF THE DAYS': 'TIẾNG VỌNG NHỮNG NGÀY XƯA', 'DAWNLINE': 'TIA RẠNG ĐÔNG', 'COLONNADE': 'HÀNG CỘT ÁNH SÁNG',
     'Echo of': 'Tiếng Vọng của', 'Echo': 'Tiếng Vọng'
 });
+
+/* ------------------------------ THE FINAL BOSS'S HEALTH BAR ------------------------------ */
+// Once it rises, the bar is the last one of the game and looks it: wider and taller, gold and violet frame
+// with a slow light running along it, a white chip that trails damage, the marks of each section as
+// diamonds, the name in large gold letters with "FINAL BOSS" over it, and a crack of red when it is low.
+(function () {
+    const bb = HUD.bossBar.bind(HUD);
+    HUD.bossBar = function (c, b) {
+        if (!b.ascended || b.dying || b.gone) return bb(c, b);
+        const w = Math.min(980, VW - 220), x = VW / 2 - w / 2, y = 70, h = 24, f = U.clamp(b.hp / b.maxHp, 0, 1), t = G.time, rage = b.rage || 0;
+        b.chip = b.chip === undefined ? f : (b.chip > f ? Math.max(f, b.chip - .0025) : f);
+        c.save(); c.textAlign = 'center';
+        c.font = 'bold 12px "Palatino Linotype", "Times New Roman", serif'; c.fillStyle = '#ff6a4a'; UIText.spaced(c, tr('FINAL BOSS'), VW / 2, y - 34, 6);
+        c.font = 'bold 26px "Palatino Linotype", "Times New Roman", serif'; c.lineWidth = 4; c.strokeStyle = 'rgba(20,6,0,.9)'; const name = tr('THE ARCHITECT, ASCENDED'); c.strokeText(name, VW / 2, y - 9); const ng = c.createLinearGradient(0, y - 30, 0, y - 6); ng.addColorStop(0, '#fff6d8'); ng.addColorStop(1, '#ffb040'); c.fillStyle = ng; c.fillText(name, VW / 2, y - 9);
+        // frame
+        c.shadowColor = rage > 2 ? '#ff3a1a' : '#ffd86b'; c.shadowBlur = 16; c.fillStyle = 'rgba(8,4,14,.85)'; c.fillRect(x - 6, y - 4, w + 12, h + 8); c.shadowBlur = 0;
+        const fg = c.createLinearGradient(x, 0, x + w, 0); fg.addColorStop(0, '#ffd86b'); fg.addColorStop(.5, '#c8b0ff'); fg.addColorStop(1, '#ffd86b'); c.strokeStyle = fg; c.lineWidth = 2; c.strokeRect(x - 6, y - 4, w + 12, h + 8); c.strokeStyle = 'rgba(255,240,200,.35)'; c.lineWidth = 1; c.strokeRect(x - 2, y, w + 4, h);
+        // chip, then the health itself
+        c.fillStyle = 'rgba(255,255,255,.75)'; c.fillRect(x, y + 2, w * b.chip, h - 4);
+        const g = c.createLinearGradient(x, 0, x + w, 0); g.addColorStop(0, '#5a1aa8'); g.addColorStop(.45, '#c040ff'); g.addColorStop(.8, '#ff6a2a'); g.addColorStop(1, '#ffe08a'); c.fillStyle = g; c.fillRect(x, y + 2, w * f, h - 4);
+        const gl = c.createLinearGradient(0, y + 2, 0, y + h - 2); gl.addColorStop(0, 'rgba(255,255,255,.35)'); gl.addColorStop(.5, 'rgba(255,255,255,0)'); c.fillStyle = gl; c.fillRect(x, y + 2, w * f, h - 4);
+        // a light running along the filled part
+        const run = x + ((t * 6) % Math.max(1, w * f)); c.globalCompositeOperation = 'lighter'; const rg = c.createLinearGradient(run - 60, 0, run + 60, 0); rg.addColorStop(0, 'rgba(255,240,200,0)'); rg.addColorStop(.5, 'rgba(255,240,200,.5)'); rg.addColorStop(1, 'rgba(255,240,200,0)'); c.fillStyle = rg; c.fillRect(Math.max(x, run - 60), y + 2, Math.min(120, x + w * f - Math.max(x, run - 60)), h - 4); c.globalCompositeOperation = 'source-over';
+        // the section marks, as diamonds
+        for (const s of CUE.seg) { if (!s.thr) continue; const mx = x + w * s.thr, on = f > s.thr; c.fillStyle = on ? '#fff6d8' : '#5a4a6a'; c.beginPath(); c.moveTo(mx, y - 7); c.lineTo(mx + 6, y + h / 2); c.lineTo(mx, y + h + 7); c.lineTo(mx - 6, y + h / 2); c.closePath(); c.fill(); c.strokeStyle = '#2a1a10'; c.lineWidth = 1.5; c.stroke(); }
+        if (rage > 2.2) { c.strokeStyle = `rgba(255,60,30,${.4 + .3 * Math.sin(t * .2)})`; c.lineWidth = 2; c.strokeRect(x - 9, y - 7, w + 18, h + 14); }
+        c.font = 'bold 12px "Courier New", monospace'; c.fillStyle = '#fff6d8'; c.textAlign = 'right'; c.fillText(Math.ceil(f * 100) + '%', x + w + 2, y + h + 18);
+        c.restore();
+    };
+})();
+
+
+/* ------------------------------ THE HALL, TORN DOWN ------------------------------ */
+// A colonnade of the Throne's hall stands behind the arena. When the god rises, the columns crack one by one
+// (nearest first), break into drums, are lifted off the floor and spiral into its eye, and are gone.
+G2.hall = {
+    cols: null,
+    build() { const A = G.arena; if (!A) return; this.cols = []; const step = 300; let i = 0; for (let x = A.x0 + 120; x < A.x1 - 60; x += step, i++) { const h = 820 + (i % 3) * 90; this.cols.push({ x, w: 74, h, segs: [0, 1, 2, 3].map(k => ({ k })), order: 0 }); } },
+    reset() { this.cols = null; this.t0 = null; },
+    draw(c) {
+        const L = G.level, b = G.boss; if (!L || L.id !== 'architect2') return; if (!this.cols) this.build(); if (!this.cols) return;
+        if (b && b.gone) return; const cam = G.cam, z = cam.zoom, A = G.arena, S = G2.song;
+        const asc = b && b.ascended && S.active, pos = asc ? S.pos() : 0, cx = b ? b.x : (A.x0 + A.x1) / 2, cy = b ? G2.cy(b) : A.y - 500;
+        if (asc && this.t0 === null) { this.t0 = pos; this.cols.slice().sort((p, q) => Math.abs(p.x - cx) - Math.abs(q.x - cx)).forEach((col, n) => { col.order = n; }); }
+        const sx = wx => (wx - cam.x) * z, sy = wy => (wy - cam.y) * z;
+        for (const col of this.cols) {
+            const crackAt = 1.2 + col.order * .75, liftAt = crackAt + .9, tBase = asc ? pos - (this.t0 || 0) : -1;
+            const segH = col.h / 4;
+            for (const sg of col.segs) {
+                let wx = col.x, wy = A.y - segH * (sg.k + .5), rot = 0, sc = 1, al = 1;
+                if (tBase > liftAt) { const u = U.clamp((tBase - liftAt - sg.k * .12) / 2.4, 0, 1); if (u >= 1) continue; const e = u * u * (3 - 2 * u), sw = Math.sin(u * Math.PI) * (160 + sg.k * 40) * (col.x < cx ? -1 : 1);
+                    wx = U.lerp(col.x, cx, e) + sw * .3; wy = U.lerp(wy, cy, e) - Math.sin(u * Math.PI) * 220; rot = e * (3 + sg.k) * (col.x < cx ? 1 : -1); sc = 1 - e * .8; al = 1 - Math.max(0, (u - .75) / .25);
+                    if (G.time % 3 === 0) VFX.add(wx + U.rand(-20, 20), wy + U.rand(-20, 20), 0, 0, '#ffe8a0', 26, 4, 1, 0); }
+                const X = sx(wx), Y = sy(wy), W = col.w * z * sc, H = segH * z * sc;
+                c.save(); c.globalAlpha = al; c.translate(X, Y); c.rotate(rot);
+                const g = c.createLinearGradient(-W / 2, 0, W / 2, 0); g.addColorStop(0, '#1c1828'); g.addColorStop(.5, '#4a4462'); g.addColorStop(1, '#1c1828'); c.fillStyle = g; c.fillRect(-W / 2, -H / 2, W, H + 1); c.fillStyle = 'rgba(255,216,107,.55)'; c.fillRect(-W / 2, -H / 2, 1.5 * z, H); c.fillRect(W / 2 - 1.5 * z, -H / 2, 1.5 * z, H);
+                if (rot) { c.globalCompositeOperation = 'lighter'; c.globalAlpha = al * .5; c.drawImage(Glow.get('#ffe8a0'), -W, -H, W * 2, H * 2); c.globalCompositeOperation = 'source-over'; c.globalAlpha = al; }
+                c.fillStyle = 'rgba(255,216,107,.45)'; c.fillRect(-W * .18, -H / 2, 1.5 * z, H); c.fillRect(W * .18, -H / 2, 1.5 * z, H);
+                if (sg.k === 3) { c.fillStyle = '#3a3248'; c.fillRect(-W * .7, -H / 2 - 12 * z, W * 1.4, 14 * z); c.fillStyle = 'rgba(255,216,107,.6)'; c.fillRect(-W * .7, -H / 2 - 12 * z, W * 1.4, 2 * z); }
+                if (sg.k === 0) { c.fillStyle = '#2a2438'; c.fillRect(-W * .6, H / 2 - 8 * z, W * 1.2, 10 * z); }
+                if (tBase > crackAt) { const k = U.clamp((tBase - crackAt) / .9, 0, 1); c.strokeStyle = `rgba(255,232,170,${.8 * k})`; c.lineWidth = 1.5; c.beginPath(); c.moveTo(-W / 2, H / 2 - 2); c.lineTo(-W * .1, H * .1); c.lineTo(W * .2, -H * .2); c.lineTo(W / 2, -H / 2 + 3); c.stroke(); }
+                c.restore();
+            }
+            if (asc && tBase > crackAt && tBase < liftAt + .1 && !col.shook) { col.shook = true; G.addShake(6); Sound.sfx('crumble', { v: .5 }); VFX.burst(col.x, A.y - 10, '#9a90b0', 20, 6, 30, 7, 1); }
+        }
+    }
+};
+(function () {
+    // behind the god and the arena, in front of the sky
+    const fd = G2.fx.draw; G2.fx.draw = function (c, F, front) { const r = fd.call(this, c, F, front); if (!front) { c.save(); try { G2.hall.draw(c); } catch (e) { console.warn(e); } c.restore(); } return r; };
+    // before it rises (no final-form sky yet) the colonnade still stands in the hall
+    const bd = Backdrop.draw.bind(Backdrop); Backdrop.draw = function (ctx, id, cam, t, level) { bd(ctx, id, cam, t, level); if (level && G.level && level === G.level && G.level.id === 'architect2' && !G.g2fx) { ctx.save(); try { G2.hall.draw(ctx); } catch (e) { } ctx.restore(); } };
+    const ll = Game.loadLevel.bind(Game); Game.loadLevel = function (id, cp) { G2.hall.reset(); return ll(id, cp); };
+})();
+
+/* ------------------------------ "FINAL BOSS" ------------------------------ */
+// At 0:46, as the music gathers itself, the screen says it plainly, then the fight begins on the cut.
+G2.drawFinalCard = function (c, F) {
+    const S = G2.song, k = S.active ? (S.pos() - F.at) : F.t / 60, e = U.clamp(k / .35, 0, 1), sc = 1.5 - .5 * (1 - Math.pow(1 - e, 3)), y = VH * .46;
+    c.save(); c.globalAlpha = Math.min(1, k / .15);
+    c.fillStyle = 'rgba(10,2,4,.55)'; c.fillRect(0, y - 90, VW, 150);
+    c.globalCompositeOperation = 'lighter'; for (let i = 0; i < 5; i++) { const yy = y - 70 + i * 32 + Math.sin(k * 6 + i) * 4, len = VW * U.clamp(k * 2 - i * .1, 0, 1); const g = c.createLinearGradient(VW / 2 - len / 2, 0, VW / 2 + len / 2, 0); g.addColorStop(0, 'rgba(255,60,30,0)'); g.addColorStop(.5, 'rgba(255,120,60,.55)'); g.addColorStop(1, 'rgba(255,60,30,0)'); c.fillStyle = g; c.fillRect(VW / 2 - len / 2, yy, len, 2); }
+    c.globalCompositeOperation = 'source-over';
+    c.translate(VW / 2, y); c.scale(sc, sc); c.textAlign = 'center'; c.font = 'bold 110px "Palatino Linotype", "Times New Roman", serif';
+    c.lineWidth = 10; c.strokeStyle = 'rgba(30,4,0,.95)'; c.strokeText('FINAL BOSS', 0, 0);
+    const g = c.createLinearGradient(0, -90, 0, 10); g.addColorStop(0, '#fff6d8'); g.addColorStop(.45, '#ffb040'); g.addColorStop(1, '#ff3a1a'); c.fillStyle = g; c.shadowColor = '#ff5a2a'; c.shadowBlur = 30; c.fillText('FINAL BOSS', 0, 0); c.shadowBlur = 0;
+    c.font = 'italic 24px "Palatino Linotype", serif'; c.fillStyle = '#ffe8c8'; c.fillText(tr('THE ARCHITECT, ASCENDED'), 0, 44);
+    c.restore();
+};
+(function () { const hd = HUD.draw.bind(HUD); HUD.draw = function (c) { hd(c); const F = G.g2final; if (!F) return; F.t = (F.t || 0) + 1; G2.drawFinalCard(c, F); }; })();

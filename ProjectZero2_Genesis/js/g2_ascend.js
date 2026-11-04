@@ -41,39 +41,48 @@ G2.song = {
         fetch('assets/boss_final.mp3').then(r => r.arrayBuffer()).then(done).catch(e => { this.loading = false; this.failed = true; console.warn('final boss track unavailable', e); });
     },
     now() { return this.useAudio ? Sound.ctx.currentTime : (G.time || 0) / 60; },
+    // Every change of place in the song (a new section, a loop back, the jump to the death) waits for the end
+    // of a four-bar phrase and crossfades over half a second, instead of cutting on the next bar line.
+    XF: .5,
     start(at = 0) {
         this.stopSrc(); this.active = true; this.loop = null; this.loopKey = null; this.jump = null; this.p = at; Music.stop(.4);
-        if (Sound.ok && this.buf) { const c = Sound.ctx; this.gain = c.createGain(); this.gain.gain.value = .5; this.gain.connect(Sound.buses.music); this.src = this.mk(); this.src.start(c.currentTime + .03, at); this.useAudio = true; this.last = c.currentTime + .03; }
+        if (Sound.ok && this.buf) { const c = Sound.ctx; this.gain = c.createGain(); this.gain.gain.value = .5; this.gain.connect(Sound.buses.music); this.voice = this.mk(at, c.currentTime + .03, false); this.useAudio = true; this.last = c.currentTime + .03; }
         else { this.useAudio = false; this.last = this.now(); if (Sound.ok) Music.cut('g2act3', 'critical'); }
     },
-    mk() { const s = Sound.ctx.createBufferSource(); s.buffer = this.buf; s.connect(this.gain); return s; },
-    stopSrc() { if (this.src) { try { this.src.stop(); } catch (e) { } this.src = null; } },
-    /** Loop a section [a, b) in bars, or null to let the song run on. */
-    setLoop(seg) {
-        const key = seg ? seg.a + ':' + seg.b : null; if (key === this.loopKey) return; this.loopKey = key; this.loop = seg ? { a: SONG.t(seg.a), b: SONG.t(seg.b) } : null;
-        if (this.useAudio && this.src) { if (seg) { this.src.loopStart = this.loop.a; this.src.loopEnd = this.loop.b; } this.src.loop = !!seg; }
+    // one playing copy of the track with its own fader; with fade, it rises over XF centred on `when`
+    mk(offset, when, fade) {
+        const c = Sound.ctx, src = c.createBufferSource(), g = c.createGain(), h = fade ? this.XF / 2 : 0; src.buffer = this.buf; src.connect(g); g.connect(this.gain);
+        if (fade) { g.gain.setValueAtTime(0, Math.max(c.currentTime, when - h)); g.gain.linearRampToValueAtTime(1, when + h); }
+        src.start(Math.max(c.currentTime, when - h), Math.max(0, offset - h)); return { src, g };
     },
-    /** Continue from a bar, starting on the next bar line. */
+    fadeOut(v, when) { if (!v) return; const c = Sound.ctx, h = this.XF / 2; try { v.g.gain.cancelScheduledValues(c.currentTime); v.g.gain.setValueAtTime(v.g.gain.value, Math.max(c.currentTime, when - h)); v.g.gain.linearRampToValueAtTime(0, when + h); v.src.stop(when + h + .05); } catch (e) { } },
+    stopSrc() { if (this.voice) { try { this.voice.src.stop(); } catch (e) { } this.voice = null; } this.src = null; },
+    /** Loop a section [a, b) in bars, or null to let the song run on. The loop itself is a crossfaded jump. */
+    setLoop(seg) { const key = seg ? seg.a + ':' + seg.b : null; if (key === this.loopKey) return; this.loopKey = key; this.loop = seg ? { a: SONG.t(seg.a), b: SONG.t(seg.b) } : null; },
+    schedule(T, to) { if (this.useAudio) { this.fadeOut(this.voice, T); this.voice = this.mk(to, T, true); } this.jump = { T, to }; },
+    /** Continue from a bar: at the end of the current four-bar phrase (or the next bar line when forced). */
     jumpTo(bar, force) {
-        if (this.jump && !force) return; if (this.jump && force && this.useAudio && this.src) { try { this.src.stop(); } catch (e) { } this.src = null; } if (this.jump && force) { this.p = this.jump.to; this.last = this.now(); this.jump = null; }
-        const pos = this.p, nb = Math.ceil((pos - SONG.first) / SONG.bar + .001), wait = Math.max(.02, SONG.t(nb) - pos), to = SONG.t(bar), T = this.now() + wait;
-        this.setLoop(null); this.jump = { T, to };
-        if (this.useAudio) { const old = this.src; if (old) old.stop(T); this.src = this.mk(); this.src.start(T, to); }
+        if (this.jump && !force) return;
+        if (this.jump && force) { if (this.useAudio && this.voice) { try { this.voice.src.stop(); } catch (e) { } } this.p = this.jump.to + Math.max(0, this.now() - this.jump.T); this.last = this.now(); this.jump = null; }
+        const pos = this.p, curBar = (pos - SONG.first) / SONG.bar, seg = CUE.seg.find(s => curBar >= s.a && curBar < s.b), base = seg ? seg.a : 0;
+        let nb = Math.ceil(curBar + .001); if (!force) { nb = base + Math.ceil((nb - base) / 4) * 4; if (seg) nb = Math.min(nb, seg.b); }
+        this.setLoop(null); this.schedule(this.now() + Math.max(.02, SONG.t(nb) - pos), SONG.t(bar));
     },
     update() {
         if (!this.active) return; const n = this.now(), dt = Math.max(0, n - this.last); this.last = n;
         if (this.jump && n >= this.jump.T) { this.p = this.jump.to + (n - this.jump.T); this.jump = null; } else this.p += dt;
-        if (this.loop && this.p >= this.loop.b) this.p -= this.loop.b - this.loop.a;
+        // the loop: a little before its end, schedule the crossfaded return to its start, on the bar line
+        if (this.loop && !this.jump && this.p >= this.loop.b - .35) this.schedule(n + Math.max(0, this.loop.b - this.p), this.loop.a);
     },
     pos() { const c = this.useAudio && Sound.ctx, lat = c ? Math.min(.3, (c.outputLatency || 0) + (c.baseLatency || 0)) : 0; return Math.max(0, (this.p || 0) - lat); },
     bar() { return Math.floor((this.pos() - SONG.first) / SONG.bar); },
     beatN() { return Math.floor((this.pos() - SONG.first) / SONG.beat); },
-    stop(fade = 1.5) { if (!this.active) return; this.active = false; this.loopKey = null; if (this.useAudio && this.gain) { const c = Sound.ctx, s = this.src; this.gain.gain.setTargetAtTime(0, c.currentTime, fade / 3); setTimeout(() => { try { s.stop(); } catch (e) { } }, fade * 1000 + 200); } this.src = null; }
+    stop(fade = 1.5) { if (!this.active) return; this.active = false; this.loopKey = null; this.loop = null; this.jump = null; if (this.useAudio && this.gain) { const c = Sound.ctx, v = this.voice, g = this.gain; g.gain.setTargetAtTime(0, c.currentTime, fade / 3); setTimeout(() => { try { v && v.src.stop(); } catch (e) { } }, fade * 1000 + 200); } this.voice = null; this.src = null; }
 };
 (function () {
     const tick = G.tick.bind(G); G.tick = function () { G2.song.update(); return tick(); };
     const play = Music.play.bind(Music); Music.play = function (id, st) { if (G2.song.active && !Music.forceCut) return; return play(id, st); };
-    const ll = Game.loadLevel.bind(Game); Game.loadLevel = function (id, cp) { if (G2.song.active) G2.song.stop(.5); G.g2fx = null; G.g2title = null; ll(id, cp); if (id === 'architect2') G2.song.load(); };
+    const ll = Game.loadLevel.bind(Game); Game.loadLevel = function (id, cp) { if (G2.song.active) G2.song.stop(.5); G.g2fx = null; G.g2title = null; G.g2final = null; ll(id, cp); if (id === 'architect2') G2.song.load(); };
 })();
 
 /* ------------------------------ THE WORLD BREAKS OPEN ------------------------------ */
@@ -100,8 +109,15 @@ G2.fx = {
             if (F.cracks > 0) { c.save(); c.strokeStyle = `rgba(255,255,255,${.5 * F.cracks})`; c.lineWidth = 1.6; const R = U.mulberry(41); for (let i = 0; i < 22 * F.cracks; i++) { let x = R() * VW, y = R() * VH * .5; c.beginPath(); c.moveTo(x, y); for (let k2 = 0; k2 < 6; k2++) { x += (R() - .5) * 120; y += R() * 50; c.lineTo(x, y); } c.stroke(); } c.restore(); }
         }
         const N = Math.floor(this.N * U.clamp(F.motes, 0, 1)), from = front ? 0 : 220, to = front ? Math.min(220, N) : N; this.step(F, cx, cy, from, to);
-        c.save(); c.globalCompositeOperation = 'lighter';
-        for (let i = from; i < to; i++) { const s = this.s[i] * (front ? 1.8 : 1), a = .35 + .3 * Math.sin(G.time * .1 + this.ph[i]); c.fillStyle = `rgba(255,250,235,${a})`; c.fillRect(this.x[i], this.y[i], s, s); if (s > 1.6 && Math.abs(this.vx[i]) + Math.abs(this.vy[i]) > 2) { c.strokeStyle = `rgba(255,240,200,${a * .5})`; c.lineWidth = s * .6; c.beginPath(); c.moveTo(this.x[i], this.y[i]); c.lineTo(this.x[i] - this.vx[i] * 4, this.y[i] - this.vy[i] * 4); c.stroke(); } }
+        // drawn in eight brightness bands, one path each, instead of one fill and one stroke per mote
+        c.save(); c.globalCompositeOperation = 'lighter'; const NB = 8, scale = front ? 1.8 : 1;
+        for (let band = 0; band < NB; band++) {
+            const lo = band / NB, hi = (band + 1) / NB, a = .05 + .6 * (lo + .5 / NB); c.beginPath(); let any = false;
+            for (let i = from; i < to; i++) { const w = .5 + .5 * Math.sin(G.time * .1 + this.ph[i]); if (w < lo || w >= hi) continue; const sz = this.s[i] * scale; c.rect(this.x[i], this.y[i], sz, sz); any = true; }
+            if (!any) continue; c.fillStyle = `rgba(255,250,235,${a})`; c.fill();
+            c.beginPath(); any = false; for (let i = from; i < to; i++) { const w = .5 + .5 * Math.sin(G.time * .1 + this.ph[i]); if (w < lo || w >= hi) continue; const sz = this.s[i] * scale; if (sz > 1.6 && Math.abs(this.vx[i]) + Math.abs(this.vy[i]) > 2) { c.moveTo(this.x[i], this.y[i]); c.lineTo(this.x[i] - this.vx[i] * 4, this.y[i] - this.vy[i] * 4); any = true; } }
+            if (any) { c.strokeStyle = `rgba(255,240,200,${a * .5})`; c.lineWidth = 1.6 * scale * .6; c.stroke(); }
+        }
         c.restore();
     }
 };
@@ -237,11 +253,13 @@ G2.ascendIntro = function* (b) {
         }
         yield 1; }
     // 0:46 the name is whole; it holds on the quiet bars
-    G.lines = []; G.sayQ = []; G.sayCur = null; if (!G.g2title) G.g2title = { name: tr('THE ARCHITECT, ASCENDED'), sub: tr('THE GOD THAT WAS NEVER ASKED FOR'), t: 0 }; G.cineCam = { x: b.x, y: floorCam(b.scale), zoom: WIDE + .1 };
+    // 0:46 FINAL BOSS, held to the cut
+    G.g2title = null; G.flash = .8; G.addShake(20); Sound.sfx('bigboom'); G.g2final = { at: S.pos(), t: 0 };
+    G.lines = []; G.sayQ = []; G.sayCur = null; if (false) G.g2title = { name: tr('THE ARCHITECT, ASCENDED'), sub: tr('THE GOD THAT WAS NEVER ASKED FOR'), t: 0 }; G.cineCam = { x: b.x, y: floorCam(b.scale), zoom: WIDE + .1 };
     yield* waitBar(CUE.fight);
     // 0:49 hard cut to the fight, with a fresh health bar
-    G.g2title = null; G.flash = .9; G.addShake(26); G.letterbox = 0; G.cineCam = null; G.lockInput = false; P.inv = Math.max(P.inv, 60); b.scale = 1.45; b.form2 = 1;
-    b.maxHp = b.hp = Math.round(4800 * Game.diff.bossHp * (G2.team && G.g2team ? 3 : 1)); b.hbar = 1; b.dilate = 0;
+    G.g2final = null; G.g2title = null; G.flash = .9; G.addShake(26); G.letterbox = 0; G.cineCam = null; G.lockInput = false; P.inv = Math.max(P.inv, 60); b.scale = 1.45; b.form2 = 1;
+    b.maxHp = b.hp = Math.round(4800 * Game.diff.bossHp * (G2.team && G.g2team ? 5 : 1)); b.hbar = 1; b.dilate = 0;
 };
 
 /* ------------------------------ THE FIGHT, CUT TO THE SONG ------------------------------ */

@@ -5770,6 +5770,12 @@ const Terrain = {
         if (L.chunks.size > 42) { const k = L.chunks.keys().next().value; L.chunks.delete(k); }
         L.chunks.set(key, c); return c;
     },
+    // A far view: with the camera pulled back, a chunk covers few screen pixels, so a quarter-size copy looks the
+    // same and costs a fraction to draw (the full-size ones were the slowest thing in the final fight).
+    chunkLo(L, cx, cy) {
+        const key = cx + cy * 4096, M = L.chunksLo || (L.chunksLo = new Map()); let c = M.get(key); if (c) return c;
+        const n = CHUNK * TILE * .5; c = U.canvas(n, n); const x = c.getContext('2d'); x.imageSmoothingQuality = 'high'; x.drawImage(this.chunk(L, cx, cy), 0, 0, n, n); M.set(key, c); return c;
+    },
     paint(L, x, cx, cy) {
         const P = L.theme.tile, reg = L.region, sx = cx * CHUNK, sy = cy * CHUNK, TT = TILE;
         for (let ty = sy; ty < sy + CHUNK; ty++) for (let tx = sx; tx < sx + CHUNK; tx++) {
@@ -5871,7 +5877,7 @@ const Terrain = {
         const y0 = Math.floor(cam.y / (CHUNK * TILE)), y1 = Math.floor((cam.y + VH / z) / (CHUNK * TILE));
         for (let cy = y0; cy <= y1; cy++) for (let cx = x0; cx <= x1; cx++) {
             if (cx < 0 || cy < 0 || cx * CHUNK >= L.w || cy * CHUNK >= L.h) continue;
-            ctx.drawImage(this.chunk(L, cx, cy), cx * CHUNK * TILE, cy * CHUNK * TILE, CHUNK * TILE + .5, CHUNK * TILE + .5);
+            ctx.drawImage(z < .75 ? this.chunkLo(L, cx, cy) : this.chunk(L, cx, cy), cx * CHUNK * TILE, cy * CHUNK * TILE, CHUNK * TILE + .5, CHUNK * TILE + .5);
         }
         // Paint one neighbouring chunk per frame so scrolling never pays for a burst at once.
         for (let cy = y0 - 1; cy <= y1 + 1; cy++) for (let cx = x0 - 1; cx <= x1 + 1; cx++) {
@@ -11476,39 +11482,48 @@ G2.song = {
         fetch('assets/boss_final.mp3').then(r => r.arrayBuffer()).then(done).catch(e => { this.loading = false; this.failed = true; console.warn('final boss track unavailable', e); });
     },
     now() { return this.useAudio ? Sound.ctx.currentTime : (G.time || 0) / 60; },
+    // Every change of place in the song (a new section, a loop back, the jump to the death) waits for the end
+    // of a four-bar phrase and crossfades over half a second, instead of cutting on the next bar line.
+    XF: .5,
     start(at = 0) {
         this.stopSrc(); this.active = true; this.loop = null; this.loopKey = null; this.jump = null; this.p = at; Music.stop(.4);
-        if (Sound.ok && this.buf) { const c = Sound.ctx; this.gain = c.createGain(); this.gain.gain.value = .5; this.gain.connect(Sound.buses.music); this.src = this.mk(); this.src.start(c.currentTime + .03, at); this.useAudio = true; this.last = c.currentTime + .03; }
+        if (Sound.ok && this.buf) { const c = Sound.ctx; this.gain = c.createGain(); this.gain.gain.value = .5; this.gain.connect(Sound.buses.music); this.voice = this.mk(at, c.currentTime + .03, false); this.useAudio = true; this.last = c.currentTime + .03; }
         else { this.useAudio = false; this.last = this.now(); if (Sound.ok) Music.cut('g2act3', 'critical'); }
     },
-    mk() { const s = Sound.ctx.createBufferSource(); s.buffer = this.buf; s.connect(this.gain); return s; },
-    stopSrc() { if (this.src) { try { this.src.stop(); } catch (e) { } this.src = null; } },
-    /** Loop a section [a, b) in bars, or null to let the song run on. */
-    setLoop(seg) {
-        const key = seg ? seg.a + ':' + seg.b : null; if (key === this.loopKey) return; this.loopKey = key; this.loop = seg ? { a: SONG.t(seg.a), b: SONG.t(seg.b) } : null;
-        if (this.useAudio && this.src) { if (seg) { this.src.loopStart = this.loop.a; this.src.loopEnd = this.loop.b; } this.src.loop = !!seg; }
+    // one playing copy of the track with its own fader; with fade, it rises over XF centred on `when`
+    mk(offset, when, fade) {
+        const c = Sound.ctx, src = c.createBufferSource(), g = c.createGain(), h = fade ? this.XF / 2 : 0; src.buffer = this.buf; src.connect(g); g.connect(this.gain);
+        if (fade) { g.gain.setValueAtTime(0, Math.max(c.currentTime, when - h)); g.gain.linearRampToValueAtTime(1, when + h); }
+        src.start(Math.max(c.currentTime, when - h), Math.max(0, offset - h)); return { src, g };
     },
-    /** Continue from a bar, starting on the next bar line. */
+    fadeOut(v, when) { if (!v) return; const c = Sound.ctx, h = this.XF / 2; try { v.g.gain.cancelScheduledValues(c.currentTime); v.g.gain.setValueAtTime(v.g.gain.value, Math.max(c.currentTime, when - h)); v.g.gain.linearRampToValueAtTime(0, when + h); v.src.stop(when + h + .05); } catch (e) { } },
+    stopSrc() { if (this.voice) { try { this.voice.src.stop(); } catch (e) { } this.voice = null; } this.src = null; },
+    /** Loop a section [a, b) in bars, or null to let the song run on. The loop itself is a crossfaded jump. */
+    setLoop(seg) { const key = seg ? seg.a + ':' + seg.b : null; if (key === this.loopKey) return; this.loopKey = key; this.loop = seg ? { a: SONG.t(seg.a), b: SONG.t(seg.b) } : null; },
+    schedule(T, to) { if (this.useAudio) { this.fadeOut(this.voice, T); this.voice = this.mk(to, T, true); } this.jump = { T, to }; },
+    /** Continue from a bar: at the end of the current four-bar phrase (or the next bar line when forced). */
     jumpTo(bar, force) {
-        if (this.jump && !force) return; if (this.jump && force && this.useAudio && this.src) { try { this.src.stop(); } catch (e) { } this.src = null; } if (this.jump && force) { this.p = this.jump.to; this.last = this.now(); this.jump = null; }
-        const pos = this.p, nb = Math.ceil((pos - SONG.first) / SONG.bar + .001), wait = Math.max(.02, SONG.t(nb) - pos), to = SONG.t(bar), T = this.now() + wait;
-        this.setLoop(null); this.jump = { T, to };
-        if (this.useAudio) { const old = this.src; if (old) old.stop(T); this.src = this.mk(); this.src.start(T, to); }
+        if (this.jump && !force) return;
+        if (this.jump && force) { if (this.useAudio && this.voice) { try { this.voice.src.stop(); } catch (e) { } } this.p = this.jump.to + Math.max(0, this.now() - this.jump.T); this.last = this.now(); this.jump = null; }
+        const pos = this.p, curBar = (pos - SONG.first) / SONG.bar, seg = CUE.seg.find(s => curBar >= s.a && curBar < s.b), base = seg ? seg.a : 0;
+        let nb = Math.ceil(curBar + .001); if (!force) { nb = base + Math.ceil((nb - base) / 4) * 4; if (seg) nb = Math.min(nb, seg.b); }
+        this.setLoop(null); this.schedule(this.now() + Math.max(.02, SONG.t(nb) - pos), SONG.t(bar));
     },
     update() {
         if (!this.active) return; const n = this.now(), dt = Math.max(0, n - this.last); this.last = n;
         if (this.jump && n >= this.jump.T) { this.p = this.jump.to + (n - this.jump.T); this.jump = null; } else this.p += dt;
-        if (this.loop && this.p >= this.loop.b) this.p -= this.loop.b - this.loop.a;
+        // the loop: a little before its end, schedule the crossfaded return to its start, on the bar line
+        if (this.loop && !this.jump && this.p >= this.loop.b - .35) this.schedule(n + Math.max(0, this.loop.b - this.p), this.loop.a);
     },
     pos() { const c = this.useAudio && Sound.ctx, lat = c ? Math.min(.3, (c.outputLatency || 0) + (c.baseLatency || 0)) : 0; return Math.max(0, (this.p || 0) - lat); },
     bar() { return Math.floor((this.pos() - SONG.first) / SONG.bar); },
     beatN() { return Math.floor((this.pos() - SONG.first) / SONG.beat); },
-    stop(fade = 1.5) { if (!this.active) return; this.active = false; this.loopKey = null; if (this.useAudio && this.gain) { const c = Sound.ctx, s = this.src; this.gain.gain.setTargetAtTime(0, c.currentTime, fade / 3); setTimeout(() => { try { s.stop(); } catch (e) { } }, fade * 1000 + 200); } this.src = null; }
+    stop(fade = 1.5) { if (!this.active) return; this.active = false; this.loopKey = null; this.loop = null; this.jump = null; if (this.useAudio && this.gain) { const c = Sound.ctx, v = this.voice, g = this.gain; g.gain.setTargetAtTime(0, c.currentTime, fade / 3); setTimeout(() => { try { v && v.src.stop(); } catch (e) { } }, fade * 1000 + 200); } this.voice = null; this.src = null; }
 };
 (function () {
     const tick = G.tick.bind(G); G.tick = function () { G2.song.update(); return tick(); };
     const play = Music.play.bind(Music); Music.play = function (id, st) { if (G2.song.active && !Music.forceCut) return; return play(id, st); };
-    const ll = Game.loadLevel.bind(Game); Game.loadLevel = function (id, cp) { if (G2.song.active) G2.song.stop(.5); G.g2fx = null; G.g2title = null; ll(id, cp); if (id === 'architect2') G2.song.load(); };
+    const ll = Game.loadLevel.bind(Game); Game.loadLevel = function (id, cp) { if (G2.song.active) G2.song.stop(.5); G.g2fx = null; G.g2title = null; G.g2final = null; ll(id, cp); if (id === 'architect2') G2.song.load(); };
 })();
 
 /* ------------------------------ THE WORLD BREAKS OPEN ------------------------------ */
@@ -11535,8 +11550,15 @@ G2.fx = {
             if (F.cracks > 0) { c.save(); c.strokeStyle = `rgba(255,255,255,${.5 * F.cracks})`; c.lineWidth = 1.6; const R = U.mulberry(41); for (let i = 0; i < 22 * F.cracks; i++) { let x = R() * VW, y = R() * VH * .5; c.beginPath(); c.moveTo(x, y); for (let k2 = 0; k2 < 6; k2++) { x += (R() - .5) * 120; y += R() * 50; c.lineTo(x, y); } c.stroke(); } c.restore(); }
         }
         const N = Math.floor(this.N * U.clamp(F.motes, 0, 1)), from = front ? 0 : 220, to = front ? Math.min(220, N) : N; this.step(F, cx, cy, from, to);
-        c.save(); c.globalCompositeOperation = 'lighter';
-        for (let i = from; i < to; i++) { const s = this.s[i] * (front ? 1.8 : 1), a = .35 + .3 * Math.sin(G.time * .1 + this.ph[i]); c.fillStyle = `rgba(255,250,235,${a})`; c.fillRect(this.x[i], this.y[i], s, s); if (s > 1.6 && Math.abs(this.vx[i]) + Math.abs(this.vy[i]) > 2) { c.strokeStyle = `rgba(255,240,200,${a * .5})`; c.lineWidth = s * .6; c.beginPath(); c.moveTo(this.x[i], this.y[i]); c.lineTo(this.x[i] - this.vx[i] * 4, this.y[i] - this.vy[i] * 4); c.stroke(); } }
+        // drawn in eight brightness bands, one path each, instead of one fill and one stroke per mote
+        c.save(); c.globalCompositeOperation = 'lighter'; const NB = 8, scale = front ? 1.8 : 1;
+        for (let band = 0; band < NB; band++) {
+            const lo = band / NB, hi = (band + 1) / NB, a = .05 + .6 * (lo + .5 / NB); c.beginPath(); let any = false;
+            for (let i = from; i < to; i++) { const w = .5 + .5 * Math.sin(G.time * .1 + this.ph[i]); if (w < lo || w >= hi) continue; const sz = this.s[i] * scale; c.rect(this.x[i], this.y[i], sz, sz); any = true; }
+            if (!any) continue; c.fillStyle = `rgba(255,250,235,${a})`; c.fill();
+            c.beginPath(); any = false; for (let i = from; i < to; i++) { const w = .5 + .5 * Math.sin(G.time * .1 + this.ph[i]); if (w < lo || w >= hi) continue; const sz = this.s[i] * scale; if (sz > 1.6 && Math.abs(this.vx[i]) + Math.abs(this.vy[i]) > 2) { c.moveTo(this.x[i], this.y[i]); c.lineTo(this.x[i] - this.vx[i] * 4, this.y[i] - this.vy[i] * 4); any = true; } }
+            if (any) { c.strokeStyle = `rgba(255,240,200,${a * .5})`; c.lineWidth = 1.6 * scale * .6; c.stroke(); }
+        }
         c.restore();
     }
 };
@@ -11672,11 +11694,13 @@ G2.ascendIntro = function* (b) {
         }
         yield 1; }
     // 0:46 the name is whole; it holds on the quiet bars
-    G.lines = []; G.sayQ = []; G.sayCur = null; if (!G.g2title) G.g2title = { name: tr('THE ARCHITECT, ASCENDED'), sub: tr('THE GOD THAT WAS NEVER ASKED FOR'), t: 0 }; G.cineCam = { x: b.x, y: floorCam(b.scale), zoom: WIDE + .1 };
+    // 0:46 FINAL BOSS, held to the cut
+    G.g2title = null; G.flash = .8; G.addShake(20); Sound.sfx('bigboom'); G.g2final = { at: S.pos(), t: 0 };
+    G.lines = []; G.sayQ = []; G.sayCur = null; if (false) G.g2title = { name: tr('THE ARCHITECT, ASCENDED'), sub: tr('THE GOD THAT WAS NEVER ASKED FOR'), t: 0 }; G.cineCam = { x: b.x, y: floorCam(b.scale), zoom: WIDE + .1 };
     yield* waitBar(CUE.fight);
     // 0:49 hard cut to the fight, with a fresh health bar
-    G.g2title = null; G.flash = .9; G.addShake(26); G.letterbox = 0; G.cineCam = null; G.lockInput = false; P.inv = Math.max(P.inv, 60); b.scale = 1.45; b.form2 = 1;
-    b.maxHp = b.hp = Math.round(4800 * Game.diff.bossHp * (G2.team && G.g2team ? 3 : 1)); b.hbar = 1; b.dilate = 0;
+    G.g2final = null; G.g2title = null; G.flash = .9; G.addShake(26); G.letterbox = 0; G.cineCam = null; G.lockInput = false; P.inv = Math.max(P.inv, 60); b.scale = 1.45; b.form2 = 1;
+    b.maxHp = b.hp = Math.round(4800 * Game.diff.bossHp * (G2.team && G.g2team ? 5 : 1)); b.hbar = 1; b.dilate = 0;
 };
 
 /* ------------------------------ THE FIGHT, CUT TO THE SONG ------------------------------ */
@@ -12312,7 +12336,7 @@ G2.heaven = function (c, k) {
     // the skill being cast, under the god's health bar
     const hd = HUD.draw.bind(HUD); HUD.draw = function (c) {
         hd(c); const S = G2.skillCap; if (!S || Game.state !== 'play' || G.letterbox) return; S.t++; if (S.t > 130) { G2.skillCap = null; return; }
-        const a = Math.min(1, S.t / 10, (130 - S.t) / 20); c.save(); c.globalAlpha = a; c.textAlign = 'center'; c.font = 'italic bold 20px "Palatino Linotype", "Times New Roman", serif'; c.lineWidth = 4; c.strokeStyle = 'rgba(10,6,20,.85)'; c.strokeText('✦ ' + S.name + ' ✦', VW / 2, 104); c.fillStyle = S.col; c.fillText('✦ ' + S.name + ' ✦', VW / 2, 104); c.restore();
+        const a = Math.min(1, S.t / 10, (130 - S.t) / 20); c.save(); c.globalAlpha = a; c.textAlign = 'center'; c.font = 'italic bold 20px "Palatino Linotype", "Times New Roman", serif'; c.lineWidth = 4; c.strokeStyle = 'rgba(10,6,20,.85)'; c.strokeText('✦ ' + S.name + ' ✦', VW / 2, 134); c.fillStyle = S.col; c.fillText('✦ ' + S.name + ' ✦', VW / 2, 134); c.restore();
     };
     // melee fighters jump higher against the god, just enough to reach its core
     const dj = Player.prototype.doJump; Player.prototype.doJump = function (air) { dj.call(this, air); const b = G.boss; if (b && b.ascended && !b.dying && !this.def.ranged) this.vy *= 1.22; };
@@ -12333,6 +12357,96 @@ Object.assign(VI, {
     'JUDGEMENT RAY': 'THÁNH QUANG PHÁN XÉT', 'TWIN RAY': 'SONG QUANG PHÁN XÉT', 'FINAL VERDICT': 'PHÁN QUYẾT CUỐI CÙNG', 'WAVE OF LIGHT': 'SÓNG ÁNH SÁNG', 'SEARING GAZE': 'ÁNH NHÌN THIÊU ĐỐT', 'FEATHER RAIN': 'MƯA LÔNG VŨ', 'TURNING CROWN': 'VƯƠNG MIỆN XOAY', 'PILLARS OF DAWN': 'CỘT BÌNH MINH', 'RISE. EVERYONE SHE EVER FACED, RISE.': 'TRỖI DẬY. TẤT CẢ NHỮNG KẺ CON BÉ TỪNG ĐỐI MẶT, TRỖI DẬY.', 'YOUR OLD ENEMIES REMEMBER YOU.': 'KẺ THÙ CŨ CỦA NGƯƠI VẪN CÒN NHỚ NGƯƠI ĐẤY.', 'COME BACK. ALL OF YOU. FIGHT FOR ME.': 'QUAY VỀ ĐÂY. TẤT CẢ CÁC NGƯƠI. CHIẾN ĐẤU VÌ TA.', 'DAWN SCYTHE': 'LƯỠI HÁI BÌNH MINH', 'ECHOES OF THE DAYS': 'TIẾNG VỌNG NHỮNG NGÀY XƯA', 'DAWNLINE': 'TIA RẠNG ĐÔNG', 'COLONNADE': 'HÀNG CỘT ÁNH SÁNG',
     'Echo of': 'Tiếng Vọng của', 'Echo': 'Tiếng Vọng'
 });
+
+/* ------------------------------ THE FINAL BOSS'S HEALTH BAR ------------------------------ */
+// Once it rises, the bar is the last one of the game and looks it: wider and taller, gold and violet frame
+// with a slow light running along it, a white chip that trails damage, the marks of each section as
+// diamonds, the name in large gold letters with "FINAL BOSS" over it, and a crack of red when it is low.
+(function () {
+    const bb = HUD.bossBar.bind(HUD);
+    HUD.bossBar = function (c, b) {
+        if (!b.ascended || b.dying || b.gone) return bb(c, b);
+        const w = Math.min(980, VW - 220), x = VW / 2 - w / 2, y = 70, h = 24, f = U.clamp(b.hp / b.maxHp, 0, 1), t = G.time, rage = b.rage || 0;
+        b.chip = b.chip === undefined ? f : (b.chip > f ? Math.max(f, b.chip - .0025) : f);
+        c.save(); c.textAlign = 'center';
+        c.font = 'bold 12px "Palatino Linotype", "Times New Roman", serif'; c.fillStyle = '#ff6a4a'; UIText.spaced(c, tr('FINAL BOSS'), VW / 2, y - 34, 6);
+        c.font = 'bold 26px "Palatino Linotype", "Times New Roman", serif'; c.lineWidth = 4; c.strokeStyle = 'rgba(20,6,0,.9)'; const name = tr('THE ARCHITECT, ASCENDED'); c.strokeText(name, VW / 2, y - 9); const ng = c.createLinearGradient(0, y - 30, 0, y - 6); ng.addColorStop(0, '#fff6d8'); ng.addColorStop(1, '#ffb040'); c.fillStyle = ng; c.fillText(name, VW / 2, y - 9);
+        // frame
+        c.shadowColor = rage > 2 ? '#ff3a1a' : '#ffd86b'; c.shadowBlur = 16; c.fillStyle = 'rgba(8,4,14,.85)'; c.fillRect(x - 6, y - 4, w + 12, h + 8); c.shadowBlur = 0;
+        const fg = c.createLinearGradient(x, 0, x + w, 0); fg.addColorStop(0, '#ffd86b'); fg.addColorStop(.5, '#c8b0ff'); fg.addColorStop(1, '#ffd86b'); c.strokeStyle = fg; c.lineWidth = 2; c.strokeRect(x - 6, y - 4, w + 12, h + 8); c.strokeStyle = 'rgba(255,240,200,.35)'; c.lineWidth = 1; c.strokeRect(x - 2, y, w + 4, h);
+        // chip, then the health itself
+        c.fillStyle = 'rgba(255,255,255,.75)'; c.fillRect(x, y + 2, w * b.chip, h - 4);
+        const g = c.createLinearGradient(x, 0, x + w, 0); g.addColorStop(0, '#5a1aa8'); g.addColorStop(.45, '#c040ff'); g.addColorStop(.8, '#ff6a2a'); g.addColorStop(1, '#ffe08a'); c.fillStyle = g; c.fillRect(x, y + 2, w * f, h - 4);
+        const gl = c.createLinearGradient(0, y + 2, 0, y + h - 2); gl.addColorStop(0, 'rgba(255,255,255,.35)'); gl.addColorStop(.5, 'rgba(255,255,255,0)'); c.fillStyle = gl; c.fillRect(x, y + 2, w * f, h - 4);
+        // a light running along the filled part
+        const run = x + ((t * 6) % Math.max(1, w * f)); c.globalCompositeOperation = 'lighter'; const rg = c.createLinearGradient(run - 60, 0, run + 60, 0); rg.addColorStop(0, 'rgba(255,240,200,0)'); rg.addColorStop(.5, 'rgba(255,240,200,.5)'); rg.addColorStop(1, 'rgba(255,240,200,0)'); c.fillStyle = rg; c.fillRect(Math.max(x, run - 60), y + 2, Math.min(120, x + w * f - Math.max(x, run - 60)), h - 4); c.globalCompositeOperation = 'source-over';
+        // the section marks, as diamonds
+        for (const s of CUE.seg) { if (!s.thr) continue; const mx = x + w * s.thr, on = f > s.thr; c.fillStyle = on ? '#fff6d8' : '#5a4a6a'; c.beginPath(); c.moveTo(mx, y - 7); c.lineTo(mx + 6, y + h / 2); c.lineTo(mx, y + h + 7); c.lineTo(mx - 6, y + h / 2); c.closePath(); c.fill(); c.strokeStyle = '#2a1a10'; c.lineWidth = 1.5; c.stroke(); }
+        if (rage > 2.2) { c.strokeStyle = `rgba(255,60,30,${.4 + .3 * Math.sin(t * .2)})`; c.lineWidth = 2; c.strokeRect(x - 9, y - 7, w + 18, h + 14); }
+        c.font = 'bold 12px "Courier New", monospace'; c.fillStyle = '#fff6d8'; c.textAlign = 'right'; c.fillText(Math.ceil(f * 100) + '%', x + w + 2, y + h + 18);
+        c.restore();
+    };
+})();
+
+
+/* ------------------------------ THE HALL, TORN DOWN ------------------------------ */
+// A colonnade of the Throne's hall stands behind the arena. When the god rises, the columns crack one by one
+// (nearest first), break into drums, are lifted off the floor and spiral into its eye, and are gone.
+G2.hall = {
+    cols: null,
+    build() { const A = G.arena; if (!A) return; this.cols = []; const step = 300; let i = 0; for (let x = A.x0 + 120; x < A.x1 - 60; x += step, i++) { const h = 820 + (i % 3) * 90; this.cols.push({ x, w: 74, h, segs: [0, 1, 2, 3].map(k => ({ k })), order: 0 }); } },
+    reset() { this.cols = null; this.t0 = null; },
+    draw(c) {
+        const L = G.level, b = G.boss; if (!L || L.id !== 'architect2') return; if (!this.cols) this.build(); if (!this.cols) return;
+        if (b && b.gone) return; const cam = G.cam, z = cam.zoom, A = G.arena, S = G2.song;
+        const asc = b && b.ascended && S.active, pos = asc ? S.pos() : 0, cx = b ? b.x : (A.x0 + A.x1) / 2, cy = b ? G2.cy(b) : A.y - 500;
+        if (asc && this.t0 === null) { this.t0 = pos; this.cols.slice().sort((p, q) => Math.abs(p.x - cx) - Math.abs(q.x - cx)).forEach((col, n) => { col.order = n; }); }
+        const sx = wx => (wx - cam.x) * z, sy = wy => (wy - cam.y) * z;
+        for (const col of this.cols) {
+            const crackAt = 1.2 + col.order * .75, liftAt = crackAt + .9, tBase = asc ? pos - (this.t0 || 0) : -1;
+            const segH = col.h / 4;
+            for (const sg of col.segs) {
+                let wx = col.x, wy = A.y - segH * (sg.k + .5), rot = 0, sc = 1, al = 1;
+                if (tBase > liftAt) { const u = U.clamp((tBase - liftAt - sg.k * .12) / 2.4, 0, 1); if (u >= 1) continue; const e = u * u * (3 - 2 * u), sw = Math.sin(u * Math.PI) * (160 + sg.k * 40) * (col.x < cx ? -1 : 1);
+                    wx = U.lerp(col.x, cx, e) + sw * .3; wy = U.lerp(wy, cy, e) - Math.sin(u * Math.PI) * 220; rot = e * (3 + sg.k) * (col.x < cx ? 1 : -1); sc = 1 - e * .8; al = 1 - Math.max(0, (u - .75) / .25);
+                    if (G.time % 3 === 0) VFX.add(wx + U.rand(-20, 20), wy + U.rand(-20, 20), 0, 0, '#ffe8a0', 26, 4, 1, 0); }
+                const X = sx(wx), Y = sy(wy), W = col.w * z * sc, H = segH * z * sc;
+                c.save(); c.globalAlpha = al; c.translate(X, Y); c.rotate(rot);
+                const g = c.createLinearGradient(-W / 2, 0, W / 2, 0); g.addColorStop(0, '#1c1828'); g.addColorStop(.5, '#4a4462'); g.addColorStop(1, '#1c1828'); c.fillStyle = g; c.fillRect(-W / 2, -H / 2, W, H + 1); c.fillStyle = 'rgba(255,216,107,.55)'; c.fillRect(-W / 2, -H / 2, 1.5 * z, H); c.fillRect(W / 2 - 1.5 * z, -H / 2, 1.5 * z, H);
+                if (rot) { c.globalCompositeOperation = 'lighter'; c.globalAlpha = al * .5; c.drawImage(Glow.get('#ffe8a0'), -W, -H, W * 2, H * 2); c.globalCompositeOperation = 'source-over'; c.globalAlpha = al; }
+                c.fillStyle = 'rgba(255,216,107,.45)'; c.fillRect(-W * .18, -H / 2, 1.5 * z, H); c.fillRect(W * .18, -H / 2, 1.5 * z, H);
+                if (sg.k === 3) { c.fillStyle = '#3a3248'; c.fillRect(-W * .7, -H / 2 - 12 * z, W * 1.4, 14 * z); c.fillStyle = 'rgba(255,216,107,.6)'; c.fillRect(-W * .7, -H / 2 - 12 * z, W * 1.4, 2 * z); }
+                if (sg.k === 0) { c.fillStyle = '#2a2438'; c.fillRect(-W * .6, H / 2 - 8 * z, W * 1.2, 10 * z); }
+                if (tBase > crackAt) { const k = U.clamp((tBase - crackAt) / .9, 0, 1); c.strokeStyle = `rgba(255,232,170,${.8 * k})`; c.lineWidth = 1.5; c.beginPath(); c.moveTo(-W / 2, H / 2 - 2); c.lineTo(-W * .1, H * .1); c.lineTo(W * .2, -H * .2); c.lineTo(W / 2, -H / 2 + 3); c.stroke(); }
+                c.restore();
+            }
+            if (asc && tBase > crackAt && tBase < liftAt + .1 && !col.shook) { col.shook = true; G.addShake(6); Sound.sfx('crumble', { v: .5 }); VFX.burst(col.x, A.y - 10, '#9a90b0', 20, 6, 30, 7, 1); }
+        }
+    }
+};
+(function () {
+    // behind the god and the arena, in front of the sky
+    const fd = G2.fx.draw; G2.fx.draw = function (c, F, front) { const r = fd.call(this, c, F, front); if (!front) { c.save(); try { G2.hall.draw(c); } catch (e) { console.warn(e); } c.restore(); } return r; };
+    // before it rises (no final-form sky yet) the colonnade still stands in the hall
+    const bd = Backdrop.draw.bind(Backdrop); Backdrop.draw = function (ctx, id, cam, t, level) { bd(ctx, id, cam, t, level); if (level && G.level && level === G.level && G.level.id === 'architect2' && !G.g2fx) { ctx.save(); try { G2.hall.draw(ctx); } catch (e) { } ctx.restore(); } };
+    const ll = Game.loadLevel.bind(Game); Game.loadLevel = function (id, cp) { G2.hall.reset(); return ll(id, cp); };
+})();
+
+/* ------------------------------ "FINAL BOSS" ------------------------------ */
+// At 0:46, as the music gathers itself, the screen says it plainly, then the fight begins on the cut.
+G2.drawFinalCard = function (c, F) {
+    const S = G2.song, k = S.active ? (S.pos() - F.at) : F.t / 60, e = U.clamp(k / .35, 0, 1), sc = 1.5 - .5 * (1 - Math.pow(1 - e, 3)), y = VH * .46;
+    c.save(); c.globalAlpha = Math.min(1, k / .15);
+    c.fillStyle = 'rgba(10,2,4,.55)'; c.fillRect(0, y - 90, VW, 150);
+    c.globalCompositeOperation = 'lighter'; for (let i = 0; i < 5; i++) { const yy = y - 70 + i * 32 + Math.sin(k * 6 + i) * 4, len = VW * U.clamp(k * 2 - i * .1, 0, 1); const g = c.createLinearGradient(VW / 2 - len / 2, 0, VW / 2 + len / 2, 0); g.addColorStop(0, 'rgba(255,60,30,0)'); g.addColorStop(.5, 'rgba(255,120,60,.55)'); g.addColorStop(1, 'rgba(255,60,30,0)'); c.fillStyle = g; c.fillRect(VW / 2 - len / 2, yy, len, 2); }
+    c.globalCompositeOperation = 'source-over';
+    c.translate(VW / 2, y); c.scale(sc, sc); c.textAlign = 'center'; c.font = 'bold 110px "Palatino Linotype", "Times New Roman", serif';
+    c.lineWidth = 10; c.strokeStyle = 'rgba(30,4,0,.95)'; c.strokeText('FINAL BOSS', 0, 0);
+    const g = c.createLinearGradient(0, -90, 0, 10); g.addColorStop(0, '#fff6d8'); g.addColorStop(.45, '#ffb040'); g.addColorStop(1, '#ff3a1a'); c.fillStyle = g; c.shadowColor = '#ff5a2a'; c.shadowBlur = 30; c.fillText('FINAL BOSS', 0, 0); c.shadowBlur = 0;
+    c.font = 'italic 24px "Palatino Linotype", serif'; c.fillStyle = '#ffe8c8'; c.fillText(tr('THE ARCHITECT, ASCENDED'), 0, 44);
+    c.restore();
+};
+(function () { const hd = HUD.draw.bind(HUD); HUD.draw = function (c) { hd(c); const F = G.g2final; if (!F) return; F.t = (F.t || 0) + 1; G2.drawFinalCard(c, F); }; })();
 
 </script>
 <script>
