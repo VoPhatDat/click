@@ -300,3 +300,20 @@ Object.assign(VI, {
     '"Will she drown us again?"': '"Cô ấy có dìm mình nữa không?"', 'Mareva floats, her song broken. The tide waits for an answer.': 'Mareva nổi lềnh bềnh, bài hát vỡ vụn. Thủy triều chờ câu trả lời.', '"Let her go back to the sea, and sing."': '"Để cô ấy về với biển, và hát."', '"End the song."': '"Kết thúc bài hát đi."',
     'Cross the Sea of Tears': 'Vượt Biển Lệ', 'Bring the Second Day its quiet': 'Mang sự yên lặng về cho Ngày Thứ Hai', 'Breath': 'Hơi thở'
 });
+
+/* While Mareva holds Zero under the water, say plainly what to do, every frame: a marker over him and
+   the key to press, brighter once Nyx is close enough to sing. (The toast alone was easy to miss, and
+   Zero sitting still in his bubble looked like a bug.) */
+(function () {
+    const hd = HUD.draw.bind(HUD); HUD.draw = function (c) {
+        hd(c); const z = G.ally, N = G.player; if (!z || !z.captured || !N || Game.state !== 'play' || G.letterbox) return;
+        const cam = G.cam, sx = (z.x - cam.x) * cam.zoom, sy = (z.y - 90 - cam.y) * cam.zoom, near = Math.hypot(z.x - N.x, z.y - N.y) < 160, key = this.keyName(Settings.binds.skill3), pulse = .6 + .4 * Math.sin(G.time * .15);
+        const x = U.clamp(sx, 60, VW - 60), y = U.clamp(sy, 120, VH - 140);
+        c.save(); c.textAlign = 'center'; c.globalAlpha = pulse; c.fillStyle = near ? '#ffffff' : '#e0d0ff';
+        c.beginPath(); c.moveTo(x - 14, y - 22); c.lineTo(x + 14, y - 22); c.lineTo(x, y); c.closePath(); c.fill();
+        c.globalAlpha = 1; c.font = 'bold 16px "Palatino Linotype", "Times New Roman", serif'; c.lineWidth = 4; c.strokeStyle = 'rgba(5,10,25,.9)';
+        const t = near ? tr('Press') + ' [' + key + '] ' + tr('to hum his lullaby!') : tr('Zero is trapped. Dive down to him, then press') + ' [' + key + ']';
+        c.strokeText(t, x, y - 32); c.fillText(t, x, y - 32); c.restore();
+    };
+})();
+Object.assign(VI, { 'Press': 'Bấm', 'to hum his lullaby!': 'để hát ru cho chú!', 'Zero is trapped. Dive down to him, then press': 'Zero bị nhốt. Lặn xuống cạnh chú rồi bấm', 'Bare Hands': 'Tay Không', 'Nothing to hold yet.': 'Chưa cầm được gì.', 'Dive to Zero and Hum his lullaby': 'Lặn xuống chỗ Zero và Ngân Nga bài hát ru của chú' });

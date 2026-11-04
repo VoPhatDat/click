@@ -51,7 +51,7 @@ G2.closeStation = function () { UI.hide(); if (G.level && G.level.id === 'garden
             const x = x0 + i * (w + gap), big = i >= 2;
             c.fillStyle = 'rgba(14,10,6,.75)'; c.fillRect(x, y, w, 58); c.strokeStyle = it.ult && P.ult >= 100 ? '#fff' : it.col || 'rgba(232,192,104,.5)'; c.lineWidth = it.ult && P.ult >= 100 ? 3 : 1.5; c.strokeRect(x, y, w, 58);
             c.font = 'bold 12px "Courier New", monospace'; c.textAlign = 'center'; c.fillStyle = it.col || '#e8d8b0'; c.fillText(this.keyName(Settings.binds[it.k]), x + w / 2, y + 16);
-            if (big && !it.ult) { c.font = 'bold 18px "Palatino Linotype", "Times New Roman", serif'; c.fillText(tr(it.name)[0], x + w / 2, y + 42); }
+            if (big && !it.ult && !(it.cd > 0)) { c.font = 'bold 18px "Palatino Linotype", "Times New Roman", serif'; c.fillText(tr(it.name)[0], x + w / 2, y + 42); }
             if (it.ult) { const k = P.ult / 100; c.fillStyle = U.rgba(it.col, .4); c.fillRect(x + 2, y + 56 - 54 * k, w - 4, 54 * k); c.fillStyle = '#fff'; c.fillText(P.ult >= 100 ? tr('READY') : Math.floor(P.ult) + '%', x + w / 2, y + 40); }
             else if (!big) { c.fillStyle = '#b8a888'; c.font = '10px "Courier New", monospace'; c.fillText(it.name, x + w / 2, y + 40); }
             if (it.cd > 0) { c.fillStyle = 'rgba(0,0,0,.72)'; c.fillRect(x + 1, y + 1, w - 2, 56 * it.cd); c.fillStyle = '#fff'; c.font = 'bold 15px "Courier New", monospace'; c.fillText(Math.ceil(it.t / 60), x + w / 2, y + 40); }

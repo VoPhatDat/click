@@ -9898,6 +9898,23 @@ Object.assign(VI, {
     'Cross the Sea of Tears': 'Vượt Biển Lệ', 'Bring the Second Day its quiet': 'Mang sự yên lặng về cho Ngày Thứ Hai', 'Breath': 'Hơi thở'
 });
 
+/* While Mareva holds Zero under the water, say plainly what to do, every frame: a marker over him and
+   the key to press, brighter once Nyx is close enough to sing. (The toast alone was easy to miss, and
+   Zero sitting still in his bubble looked like a bug.) */
+(function () {
+    const hd = HUD.draw.bind(HUD); HUD.draw = function (c) {
+        hd(c); const z = G.ally, N = G.player; if (!z || !z.captured || !N || Game.state !== 'play' || G.letterbox) return;
+        const cam = G.cam, sx = (z.x - cam.x) * cam.zoom, sy = (z.y - 90 - cam.y) * cam.zoom, near = Math.hypot(z.x - N.x, z.y - N.y) < 160, key = this.keyName(Settings.binds.skill3), pulse = .6 + .4 * Math.sin(G.time * .15);
+        const x = U.clamp(sx, 60, VW - 60), y = U.clamp(sy, 120, VH - 140);
+        c.save(); c.textAlign = 'center'; c.globalAlpha = pulse; c.fillStyle = near ? '#ffffff' : '#e0d0ff';
+        c.beginPath(); c.moveTo(x - 14, y - 22); c.lineTo(x + 14, y - 22); c.lineTo(x, y); c.closePath(); c.fill();
+        c.globalAlpha = 1; c.font = 'bold 16px "Palatino Linotype", "Times New Roman", serif'; c.lineWidth = 4; c.strokeStyle = 'rgba(5,10,25,.9)';
+        const t = near ? tr('Press') + ' [' + key + '] ' + tr('to hum his lullaby!') : tr('Zero is trapped. Dive down to him, then press') + ' [' + key + ']';
+        c.strokeText(t, x, y - 32); c.fillText(t, x, y - 32); c.restore();
+    };
+})();
+Object.assign(VI, { 'Press': 'Bấm', 'to hum his lullaby!': 'để hát ru cho chú!', 'Zero is trapped. Dive down to him, then press': 'Zero bị nhốt. Lặn xuống cạnh chú rồi bấm', 'Bare Hands': 'Tay Không', 'Nothing to hold yet.': 'Chưa cầm được gì.', 'Dive to Zero and Hum his lullaby': 'Lặn xuống chỗ Zero và Ngân Nga bài hát ru của chú' });
+
 </script>
 <script>
 'use strict';
@@ -13172,7 +13189,7 @@ G2.closeStation = function () { UI.hide(); if (G.level && G.level.id === 'garden
             const x = x0 + i * (w + gap), big = i >= 2;
             c.fillStyle = 'rgba(14,10,6,.75)'; c.fillRect(x, y, w, 58); c.strokeStyle = it.ult && P.ult >= 100 ? '#fff' : it.col || 'rgba(232,192,104,.5)'; c.lineWidth = it.ult && P.ult >= 100 ? 3 : 1.5; c.strokeRect(x, y, w, 58);
             c.font = 'bold 12px "Courier New", monospace'; c.textAlign = 'center'; c.fillStyle = it.col || '#e8d8b0'; c.fillText(this.keyName(Settings.binds[it.k]), x + w / 2, y + 16);
-            if (big && !it.ult) { c.font = 'bold 18px "Palatino Linotype", "Times New Roman", serif'; c.fillText(tr(it.name)[0], x + w / 2, y + 42); }
+            if (big && !it.ult && !(it.cd > 0)) { c.font = 'bold 18px "Palatino Linotype", "Times New Roman", serif'; c.fillText(tr(it.name)[0], x + w / 2, y + 42); }
             if (it.ult) { const k = P.ult / 100; c.fillStyle = U.rgba(it.col, .4); c.fillRect(x + 2, y + 56 - 54 * k, w - 4, 54 * k); c.fillStyle = '#fff'; c.fillText(P.ult >= 100 ? tr('READY') : Math.floor(P.ult) + '%', x + w / 2, y + 40); }
             else if (!big) { c.fillStyle = '#b8a888'; c.font = '10px "Courier New", monospace'; c.fillText(it.name, x + w / 2, y + 40); }
             if (it.cd > 0) { c.fillStyle = 'rgba(0,0,0,.72)'; c.fillRect(x + 1, y + 1, w - 2, 56 * it.cd); c.fillStyle = '#fff'; c.font = 'bold 15px "Courier New", monospace'; c.fillText(Math.ceil(it.t / 60), x + w / 2, y + 40); }
