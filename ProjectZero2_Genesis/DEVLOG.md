@@ -199,6 +199,26 @@ Có ba nguyên nhân, đều đã tái hiện bằng bot trên bản cũ (chiêu
 - **"FINAL BOSS":** ở 0:46 màn hình hiện chữ FINAL BOSS lớn, giữ đến cú cắt vào trận ở 0:49.
 - **Cùng chiến đấu:** máu boss ở hình thái tối thượng gấp 3 lần (đã thử 5 lần, rồi đưa về 3 theo yêu cầu: gấp 3 khớp với độ dài bài nhạc khi đánh liên tục).
 
+### Trailer và ảnh nền
+- **Ảnh nền** (`art/`, dựng bằng `node tools/keyart.js`): hình thái tối thượng trên bầu trời xé toạc, cả nhóm đứng trên mỏm đá trước ánh sáng của nó, logo. Có bản 3840×2160 (có và không có logo) và 1920×1080.
+- **Trailer 70 giây** (`node tools/trailer/render.js <nhạc> <video.mp4>`, xem trước bằng `--preview`):
+  - Đạo diễn `tools/trailer/director.js` chạy ngay trong trang game và kết xuất từng khung hình (30 khung/giây, 1920×1080).
+  - Nguồn hình: phông cảnh truyện và nhân vật dựng tay, cùng các trận đánh thật với camera điều khiển tay và chuyển động chậm.
+  - Hậu kỳ: khung 2.39:1, chỉnh màu xanh–cam, viền tối, hạt phim, vệt sáng, chớp trên các cú nhấn của nhạc, chữ trailer giãn cách.
+  - Nhạc: "Epic Action Cinematic Teaser Trailer Music" (không bản quyền), 120 BPM.
+
+| Thời gian | Cảnh |
+|---|---|
+| 0:00–0:16 | Thế giới không có đêm, đứa trẻ biết ngủ, Zero đặt tên Nyx |
+| 0:16–0:30 | Bảy ngày: Cá voi, Mareva, Mẹ Của Rễ, Astraea, Lilith-Varga |
+| 0:30–0:33 | Thanh kiếm cắm trên cát, Nyx một mình, Tứ Kỵ Sĩ tới |
+| 0:32–0:47 | Nyx nhấc kiếm, Archon, Vesper, ký ức của Vesper, The Architect, cả đội |
+| 0:47–0:49 | "Vậy thì hãy chiêm ngưỡng hình thái tối thượng của ta." |
+| 0:49–0:52 | Khoảng lặng: con mắt mở trong bóng tối, Zero và Nyx |
+| 0:52–0:58 | Cao trào: FINAL BOSS, sét, vương miện laser, cả đội lao lên, tiếng vọng, cột sáng phán xét |
+| 0:58–1:04 | Ngày và Đêm, vị thần vỡ tan |
+| 1:04–1:10 | Logo, "Mọi ngày đều cần một đêm", ghi công |
+
 ### Kiểm thử (đều do bot)
 - `node tools/e2e2.js`: chương 1 bằng Nyx (cả tha và giết), 7 nhân vật đánh thật Hiệp Sĩ và Seraphina: PASS.
 - `node tools/e2e3.js`: chiến dịch từ ngày 2 tới cả 4 kết thúc (cutscene, chương, lựa chọn, mở khóa, các hồi, NG+, lưu/tải). Người chơi được giữ sống, bài này kiểm tra mạch truyện, không kiểm tra độ khó: **CAMPAIGN II COMPLETE**.
