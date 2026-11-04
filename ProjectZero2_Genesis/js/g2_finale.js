@@ -89,7 +89,7 @@ Object.assign(BOSS_INTRO, { zshadow: [['ZERO’S SHADOW', 'You never had a shado
 G2.F = { act: () => Save.data.g2.act || 0, setAct(n) { Save.data.g2.act = n; Save.write(); } };
 // Act 1: Vesper pushes Nyx back toward the Throne; the Perfect Mirror answers your most used moves.
 const B_VESPER = {
-    id: 'vesper', name: 'VESPER', title: 'THE BURNED ANGEL', hp: 9000, w: 70, h: 170, col: '#ffb060', female: true, music: 'g2act1', reward: { xp: 2600, cells: 0 },
+    id: 'vesper', name: 'VESPER', title: 'THE BURNED ANGEL', hp: 6400, w: 70, h: 170, col: '#ffb060', female: true, music: 'g2act1', reward: { xp: 2600, cells: 0 },
     init: b => ({ mirror: G2.topMoves(), ring: 0 }),
     aim: b => ({ x: b.x, y: b.y - 100 }), box: b => ({ x: b.x - 35, y: b.y - 170, w: 70, h: 170 }),
     tick(b) {

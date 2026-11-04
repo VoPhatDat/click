@@ -7635,7 +7635,9 @@ const G2 = {
 /* Part II has its own save and settings, so a Part I save is never overwritten. */
 Store.KEY = 'pz2_genesis_save_v1';
 Store.SKEY = 'pz2_genesis_settings_v1';
-Object.assign(DEFAULT_BINDS, { skill3: 'Digit4', form: 'KeyF', weapon: 'KeyQ', nyx: 'KeyN' });
+// skills 1, 2, 3 on keys 1, 2, 3 and the ultimate on 4, in the order the skill bar shows them
+Object.assign(DEFAULT_BINDS, { skill3: 'Digit3', ult: 'Digit4', form: 'KeyF', weapon: 'KeyQ', nyx: 'KeyN' });
+(function () { const ls = Store.loadSettings; if (ls) Store.loadSettings = function () { ls.call(this); const B = Settings.binds; if (B.skill3 === 'Digit4' && B.ult === 'Digit3') { B.skill3 = 'Digit3'; B.ult = 'Digit4'; } }; })();
 Object.assign(ALT_BINDS, { skill3: 'KeyY', form: 'Tab' });
 Object.assign(Settings, { binds: Object.assign({}, DEFAULT_BINDS), soundHints: true });
 
@@ -10970,7 +10972,7 @@ Object.assign(BOSS_INTRO, { zshadow: [['ZERO’S SHADOW', 'You never had a shado
 G2.F = { act: () => Save.data.g2.act || 0, setAct(n) { Save.data.g2.act = n; Save.write(); } };
 // Act 1: Vesper pushes Nyx back toward the Throne; the Perfect Mirror answers your most used moves.
 const B_VESPER = {
-    id: 'vesper', name: 'VESPER', title: 'THE BURNED ANGEL', hp: 9000, w: 70, h: 170, col: '#ffb060', female: true, music: 'g2act1', reward: { xp: 2600, cells: 0 },
+    id: 'vesper', name: 'VESPER', title: 'THE BURNED ANGEL', hp: 6400, w: 70, h: 170, col: '#ffb060', female: true, music: 'g2act1', reward: { xp: 2600, cells: 0 },
     init: b => ({ mirror: G2.topMoves(), ring: 0 }),
     aim: b => ({ x: b.x, y: b.y - 100 }), box: b => ({ x: b.x - 35, y: b.y - 170, w: 70, h: 170 }),
     tick(b) {

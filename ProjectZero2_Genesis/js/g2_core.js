@@ -16,7 +16,9 @@ const G2 = {
 /* Part II has its own save and settings, so a Part I save is never overwritten. */
 Store.KEY = 'pz2_genesis_save_v1';
 Store.SKEY = 'pz2_genesis_settings_v1';
-Object.assign(DEFAULT_BINDS, { skill3: 'Digit4', form: 'KeyF', weapon: 'KeyQ', nyx: 'KeyN' });
+// skills 1, 2, 3 on keys 1, 2, 3 and the ultimate on 4, in the order the skill bar shows them
+Object.assign(DEFAULT_BINDS, { skill3: 'Digit3', ult: 'Digit4', form: 'KeyF', weapon: 'KeyQ', nyx: 'KeyN' });
+(function () { const ls = Store.loadSettings; if (ls) Store.loadSettings = function () { ls.call(this); const B = Settings.binds; if (B.skill3 === 'Digit4' && B.ult === 'Digit3') { B.skill3 = 'Digit3'; B.ult = 'Digit4'; } }; })();
 Object.assign(ALT_BINDS, { skill3: 'KeyY', form: 'Tab' });
 Object.assign(Settings, { binds: Object.assign({}, DEFAULT_BINDS), soundHints: true });
 
