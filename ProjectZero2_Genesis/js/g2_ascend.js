@@ -113,6 +113,7 @@ G2.drawEye = function (c, x, y, R, b) {
     const ix = x + look * R * .35, iy = y + lookY * H * .3, IR = R * .46;
     const ig = c.createRadialGradient(ix, iy, IR * .15, ix, iy, IR); ig.addColorStop(0, '#fff3a0'); ig.addColorStop(.35, '#ffb020'); ig.addColorStop(.75, '#c8401a'); ig.addColorStop(1, '#3a0a04'); c.fillStyle = ig; c.beginPath(); c.arc(ix, iy, IR, 0, TAU); c.fill();
     c.strokeStyle = 'rgba(90,20,0,.6)'; c.lineWidth = 1; for (let i = 0; i < 40; i++) { const a = i / 40 * TAU + Math.sin(t * .01) * .05; c.beginPath(); c.moveTo(ix + Math.cos(a) * IR * .32, iy + Math.sin(a) * IR * .32); c.lineTo(ix + Math.cos(a) * IR * .95, iy + Math.sin(a) * IR * .95); c.stroke(); }
+    if (b.rage > .05) { c.fillStyle = `rgba(255,20,10,${Math.min(.45, b.rage * .15)})`; c.beginPath(); c.arc(ix, iy, IR, 0, TAU); c.fill(); }
     c.strokeStyle = '#1a0402'; c.lineWidth = 3; c.beginPath(); c.arc(ix, iy, IR, 0, TAU); c.stroke();
     c.strokeStyle = 'rgba(255,220,120,.55)'; c.lineWidth = 2.5; c.beginPath(); for (let i = 0; i <= 48; i++) { const a = i / 48 * TAU, rr = IR * (.4 + Math.sin(a * 9 + t * .02) * .03); i ? c.lineTo(ix + Math.cos(a) * rr, iy + Math.sin(a) * rr) : c.moveTo(ix + Math.cos(a) * rr, iy + Math.sin(a) * rr); } c.stroke();
     const lg = c.createRadialGradient(ix, iy, IR * .78, ix, iy, IR); lg.addColorStop(0, 'rgba(40,6,2,0)'); lg.addColorStop(1, 'rgba(40,6,2,.75)'); c.fillStyle = lg; c.beginPath(); c.arc(ix, iy, IR, 0, TAU); c.fill();
@@ -169,6 +170,7 @@ G2.drawAscendedBody = function (c, b) {
     c.save(); c.globalCompositeOperation = 'lighter'; c.globalAlpha = .9; c.drawImage(Glow.get('#ffe8a0'), x - 380, y - 380, 760, 760); c.restore();
     // the robe of light reaching down to the floor, where it can be struck; faint, so the player shows through
     const rg = c.createLinearGradient(0, y, 0, b.A.y); rg.addColorStop(0, 'rgba(255,240,200,.5)'); rg.addColorStop(1, 'rgba(200,170,255,.05)'); c.fillStyle = rg; c.beginPath(); c.moveTo(x - 50, y + 40); c.quadraticCurveTo(x - 140 - Math.sin(t * .03) * 20, b.A.y - 100, x - 170, b.A.y); c.lineTo(x + 170, b.A.y); c.quadraticCurveTo(x + 140 + Math.sin(t * .03) * 20, b.A.y - 100, x + 50, y + 40); c.fill();
+    G2.drawRage && G2.drawRage(c, b, x, y);
     G2.wings.draw(c, b, near);
     for (let r = 0; r < 4; r++) { c.save(); c.translate(x, y); c.rotate((b.rings ? b.rings[r % 3] : 0) * (1 + r * .3) + t * .004 * (r % 2 ? -1 : 1)); c.scale(1, .28 + r * .16); const R = (230 - r * 26) * (1 - ab * .5 + (b.eye ? .55 : 0));
         c.strokeStyle = r % 2 ? 'rgba(200,176,255,.85)' : 'rgba(255,216,107,.9)'; c.lineWidth = 7 - r; c.beginPath(); c.arc(0, 0, R, 0, TAU); c.stroke();
@@ -188,6 +190,8 @@ G2.drawAscendedBody = function (c, b) {
 
 G2.cy = b => b.y - 380 * (b.scale || 1);
 /* ------------------------------ THE TRANSFORMATION, 0:00-0:49 ------------------------------ */
+// lines in the cut scenes land on their beat, not after whatever was still being said
+G2.sayNow = (who, text, dur) => { G.sayQ = []; G.sayCur = null; G.say(who, text, dur); };
 const waitBar = function* (bar) { while (G2.song.pos() < SONG.t(bar) - .008) yield 1; };
 G2.ascendIntro = function* (b) {
     const S = G2.song, P = G.player; G.warns = []; G.projs = G.projs.filter(p => p.friendly); G.g2night = 0; G.g2xf = null; G.g2grav = 1; G.level.forceNyx = false; b.spin = 0; b.rot = 0;
@@ -195,19 +199,19 @@ G2.ascendIntro = function* (b) {
     // the camera stays far back for most of it: the point is how big this is, and how small everyone else is
     const WIDE = .52, cx = (b.A.x0 + b.A.x1) / 2, floorCam = s => b.A.y - 350 * s;
     G.lockInput = true; G.letterbox = 1; G.cineCam = { x: cx, y: b.A.y - 300, zoom: .9 };
-    G.say('THE ARCHITECT', 'THEN BEHOLD WHAT I TRULY AM.', 150);
+    G2.sayNow('THE ARCHITECT', 'THEN BEHOLD WHAT I TRULY AM.', 150);
     G2.team.arrive();
     S.start(0); b.ascended = 1; b.wings = 0; b.eye = 0; b.absorb = 0; b.open = 0; b.wingS = null; b.lb = -1; b.scale = .8; b.form2 = 0; G.g2fx = { sky: 0, motes: 0, cracks: 0, mode: 'pull' };
     yield* b.moveTo(cx, b.A.y + 40, 60);
     // 0:00-0:10 it swallows the Throne: the light, the rings, the walls are drawn into it
     while (S.pos() < CUE.eyeT) { const k = S.pos() / CUE.eyeT; b.absorb = k; b.scale = .8 + k * .2; G.g2fx.motes = .2 + k * .5; G.g2fx.sky = k * .3; G.cineCam.zoom = U.lerp(.9, WIDE + .08, k); G.cineCam.x = cx; G.cineCam.y = floorCam(b.scale);
-        if (S.bar() !== b.lb) { b.lb = S.bar(); G.flash = .1; G.addShake(2 + k * 5); if (b.lb === 3) G.say('VESPER', 'It is eating the Throne... the light, the walls, all of it.', 150); } yield 1; }
+        if (S.bar() !== b.lb) { b.lb = S.bar(); G.flash = .1; G.addShake(2 + k * 5); if (b.lb === 3) G2.sayNow('VESPER', 'It is eating the Throne... the light, the walls, all of it.', 150); } yield 1; }
     // 0:10 the eye opens: one close look, then straight back out
-    G.flash = 1; G.addShake(24); b.eye = 1; b.dilate = 1; G.g2fx.cracks = .2; VFX.ring(b.x, G2.cy(b), 600, '#ffffff', 30, 14); G.say('NYX', 'It opened its eye. It is looking right at me.', 110); G.cineCam.zoom = 1.25; G.cineCam.y = G2.cy(b);
+    G.flash = 1; G.addShake(24); b.eye = 1; b.dilate = 1; G.g2fx.cracks = .2; VFX.ring(b.x, G2.cy(b), 600, '#ffffff', 30, 14); G2.sayNow('NYX', 'It opened its eye. It is looking right at me.', 110); G.cineCam.zoom = 1.25; G.cineCam.y = G2.cy(b);
     yield* waitBar(CUE.build);
     // 0:11-0:22 the build: the wings unfold, it grows, the sky gives way; the camera pulls all the way back
     while (S.pos() < SONG.t(CUE.drop) - .02) { const k = (S.pos() - SONG.t(CUE.build)) / (SONG.t(CUE.drop) - SONG.t(CUE.build)); b.wings = k * 6; b.dilate = .5; b.scale = 1 + k * .3; G.g2fx.sky = .3 + k * .4; G.g2fx.motes = .7 + k * .3; G.cineCam.zoom = U.lerp(1.25, WIDE, Math.min(1, k * 1.6)); G.cineCam.x = cx; G.cineCam.y = U.lerp(G2.cy(b), floorCam(b.scale), Math.min(1, k * 1.6));
-        if (S.bar() !== b.lb) { b.lb = S.bar(); G.addShake(3 + k * 8); G.flash = .15; if (b.lb === 10) G.say('ZERO', 'Wings. Meridian always wanted a god with wings.', 120); if (b.lb === 13) G.say('ROOK', 'It is still growing. Everyone, fall back to Nyx!', 120); } yield 1; }
+        if (S.bar() !== b.lb) { b.lb = S.bar(); G.addShake(3 + k * 8); G.flash = .15; if (b.lb === 10) G2.sayNow('ZERO', 'Wings. Meridian always wanted a god with wings.', 120); if (b.lb === 13) G2.sayNow('ROOK', 'It is still growing. Everyone, fall back to Nyx!', 120); } yield 1; }
     // 0:22 the drop: the god in full, a crown, a second halo, swords of light; the sky breaks
     b.wings = 6; G.flash = 1; G.addShake(34); G.g2fx.mode = 'swirl'; G.g2fx.sky = 1; G.g2fx.cracks = .6; G.g2fx.motes = 1; for (let i = 0; i < 4; i++) VFX.ring(b.x, G2.cy(b), 500 + i * 300, i % 2 ? '#c8b0ff' : '#ffe8a0', 30 + i * 8, 16); G.cineCam.zoom = WIDE;
     // the name comes in on the drop, then sinks to the bottom of the screen so it does not cover the god
@@ -216,11 +220,11 @@ G2.ascendIntro = function* (b) {
     while (S.pos() < SONG.t(CUE.name) - .02) { const bar = S.bar(), k = (S.pos() - SONG.t(CUE.drop)) / (SONG.t(CUE.name) - SONG.t(CUE.drop));
         b.scale = Math.min(1.45, 1.3 + k * .6); b.form2 = Math.min(1, k * 3); G.cineCam.x = cx + Math.sin(k * Math.PI * 2) * 160; G.cineCam.y = floorCam(b.scale) + Math.cos(k * Math.PI * 2) * 30; G.cineCam.zoom = WIDE + Math.sin(k * Math.PI) * .12; G.g2fx.cracks = .6 + k * .4;
         if (bar !== b.lb) { b.lb = bar; G.addShake(bar % 4 === 0 ? 10 : 4); if (bar % 4 === 0) { G.flash = .35; VFX.ring(b.x, G2.cy(b), 900, '#ffe8a0', 26, 10); } b.dilate = bar % 2;
-            if (bar === 17) G.say('THE ARCHITECT', 'LOOK AT ME. I AM THE SEVENTH DAY YOU REFUSED.', 170);
-            if (bar === 21) G.say('NYX', 'Nobody asked for you. Not him, not me, not anyone.', 150);
-            if (bar === 24) G.say('THE ARCHITECT', 'THEN I WILL BE THE GOD NOBODY ASKED FOR.', 160);
-            if (bar === 28) G.say('ZERO', 'Nyx. Stay by my side this time.', 110);
-            if (bar === 30) G.say('NYX', 'Always.', 80);
+            if (bar === 17) G2.sayNow('THE ARCHITECT', 'LOOK AT ME. I AM THE SEVENTH DAY YOU REFUSED.', 170);
+            if (bar === 21) G2.sayNow('NYX', 'Nobody asked for you. Not him, not me, not anyone.', 150);
+            if (bar === 24) G2.sayNow('THE ARCHITECT', 'THEN I WILL BE THE GOD NOBODY ASKED FOR.', 160);
+            if (bar === 28) G2.sayNow('ZERO', 'Nyx. Stay by my side this time.', 110);
+            if (bar === 30) G2.sayNow('NYX', 'Always.', 80);
         }
         yield 1; }
     // 0:46 the name is whole; it holds on the quiet bars
@@ -228,7 +232,7 @@ G2.ascendIntro = function* (b) {
     yield* waitBar(CUE.fight);
     // 0:49 hard cut to the fight, with a fresh health bar
     G.g2title = null; G.flash = .9; G.addShake(26); G.letterbox = 0; G.cineCam = null; G.lockInput = false; P.inv = Math.max(P.inv, 60); b.scale = 1.45; b.form2 = 1;
-    b.maxHp = b.hp = Math.round(4800 * Game.diff.bossHp * (G2.team && G.g2team ? 2.3 : 1)); b.hbar = 1; b.dilate = 0;
+    b.maxHp = b.hp = Math.round(4800 * Game.diff.bossHp * (G2.team && G.g2team ? 3 : 1)); b.hbar = 1; b.dilate = 0;
 };
 
 /* ------------------------------ THE FIGHT, CUT TO THE SONG ------------------------------ */
@@ -262,7 +266,7 @@ G2.ascendMusic = function (b) {
 // A sword cut of light: a crescent that grows with the blade that makes it, white at the edge,
 // coloured in the body, with a soft bloom; it stays in the air like a scar while the god cracks.
 G2.drawSlash = function (c, S) {
-    const dx = S.ex - S.sx, dy = S.ey - S.sy, L = Math.hypot(dx, dy) || 1, nx = -dy / L, ny = dx / L, bulge = L * .1, W = 34, N = 40, k = U.clamp(S.k, 0, 1); if (k <= 0) return;
+    const dx = S.ex - S.sx, dy = S.ey - S.sy, L = Math.hypot(dx, dy) || 1, nx = -dy / L, ny = dx / L, bulge = 0, W = 34, N = 40, k = U.clamp(S.k, 0, 1); if (k <= 0) return;
     const age = (G.time - S.born) / 60, pulse = .85 + Math.sin(G.time * .2) * .15, pt = u => { const q = 4 * u * (1 - u); return [S.sx + dx * u + nx * bulge * q, S.sy + dy * u + ny * bulge * q]; };
     const shape = wm => { c.beginPath(); for (let i = 0; i <= N; i++) { const [x, y] = pt(i / N * k), w = W * wm * Math.pow(Math.sin(Math.PI * i / N), .7); i ? c.lineTo(x + nx * w, y + ny * w) : c.moveTo(x, y); } for (let i = N; i >= 0; i--) { const [x, y] = pt(i / N * k), w = W * wm * .22 * Math.sin(Math.PI * i / N); c.lineTo(x - nx * w, y - ny * w); } c.closePath(); };
     c.save(); c.globalCompositeOperation = 'lighter';
@@ -282,7 +286,7 @@ G2.dn = {
     step(b, p, T0) {
         if (!this.actors) return; const sc = b.scale || 1, bt = SONG.beat;
         for (const a of this.actors) { const t0 = T0 + (a.side > 0 ? 2 : 0) * bt, s = a.side, // Zero cuts from the upper left, Nyx from the upper right
-                sx = b.x + s * 420 * sc, sy = b.y - 720 * sc, ex = b.x - s * 420 * sc, ey = Math.min(b.A.y, b.y - 40 * sc), home = b.x + s * 380, land = b.x - s * 330;
+                Cy = G2.cy(b) + 30, D = Math.min(400, b.A.y - 70 - Cy), sx = b.x + s * D, sy = Cy - D + 50, ex = b.x - s * D, ey = Cy + D + 50, home = b.x + s * 380, land = b.x - s * 330;
             a.px = a.x; a.py = a.y;
             if (p < t0 - 2 * bt) { a.x = home; a.y = b.A.y; a.facing = -s; this.play(a, 'crouch'); }
             else if (p < t0) { const k = (p - (t0 - 2 * bt)) / (2 * bt), e = 1 - (1 - k) * (1 - k); a.x = U.lerp(home, sx, e); a.y = U.lerp(b.A.y, sy, e) - Math.sin(k * Math.PI) * 60; a.facing = -s; this.play(a, 'djump'); }
@@ -298,19 +302,19 @@ G2.ascendDeath = function* (b) {
     const S = G2.song; b.dying = 1; G.lockInput = true; G.warns = []; G.projs = G.projs.filter(p => p.friendly); G.letterbox = 1; G.cineCam = { x: b.x, y: G2.cy(b), zoom: 1.15 };
     S.setLoop(null); if (S.pos() < SONG.t(CUE.dying) - .05 || S.jump) S.jumpTo(CUE.dying, true); yield 2; yield* waitBar(CUE.dying);
     b.blink = 1; b.open = 1; G.flash = .6; G.addShake(12); if (G.g2fx) G.g2fx.mode = 'pull';
-    G.say('ZERO, AS HE WAS ON THE ALTAR', 'I am what he forgave... and never healed.', Math.round(SONG.bar * 60 * 3));
+    G2.sayNow('ZERO, AS HE WAS ON THE ALTAR', 'I am what he forgave... and never healed.', Math.round(SONG.bar * 60 * 3));
     yield* waitBar(CUE.dying + 4);
-    G.say('NYX', 'Then let us heal you. Uncle, now!', Math.round(SONG.bar * 60 * 1.5));
+    G2.sayNow('NYX', 'Then let us heal you. Uncle, now!', Math.round(SONG.bar * 60 * 1.5));
     // DAY AND NIGHT: Zero and Nyx crouch on either side, leap, and cut through the god on the beat, gold then violet
     G2.dn.start(b); G.cineCam = { x: b.x, y: b.A.y - 500, zoom: .56 };
     const T0 = SONG.t(CUE.dying + 6); let cutG = false, cutN = false;
     while (S.pos() < T0 + SONG.beat * 4) { const p = S.pos(); G2.dn.step(b, p, T0);
-        if (!cutG && p >= T0) { cutG = true; Sound.sfx('swing_h'); G.flash = .35; G.addShake(16); G.say('ZERO', 'Day.', 50); }
-        if (!cutN && p >= T0 + SONG.beat * 2) { cutN = true; Sound.sfx('swing_h'); G.flash = .35; G.addShake(16); G.say('NYX', 'Night.', 50); G.g2title = { name: tr('DAY AND NIGHT'), sub: '', t: 0, dur: 60 }; }
+        if (!cutG && p >= T0) { cutG = true; Sound.sfx('swing_h'); G.flash = .35; G.addShake(16); G2.sayNow('ZERO', 'Day.', 50); }
+        if (!cutN && p >= T0 + SONG.beat * 2) { cutN = true; Sound.sfx('swing_h'); G.flash = .35; G.addShake(16); G2.sayNow('NYX', 'Night.', 50); G.g2title = { name: tr('DAY AND NIGHT'), sub: '', t: 0, dur: 60, y: VH * .2 }; }
         yield 1; }
     let lb = -1; while (S.pos() < SONG.t(CUE.die) - .01) { G2.dn.step(b, S.pos(), T0); const n = S.beatN(); if (n !== lb) { lb = n; b.crack = Math.min(1, (b.crack || 0) + .04); for (let i = 0; i < 14; i++) VFX.add(b.x + U.rand(-600, 600), b.y - 760 + U.rand(-100, 60), U.rand(-1, 1), U.rand(3, 7), i % 2 ? '#ffe8a0' : '#cfe8ff', 90, 3, 1, 0); if (n % 4 === 0) G.addShake(5); } G.cineCam.zoom = Math.max(.56, G.cineCam.zoom - .0003); if (S.bar() >= CUE.dying + 8) G.g2title = null; yield 1; }
     // 2:45 death, then the two last hits
-    G.flash = 1; G.addShake(20); b.wings = 0; G.say('', tr('The false god shattered into a million pieces of glass, falling like shooting stars.'), Math.round(SONG.bar * 60 * 2));
+    G.flash = 1; G.addShake(20); b.wings = 0; G2.sayNow('', tr('The false god shattered into a million pieces of glass, falling like shooting stars.'), Math.round(SONG.bar * 60 * 2));
     for (const hit of [CUE.boom1, CUE.boom2]) { yield* waitBar(hit); G.flash = 1; G.addShake(36); Sound.sfx('bigboom'); for (let i = 0; i < 5; i++) VFX.ring(b.x, G2.cy(b), 300 + i * 240, i % 2 ? '#8a5aff' : '#ffe8a0', 30 + i * 6, 16); VFX.burst(b.x, G2.cy(b), '#ffffff', 90, 15, 60, 12, 1); if (hit === CUE.boom2) { b.gone = true; if (G2.dn.actors) G2.dn.actors.forEach(a => { a.slash = null; }); if (G.g2fx) { G.g2fx.sky = 0; G.g2fx.cracks = 0; } } }
     yield* waitBar(CUE.end); G.flash = 1; S.stop(3); yield 90;
     G2.dn.end(); G.g2fx = null; G.cineCam = null; G.letterbox = 0; G.lockInput = false; G2.F.setAct(4); G2.cut('g2choiceScene', () => G2.throneChoice());
@@ -319,7 +323,7 @@ G2.ascendDeath = function* (b) {
 // The name card: the band fades in, then the name comes in letter by letter out of the light, the way a
 // name is remembered rather than announced; the subtitle follows once the name is whole.
 G2.drawTitle = function (c, T) {
-    const sk = T.sinkAt !== undefined && G2.song.active ? U.clamp((G2.song.pos() - T.sinkAt) / 1.4, 0, 1) : 0, ek = sk * sk * (3 - 2 * sk), Y0 = U.lerp(VH * .62, VH * .965, ek), dur = T.dur || 200, name = T.name, n = name.length, band = Math.min(1, T.t / 40) * (1 - ek * .45), sp = 5;
+    const sk = T.sinkAt !== undefined && G2.song.active ? U.clamp((G2.song.pos() - T.sinkAt) / 1.4, 0, 1) : 0, ek = sk * sk * (3 - 2 * sk), Y0 = U.lerp(T.y || VH * .62, VH * .965, ek), dur = T.dur || 200, name = T.name, n = name.length, band = Math.min(1, T.t / 40) * (1 - ek * .45), sp = 5;
     c.save(); if (ek > 0) { const z = 1 - ek * .5; c.translate(VW / 2, Y0); c.scale(z, z); c.translate(-VW / 2, -Y0); } c.globalAlpha = band; const bg = c.createLinearGradient(0, 0, VW, 0); bg.addColorStop(0, 'rgba(6,4,12,0)'); bg.addColorStop(.2, 'rgba(6,4,12,.7)'); bg.addColorStop(.8, 'rgba(6,4,12,.7)'); bg.addColorStop(1, 'rgba(6,4,12,0)'); c.fillStyle = bg; c.fillRect(0, Y0 - 78, VW, 130);
     const lw = Math.min(1, T.t / 60) * VW * .36; c.fillStyle = 'rgba(255,216,107,.85)'; c.fillRect(VW / 2 - lw, Y0 - 78, lw * 2, 1.5); c.fillRect(VW / 2 - lw, Y0 + 50, lw * 2, 1.5);
     c.font = 'bold 60px "Palatino Linotype", "Times New Roman", serif'; c.textAlign = 'left'; c.textBaseline = 'alphabetic';
@@ -346,8 +350,8 @@ G2.drawTitle = function (c, T) {
         if (b.blink > 0 && !b.dying) b.blink = Math.max(0, b.blink - .1); else if (!b.dying && Math.random() < .004) b.blink = 1;
         Light.add(b.x, G2.cy(b), 600, '#ffe8a0', 1); G2.ascendMusic(b);
     };
-    B.aim = b => (b.ascended ? { x: b.x, y: b.y - 260 * (b.scale || 1) } : { x: b.x, y: b.y - 200 });
-    B.box = b => (b.ascended ? { x: b.x - 120 * (b.scale || 1), y: b.y - 470 * (b.scale || 1), w: 240 * (b.scale || 1), h: 470 * (b.scale || 1) } : { x: b.x - 110, y: b.y - 320, w: 220, h: 240 });
+    B.aim = b => (b.ascended ? { x: b.x, y: G2.cy(b) + 60 } : { x: b.x, y: b.y - 200 });
+    B.box = b => (b.ascended ? (() => { const s = b.scale || 1, y0 = G2.cy(b) - 170 * s, y1 = b.A.y - 210; return { x: b.x - 130 * s, y: y0, w: 260 * s, h: Math.max(120, y1 - y0) }; })() : { x: b.x - 110, y: b.y - 320, w: 220, h: 240 });
     B.death = b => (b.ascended ? G2.ascendDeath(b) : death(b));
     const hd = HUD.draw.bind(HUD); HUD.draw = function (c) {
         if (G.g2fx && G.boss) G2.fx.draw(c, G.g2fx, true);

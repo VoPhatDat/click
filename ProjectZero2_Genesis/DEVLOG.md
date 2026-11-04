@@ -86,20 +86,31 @@ Cấu trúc bài được đo bằng FFT: 172.27 BPM, phách đầu ở 0.232 gi
 - Mắt mở đúng tiếng "bùm" ở 10,7 giây. Tiếng bùm nằm giữa ô nhịp 7, không phải ở vạch nhịp như bản trước. Vị trí bài hát trừ đi độ trễ âm thanh của thiết bị.
 - Tên boss hiện dần ở cú drop 0:22, rồi chìm xuống dưới màn hình cho khỏi che.
 - Mắt boss nhìn theo một người: thường là người gần nhất, thỉnh thoảng chọn ngẫu nhiên. Đòn ngắm bắn vào đúng người đó.
-- Kỹ năng có tên, hiện dưới thanh máu boss:
+- Kỹ năng có tên, hiện dưới thanh máu boss. Mỗi mốc máu boss học thêm chiêu mới, chiêu cũ vẫn giữ:
 
-| Kỹ năng | Đòn |
+| Mốc máu | Chiêu thêm vào |
 |---|---|
-| Thánh Quang Phán Xét | cột sáng từ con mắt giáng xuống người đang bị nhìn |
-| Lưỡi Hái Bình Minh | một đoạn sàn được đánh dấu, rồi chân tia sáng quét qua |
-| Tia Rạng Đông | một tia ngang sàn, thấp (nhảy qua) hoặc cao (đứng yên); mỗi lần chỉ một tia |
-| Hàng Cột Ánh Sáng | 8 cột, xen kẽ chẵn lẻ theo ô nhịp |
-| Tiếng Vọng Những Ngày Xưa | triệu hồi bản yếu của boss các ngày trước, có thanh máu và tên; một số đồng đội (ngẫu nhiên) đánh chúng trước |
+| 100–66% | Cột Bình Minh, Thánh Quang Phán Xét (cột sáng giáng xuống người đang bị nhìn), loạt đạn, vòng cầu sáng, lần triệu hồi đầu tiên |
+| 66–40% | Tia Rạng Đông (một tia ngang, thấp hoặc cao), Hàng Cột Ánh Sáng (xen kẽ), Lưỡi Hái Bình Minh (quét một đoạn sàn), Mưa Lông Vũ |
+| 40–15% | Song Quang Phán Xét (2 cột), Ánh Nhìn Thiêu Đốt (laser từ mắt cháy dọc cả sàn, nhảy qua), Sóng Ánh Sáng, Vương Miện Xoay (3 tia laser xoay từ con mắt) |
+| 15–0% | Phán Quyết Cuối Cùng (cột sáng lên mọi người), Vương Miện Xoay 5 tia và nhanh hơn, đạn dày hơn |
 
+- Tiếng Vọng Những Ngày Xưa: boss mở cột sáng màu, hô một câu, rồi gọi bản yếu của các boss cũ ra.
+  - Lần đầu ngay ở 4 ô nhịp đầu trận, rồi ở đầu mỗi mốc máu và một lần gần cuối.
+  - Tối đa 3 con cùng lúc. Cả 6 boss cũ đều có thể xuất hiện.
+  - Mỗi con to gấp 1,45 lần, có tên và thanh máu riêng (420 máu), và đã bỏ chiêu gọi thêm quân.
+- Boss thay đổi khi máu thấp dần:
+  - hào quang đỏ lan ra, con mắt đỏ dần, vòng xoay nhanh hơn;
+  - từ mốc thứ ba có vết nứt đỏ trên thân;
+  - bầu trời đỏ và chớp ở mốc cuối.
+- Chỉ thân và lõi boss mới nhận đòn, phần áo choàng sáng sát đất thì không.
+  - Nhân vật cận chiến phải nhảy (nhảy cao hơn 22%, có nhảy đôi) để chém.
+  - AI đồng đội cận chiến tự bật nhảy, nhảy đôi ở đỉnh và chém trên không. Trong mô phỏng, 826 đòn trúng trên không so với 54 đòn dưới đất.
+- Chọn Cùng chiến đấu thì máu boss ở hình thái tối thượng gấp 3 lần.
 - Mỗi ô nhịp có tối đa một đòn phủ sàn; các đòn còn lại là đòn ngắm, nên luôn có đường né.
 - Phông nền đổi hẳn khi boss hóa thần: bầu trời tím thẫm, vầng hào quang khổng lồ, cực quang vàng, mảnh vỡ của Ngai bay lên.
 - Lõi khi vỡ ra: Zero quỳ như trên bàn tế (thay cho vạch xanh trước đây).
-- Ngày và Đêm: vết chém hình trăng khuyết, mọc dần theo đúng đường bay của Zero và Nyx; mỗi người lướt chậm hơn để thấy rõ cả hai nhát.
+- Ngày và Đêm: hai vết chém thẳng giao nhau đúng ở con mắt (hơi lệch xuống), mọc dần theo đường bay của Zero và Nyx. Chữ "NGÀY VÀ ĐÊM" hiện phía trên. Lời thoại trong cảnh biến hình và cảnh chết hiện ngay, không xếp hàng chờ câu trước.
 - Nhân vật cận chiến nhảy cao hơn 22% trong trận này, vừa đủ chạm lõi boss. Nhảy đôi vẫn có như thường.
 - Trong game không dùng chữ "con bài cuối"; boss nói "Vậy thì hãy chiêm ngưỡng hình thái tối thượng của ta."
 - Cảnh báo đòn hiện trước 2 phách, đòn rơi đúng phách.
@@ -119,7 +130,7 @@ Cấu trúc bài được đo bằng FFT: 172.27 BPM, phách đầu ở 0.232 gi
 - Camera lùi xa để thấy cả đội.
 - Cân bằng:
   - mỗi đồng đội gây khoảng 28% sát thương;
-  - ở hình thái tối thượng, boss có máu gấp 2,3 lần khi chọn Cùng chiến đấu.
+  - ở hình thái tối thượng, boss có máu gấp 3 lần khi chọn Cùng chiến đấu.
 - Nyx học Bài Ru Gọi Về từ Sable (Tử Thần) cuối Ngày Thứ Năm, ngay sau khi gặp Tứ Kỵ Sĩ. Từ đó, ngoài màn cuối, thanh Linh Lực đầy cũng cứu người chơi khỏi một đòn chí mạng.
 - Bot giả lập (người chơi không né) đánh thắng trận cuối khi có cả đội, với 7 lần gục và 4 lần hồi sinh.
 

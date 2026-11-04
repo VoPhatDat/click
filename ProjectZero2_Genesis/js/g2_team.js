@@ -45,7 +45,12 @@ G2.teamBrain = function (z) {
     if (Math.abs(dx) > 380 && z.dodgeCd <= 0 && z.grounded && (G.time + z.slot * 7) % 45 === 0) { z.facing = U.sign(dx); S['!dodge'] = true; }
     const reach = !ranged && Math.abs(a.x - z.x) < box.w / 2 + 70 && z.y > box.y && z.y - 80 < box.y + box.h;
     if (ranged || reach) { z.facing = U.sign(a.x - z.x) || 1; if ((G.time + z.slot * 3) % (ranged ? 5 : 4) === 0) { S['!attack'] = true; S.attack = true; } else S.attack = ranged; }
-    if (!ranged && box.y + box.h < z.y - 60 && z.grounded && (G.time + z.slot * 11) % 50 === 0) S['!jump'] = S.jump = true;
+    // melee against something tall: jump, jump again at the top, and cut on the way
+    if (!ranged && box.y + box.h < z.y - 60 && Math.abs(a.x - z.x) < box.w / 2 + 160) {
+        if (z.grounded && (G.time + z.slot * 11) % 34 === 0) S['!jump'] = S.jump = true;
+        else if (!z.grounded && z.vy > -3 && z.jumps < 2) S['!jump'] = S.jump = true;
+        if (!z.grounded) { S.jump = true; z.facing = U.sign(a.x - z.x) || 1; if ((G.time + z.slot) % 4 === 0) S['!attack'] = S.attack = true; }
+    }
     const k = (G.time + z.slot * 37) % 600; if (k === 100) S['!skill1'] = true; if (k === 260 && z.id !== 'nyx') S['!skill2'] = true; if (k === 420 && z.id !== 'ysolde') S['!skill3'] = true; if (z.ult >= 100 && (G.time + z.slot * 50) % 400 === 0) S['!ult'] = true;
     if (z.form && z.balance < 20 && G.time % 40 === 0) S['!form'] = true; if (z.form === 'wrath' && z.balance > 78) S['!form'] = true;
     return S;

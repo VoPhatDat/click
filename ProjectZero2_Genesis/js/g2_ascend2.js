@@ -13,6 +13,7 @@
  *   - Melee fighters jump higher in this fight, just enough to reach the god's core.
  */
 G2.beams = [];
+G2.lasers = [];
 G2.skillCap = null;
 G2.castSkill = function (name, col = '#ffe8a0') { G2.skillCap = { name: tr(name), col, t: 0 }; Sound.sfx('charge', { v: .5 }); };
 
@@ -73,14 +74,38 @@ G2.SK = {
     },
     volley(b, n, sp = .14) { const P = b.tgt || G.player, cy = G2.cy(b); b.dilate = 1; for (let i = 0; i < n; i++) { const a = Math.atan2(P.y - 36 - cy, P.x - b.x) + (i - (n - 1) / 2) * sp; Combat.eshoot(b, 'bolt', b.x, cy + 40, a, 11, b.D(10), { r: 7, life: 150, col: '#ffd0a0', len: 30 }); } },
     ring(b, n, bar) { const cy = G2.cy(b); for (let i = 0; i < n; i++) Combat.eshoot(b, 'orb', b.x, cy, i / n * TAU + bar * .2, 4.6, b.D(9), { r: 10, life: 220, col: '#ffe8a0' }); },
+    pillar(b, tele, x, w = 110) { const A = b.A; x = U.clamp(x, A.x0 + w / 2, A.x1 - w / 2); Combat.warn({ shape: 'rect', x: x - w / 2, y: A.y - 620, w, h: 620, t: tele, dmg: b.D(16), src: b, col: '#ffe8a0', onFire: () => { VFX.burst(x, A.y - 10, '#fff4d0', 24, 9, 30, 8, 1); G.addShake(5); } }); },
+    // eight blades of light rolling across the floor from the side away from the target
+    wave(b, tele) { const A = b.A, P = b.tgt || G.player, dir = P.x > b.x ? -1 : 1, x0 = dir > 0 ? A.x0 : A.x1; b.dilate = 1; for (let i = 0; i < 8; i++) { const x = x0 + dir * i * (A.x1 - A.x0) / 8; Combat.warn({ shape: 'rect', x: Math.min(x, x + dir * 130), y: A.y - 420, w: 130, h: 420, t: tele + i * 6, dmg: b.D(17), src: b, col: '#ff8a4a' }); } },
+    // the eye burns a line along the whole floor, end to end: jump it as it passes
+    gaze(b, tele) {
+        const A = b.A, dir = Math.random() < .5 ? 1 : -1, x0 = dir > 0 ? A.x0 + 20 : A.x1 - 20, x1 = dir > 0 ? A.x1 - 20 : A.x0 + 20, n = 16, run = 70; b.dilate = 1;
+        Combat.warn({ shape: 'rect', x: A.x0, y: A.y - 90, w: A.x1 - A.x0, h: 90, t: tele, dmg: 0, src: b, col: '#ff6a3a' });
+        for (let i = 0; i < n; i++) { const xa = U.lerp(x0, x1, i / n), xb = U.lerp(x0, x1, (i + 1) / n); Combat.warn({ shape: 'rect', x: Math.min(xa, xb), y: A.y - 80, w: Math.abs(xb - xa), h: 80, t: tele + Math.round(i / n * run), dmg: b.D(15), src: b, col: 'rgba(0,0,0,0)' }); }
+        G2.beams.push({ kind: 'sweep', x0, x1, delay: tele, dur: run, life: tele + run + 12, w: 30, col: '#ff5a2a' });
+    },
+    // thin feathers of light falling at random, a little ahead of the fighters
+    feathers(b, tele, n) { const A = b.A; for (let i = 0; i < n; i++) { const x = U.rand(A.x0 + 40, A.x1 - 40); Combat.warn({ shape: 'rect', x: x - 18, y: A.y - 620, w: 36, h: 620, t: tele + i * 3, dmg: b.D(11), src: b, col: '#e8dcff' }); } },
+    // the Turning Crown: arms of laser from the eye, slowly turning, with gaps to stand in
+    crown(b, n, spin) { G2.castSkill('TURNING CROWN', '#ff6a4a'); b.dilate = 1; G2.lasers.push({ n, a0: Math.random() * TAU, spin: spin * (Math.random() < .5 ? 1 : -1), warm: 70, act: 220, age: 0, len: 1600, dmg: b.D(14) }); Sound.sfx('charge'); },
+    // the summoning: a column of each echo's colour opens first, the god calls, then they step out
+    summon(b, n) {
+        const pool = ['seraphina', 'mareva', 'gardener', 'astraea', 'lilith', 'archon'].filter(k => !(b.echoed || (b.echoed = {}))[k]), A = b.A, alive = G.enemies.filter(e => e.g2echo && !e.dead).length;
+        if (!pool.length || alive >= 3) return; n = Math.min(n, 3 - alive, pool.length);
+        G2.castSkill('ECHOES OF THE DAYS', '#d8c0ff'); G.say('THE ARCHITECT', U.pick(['RISE. EVERYONE SHE EVER FACED, RISE.', 'YOUR OLD ENEMIES REMEMBER YOU.', 'COME BACK. ALL OF YOU. FIGHT FOR ME.']), 130);
+        for (let i = 0; i < n; i++) {
+            const k = pool.splice(Math.floor(Math.random() * pool.length), 1)[0], x = U.clamp(b.x + (i % 2 ? 1 : -1) * U.rand(360, 660), A.x0 + 90, A.x1 - 90); b.echoed[k] = 1;
+            G2.beams.push({ kind: 'ray', x, life: 60, w: 70, col: ECHO_COL[k] }); VFX.ring(x, A.y - 20, 200, ECHO_COL[k], 30, 10);
+            G.delay(45, () => { if (!G.boss || G.boss.dying) return; G2.SK.echoes(b, 1, k, x); });
+        }
+    },
     // weaker echoes of earlier bosses, each with its own health bar
-    echoes(b, n) {
-        const pool = ['seraphina', 'mareva', 'gardener', 'astraea', 'lilith', 'archon'].filter(k => !(b.echoed || (b.echoed = {}))[k]), A = b.A;
-        if (G.enemies.filter(e => e.g2echo && !e.dead).length >= 2) return;
+    echoes(b, n, only, at) {
+        const pool = only ? [only] : ['seraphina', 'mareva', 'gardener', 'astraea', 'lilith', 'archon'].filter(k => !(b.echoed || (b.echoed = {}))[k]), A = b.A;
         for (let i = 0; i < n && pool.length; i++) {
             const k = pool.splice(Math.floor(Math.random() * pool.length), 1)[0]; b.echoed[k] = 1;
-            const x = U.clamp(b.x + (i % 2 ? 1 : -1) * U.rand(320, 620), A.x0 + 80, A.x1 - 80), e = new Enemy('echo_' + k, x, A.y - 4, { summoned: true });
-            e.g2echo = k; e.name = tr('Echo of') + ' ' + tr(BOSSES[k] ? BOSSES[k].name : k); e.spawnT = 30; G.enemies.push(e);
+            const x = at !== undefined ? at : U.clamp(b.x + (i % 2 ? 1 : -1) * U.rand(320, 620), A.x0 + 80, A.x1 - 80), e = new Enemy('echo_' + k, x, A.y - 4, { summoned: true });
+            e.g2echo = k; e.name = tr('Echo of') + ' ' + tr(BOSSES[k] ? BOSSES[k].name : k); e.spawnT = 30; if (e.w) e.w *= 1.4; if (e.h) e.h *= 1.4; G.enemies.push(e); G.addShake(10); Sound.sfx('roar', { v: .6 });
             VFX.ring(x, A.y - 40, 160, ECHO_COL[k], 26, 10); VFX.burst(x, A.y - 40, ECHO_COL[k], 30, 7, 40, 7, 1); G.toast(e.name, ECHO_COL[k]);
             // some of the party (not all) turn on the echo first
             for (const z of G2.team.alive()) if (Math.random() < .45) z.focusE = e;
@@ -90,52 +115,93 @@ G2.SK = {
 const ECHO_COL = { seraphina: '#ffe8a0', mareva: '#7ad8ff', gardener: '#9aff8a', astraea: '#d8c0ff', lilith: '#ff8a5a', archon: '#ffb0d0' };
 (function () {
     const base = { seraphina: 'dawnwarden', mareva: 'tidewarden', gardener: 'hollowstag', astraea: 'orrery', lilith: 'alpha', archon: 'inquisitor' };
-    for (const [k, id] of Object.entries(base)) if (ENEMIES[id]) ENEMIES['echo_' + k] = Object.assign({}, ENEMIES[id], { name: 'Echo', hp: 300, xp: 0, elite: true, col: Object.assign({}, ENEMIES[id].col, { g: ECHO_COL[k] }) });
+    for (const [k, id] of Object.entries(base)) if (ENEMIES[id]) ENEMIES['echo_' + k] = Object.assign({}, ENEMIES[id], { atks: (ENEMIES[id].atks || []).filter(x => x.kind !== 'summon'), name: 'Echo', hp: 420, xp: 0, elite: true, col: Object.assign({}, ENEMIES[id].col, { g: ECHO_COL[k] }) });
     // echoes are a little see-through, glow in their boss's colour and always show their health
     const draw = Enemy.prototype.draw; Enemy.prototype.draw = function (ctx) {
         if (!this.g2echo) return draw.call(this, ctx);
-        ctx.save(); ctx.globalAlpha = .82; Paint.glow(ctx, this.x, this.y - this.h / 2, 70, ECHO_COL[this.g2echo]); draw.call(this, ctx); ctx.restore();
-        if (this.dead) return; const w = 96, px = this.x - w / 2, py = this.y - this.h - 26;
-        ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(px - 1, py - 1, w + 2, 7); ctx.fillStyle = ECHO_COL[this.g2echo]; ctx.fillRect(px, py, w * Math.max(0, this.hp / this.maxHp), 5);
-        ctx.font = '11px "Palatino Linotype", serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#f4ecff'; ctx.fillText(this.name, this.x, py - 4);
+        ctx.save(); ctx.globalAlpha = .86; Paint.glow(ctx, this.x, this.y - this.h / 2, 110, ECHO_COL[this.g2echo]); ctx.translate(this.x, this.y); ctx.scale(1.45, 1.45); ctx.translate(-this.x, -this.y); draw.call(this, ctx); ctx.restore();
+        if (this.dead) return; const w = 140, px = this.x - w / 2, py = this.y - this.h - 34;
+        ctx.fillStyle = 'rgba(0,0,0,.65)'; ctx.fillRect(px - 2, py - 2, w + 4, 11); ctx.fillStyle = ECHO_COL[this.g2echo]; ctx.fillRect(px, py, w * Math.max(0, this.hp / this.maxHp), 7);
+        ctx.font = 'bold 14px "Palatino Linotype", serif'; ctx.textAlign = 'center'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(10,6,20,.9)'; ctx.strokeText(this.name, this.x, py - 6); ctx.fillStyle = '#f4ecff'; ctx.fillText(this.name, this.x, py - 6);
     };
 })();
 
 /* ------------------------------ THE FIGHT, BY SECTION ------------------------------ */
-// Every bar has at most one attack that covers the floor; the rest are aimed, so there is always a way out.
+// At each mark on the health bar the god learns more, and everything it already knew stays in the pool:
+//   100-66%  Pillars, Judgement Ray, Volley, Halo of Orbs, and the first Echo
+//   66-40%   + Dawnline, Colonnade, Dawn Scythe, Feather Rain
+//   40-15%   + Twin Ray, Searing Gaze, Wave of Light, Turning Crown (rotating lasers)
+//   15-0%    + Final Verdict (a ray on every fighter), a faster Crown with more arms, denser fire
+// One attack that covers the floor per bar at most, nothing on the floor while the Crown turns.
+const FLOOR_POOL = [['pillars'], ['pillars', 'line', 'colonnade', 'scythe'], ['line', 'colonnade', 'scythe', 'wave', 'gaze', 'pillars'], ['line', 'colonnade', 'scythe', 'wave', 'gaze', 'pillars']];
+const AIM_POOL = [['volley', 'ray'], ['volley', 'ray', 'feathers'], ['volley', 'twin', 'feathers', 'ray'], ['volley', 'twin', 'verdict', 'feathers']];
+const SKILL_NAME = { ray: 'JUDGEMENT RAY', twin: 'TWIN RAY', verdict: 'FINAL VERDICT', line: 'DAWNLINE', colonnade: 'COLONNADE', scythe: 'DAWN SCYTHE', wave: 'WAVE OF LIGHT', gaze: 'SEARING GAZE', feathers: 'FEATHER RAIN', crown: 'TURNING CROWN', pillars: 'PILLARS OF DAWN' };
 G2.ascendBeat = function (b, bar, bi) {
-    const A = b.A, P = G.player, tele = Math.round(SONG.beat * 60 * 2), seg = CUE.seg.findIndex(s => bar >= s.a && bar < s.b), SK = G2.SK;
-    if (bi === 0) { G.addShake(2); if (bar % 4 === 0) VFX.ring(b.x, G2.cy(b), 300, '#ffe8a0', 18, 6); }
-    const segStart = seg >= 0 && bar === CUE.seg[seg].a && bi === 0;
-    if (segStart && seg >= 1) { G2.castSkill('ECHOES OF THE DAYS', '#d8c0ff'); SK.echoes(b, seg === 3 ? 2 : 1); return; }
-    const pillar = (x, w = 110) => { x = U.clamp(x, A.x0 + w / 2, A.x1 - w / 2); Combat.warn({ shape: 'rect', x: x - w / 2, y: A.y - 620, w, h: 620, t: tele, dmg: b.D(16), src: b, col: '#ffe8a0', onFire: () => { VFX.burst(x, A.y - 10, '#fff4d0', 24, 9, 30, 8, 1); G.addShake(5); } }); };
-    if (seg === 0) {
-        const k = bar % 4;
-        if (bi === 0 && k === 1) { G2.castSkill('JUDGEMENT RAY'); SK.ray(b, tele); }
-        else if (bi === 0 && k !== 1) { const gap = U.pick([-1, 1]); pillar(P.x); pillar(P.x + gap * 320); }
-        if (bi === 2) SK.volley(b, 5);
-        if (bi === 0 && k === 3) SK.ring(b, 14, bar);
-    } else if (seg === 1) {
-        // one beam on the beat, low then high, and columns that alternate in between
-        const k = bar % 4;
-        if (k === 3) { if (bi === 0) { G2.castSkill('DAWN SCYTHE', '#ffb070'); SK.scythe(b, tele); } if (bi === 2) SK.volley(b, 3, .25); return; }
-        if (bi === 0) { if (k === 0) G2.castSkill('DAWNLINE'); SK.line(b, tele, bar % 2 === 1); }
-        if (bi === 2) { if (k === 1) G2.castSkill('COLONNADE'); SK.colonnade(b, tele, bar % 2 === 0); }
-    } else if (seg === 2) {
-        const k = bar % 4;
-        if (bi === 0 && k === 0) { G2.castSkill('DAWN SCYTHE', '#ffb070'); SK.scythe(b, tele); }
-        if (bi === 0 && k === 2) { const dir = P.x > b.x ? -1 : 1, x0 = dir > 0 ? A.x0 : A.x1; b.dilate = 1; for (let i = 0; i < 8; i++) { const x = x0 + dir * i * (A.x1 - A.x0) / 8; Combat.warn({ shape: 'rect', x: Math.min(x, x + dir * 130), y: A.y - 420, w: 130, h: 420, t: tele + i * 6, dmg: b.D(17), src: b, col: '#ff8a4a' }); } }
-        if (bi === 2 && k % 2 === 1) { G2.castSkill('JUDGEMENT RAY'); SK.ray(b, tele); }
-        if (bi === 3) SK.volley(b, 4, .2);
-    } else if (seg === 3) {
-        const k = bar % 4;
-        if (bi === 0 && k === 0) { G2.castSkill('COLONNADE'); SK.colonnade(b, tele * 2, (bar >> 2) % 2); }
-        if (bi === 0 && k === 2) SK.line(b, tele, bar % 8 < 4);
-        if (bi === 2 && k === 1) { G2.castSkill('JUDGEMENT RAY'); SK.ray(b, tele); const o = G2.team.alive()[0]; if (o) SK.ray(b, tele + 6, o); }
-        if (bi === 2 && k === 3) { G2.castSkill('DAWN SCYTHE', '#ffb070'); SK.scythe(b, tele); }
-        if (bi === 3) SK.volley(b, 5, .12);
-        if (bi === 0 && k === 1) SK.ring(b, 18, bar);
+    const A = b.A, P = G.player, tele = Math.round(SONG.beat * 60 * 2), seg = CUE.seg.findIndex(s => bar >= s.a && bar < s.b), SK = G2.SK, k = bar % 4;
+    if (seg < 0) return; b.rageT = seg;
+    if (bi === 0) { G.addShake(2 + seg); if (bar % 4 === 0) VFX.ring(b.x, G2.cy(b), 300, seg >= 2 ? '#ff8a5a' : '#ffe8a0', 18, 6); }
+    // the echoes: once early so it is seen, then at every new section, and once more near the end
+    const segStart = bar === CUE.seg[seg].a, summon = bar === CUE.seg[0].a + 4 ? 1 : segStart && seg >= 1 ? (seg >= 2 ? 2 : 1) : bar === CUE.seg[3].a + 8 ? 1 : 0;
+    if (summon && bi === 0) { SK.summon(b, summon); return; }
+    if (summon && bi < 3) return;
+    // the Turning Crown: every 8 bars from the third section, nothing else on the floor while it turns
+    if (seg >= 2 && bi === 0 && (bar - CUE.seg[seg].a) % 8 === 2) { SK.crown(b, seg === 3 ? 5 : 3, seg === 3 ? .009 : .006); return; }
+    const crownOn = G2.lasers.length > 0, pick = (L, salt) => L[Math.abs(bar * 7 + salt * 3 + (b.pickSeed || 0)) % L.length];
+    if (bi === 0 && !crownOn) {
+        const f = pick(FLOOR_POOL[seg], 1); G2.castSkill(SKILL_NAME[f], f === 'scythe' || f === 'gaze' ? '#ffb070' : '#ffe8a0');
+        if (f === 'pillars') { const gap = U.pick([-1, 1]); SK.pillar(b, tele, P.x); SK.pillar(b, tele, P.x + gap * 330); }
+        else if (f === 'line') SK.line(b, tele, bar % 2 === 1);
+        else if (f === 'colonnade') SK.colonnade(b, tele, bar % 2 === 0);
+        else if (f === 'scythe') SK.scythe(b, tele);
+        else if (f === 'wave') SK.wave(b, tele);
+        else if (f === 'gaze') SK.gaze(b, tele);
     }
+    if (bi === 2) {
+        const a = pick(AIM_POOL[seg], 2); if (a !== 'volley' && a !== 'feathers' || bar % 4 === 1) G2.castSkill(SKILL_NAME[a] || 'JUDGEMENT RAY', a === 'verdict' ? '#ff8a5a' : '#ffe8a0');
+        if (a === 'volley') SK.volley(b, 5 + seg, .14 - seg * .01);
+        else if (a === 'ray') SK.ray(b, tele);
+        else if (a === 'twin') { SK.ray(b, tele); SK.ray(b, tele + 8, U.pick([G.player, ...G2.team.alive()])); }
+        else if (a === 'verdict') [G.player, ...G2.team.alive()].forEach((z, i) => SK.ray(b, tele + i * 4, z));
+        else if (a === 'feathers') SK.feathers(b, tele, 4 + seg * 2);
+    }
+    if (bi === 0 && k === 3) SK.ring(b, 12 + seg * 3, bar);
+    if (seg >= 2 && bi === 3) SK.volley(b, 3 + seg, .22);
+    if (seg === 3 && bi === 1 && bar % 2) SK.ring(b, 10, bar + .5);
+};
+
+/* ------------------------------ THE TURNING CROWN ------------------------------ */
+// Arms of laser from the eye. Thin and dashed while they warm up, then burning; they turn slowly, so the
+// way out is to keep to the gap between two arms (or dodge through one).
+G2.lasersTick = function (b) {
+    const ex = b.x, ey = G2.cy(b);
+    for (const L of G2.lasers) {
+        L.age++; if (L.age < L.warm || L.age > L.warm + L.act) continue;
+        for (const z of [G.player, ...G2.team.alive()]) { if (!z || z.inv > 0 || z.state === 'dead') continue; const px = z.x - ex, py = z.y - 34 - ey;
+            for (let i = 0; i < L.n; i++) { const a = L.a0 + i * TAU / L.n + L.spin * L.age, ux = Math.cos(a), uy = Math.sin(a), along = px * ux + py * uy, perp = Math.abs(px * uy - py * ux);
+                if (along > 0 && along < L.len && perp < 20) { z.hurt(L.dmg, { x: ex, kb: 6, unblockable: true, owner: b }); break; } } }
+    }
+    G2.lasers = G2.lasers.filter(L => L.age <= L.warm + L.act + 12);
+};
+G2.drawLasers = function (c, b) {
+    const ex = b.x, ey = G2.cy(b);
+    for (const L of G2.lasers) {
+        const warm = L.age < L.warm, fade = L.age > L.warm + L.act ? 1 - (L.age - L.warm - L.act) / 12 : 1;
+        for (let i = 0; i < L.n; i++) { const a = L.a0 + i * TAU / L.n + L.spin * L.age, x2 = ex + Math.cos(a) * L.len, y2 = ey + Math.sin(a) * L.len;
+            c.save();
+            if (warm) { c.globalAlpha = .35 + .35 * Math.abs(Math.sin(L.age * .3)); c.strokeStyle = '#ff6a4a'; c.lineWidth = 2; c.setLineDash([14, 10]); c.beginPath(); c.moveTo(ex, ey); c.lineTo(x2, y2); c.stroke(); }
+            else { c.globalCompositeOperation = 'lighter'; c.globalAlpha = .55 * fade; c.strokeStyle = '#ff5a2a'; c.lineWidth = 34; c.beginPath(); c.moveTo(ex, ey); c.lineTo(x2, y2); c.stroke(); c.globalAlpha = .95 * fade; c.strokeStyle = '#fff2d8'; c.lineWidth = 9; c.stroke(); }
+            c.restore(); }
+    }
+};
+
+/* ------------------------------ IT GETS WORSE AS IT DIES ------------------------------ */
+// rage: 0 at full health, 3 in the last section. Red creeps into the eye and the aura, the halo turns
+// faster, red cracks open on its body, the sky behind it reddens and flickers.
+G2.drawRage = function (c, b, x, y) {
+    const r = b.rage || 0; if (r <= .02) return;
+    c.save(); c.globalCompositeOperation = 'lighter'; c.globalAlpha = Math.min(.5, r * .15); c.drawImage(Glow.get('#ff3a1a'), x - 520, y - 460, 1040, 920); c.restore();
+    if (r > 1.2) { const k = Math.min(1, (r - 1.2) / 1.5), R = U.mulberry(19); c.save(); c.globalCompositeOperation = 'lighter'; c.strokeStyle = `rgba(255,90,40,${.75 * k})`; c.lineWidth = 3; c.shadowColor = '#ff3a1a'; c.shadowBlur = 12;
+        for (let i = 0; i < 14; i++) { const a = R() * TAU; let px = x + Math.cos(a) * 110, py = y + Math.sin(a) * 110; c.beginPath(); c.moveTo(px, py); for (let j = 0; j < 4; j++) { px += Math.cos(a) * 40 + (R() - .5) * 50; py += Math.sin(a) * 40 + (R() - .5) * 50; c.lineTo(px, py); } c.stroke(); } c.restore(); }
 };
 
 /* ------------------------------ THE CORE, OPENED ------------------------------ */
@@ -172,6 +238,7 @@ G2.heaven = function (c, k) {
     for (let i = 0; i < 48; i++) { const a = i / 48 * TAU + t * .0008; c.fillStyle = 'rgba(255,240,200,.5)'; c.fillRect(hx + Math.cos(a) * 520 - 1, hy + Math.sin(a) * 150 - 1, 3, 3); }
     c.globalCompositeOperation = 'source-over';
     const P = U.mulberry(5); for (let i = 0; i < 16; i++) { const px = P() * VW, sp = .2 + P() * .5, py = VH + 60 - ((t * sp + P() * 900) % (VH + 160)), w = 20 + P() * 60, h = 10 + P() * 40, rot = t * .002 * (P() - .5) + P() * 6; c.save(); c.translate(px, py); c.rotate(rot); c.fillStyle = 'rgba(30,18,40,.85)'; c.fillRect(-w / 2, -h / 2, w, h); c.strokeStyle = 'rgba(255,210,140,.35)'; c.lineWidth = 1; c.strokeRect(-w / 2, -h / 2, w, h); c.restore(); }
+    const rg = b ? b.rage || 0 : 0; if (rg > .05) { c.globalCompositeOperation = 'source-over'; c.globalAlpha = k * Math.min(.35, rg * .1) * (rg > 2.5 && Math.random() < .03 ? 2 : 1); c.fillStyle = '#ff3010'; c.fillRect(0, 0, VW, VH); }
     c.restore();
 };
 
@@ -181,10 +248,10 @@ G2.heaven = function (c, k) {
     const fd = G2.fx.draw.bind(G2.fx); G2.fx.draw = function (c, F, front) { c.save(); try { if (!front) G2.heaven(c, U.clamp(F.sky, 0, 1)); fd(c, F, front); } catch (e) { console.warn(e); } finally { c.restore(); } };
     // the god: eye target and beams each tick
     const B = BOSSES.architect2, tick = B.tick, draw = B.draw;
-    B.tick = b => { tick(b); if (b.ascended && !b.dying) G2.eyeTick(b); if (b.dying) { b.lookX = U.lerp(b.lookX || b.x, b.x, .05); for (const e of G.enemies) if (e.g2echo && !e.dead) { e.hp = 0; e.die({ dir: 0 }); } } G2.beamsTick(); };
+    B.tick = b => { tick(b); if (b.ascended && !b.dying) { G2.eyeTick(b); G2.lasersTick(b); b.rage = U.lerp(b.rage || 0, b.rageT || 0, .01); if (b.rings) b.rings = b.rings.map(x => x + .006 * b.rage); } if (b.dying) { G2.lasers = []; b.lookX = U.lerp(b.lookX || b.x, b.x, .05); for (const e of G.enemies) if (e.g2echo && !e.dead) { e.hp = 0; e.die({ dir: 0 }); } } G2.beamsTick(); };
     // drawing never leaves the canvas in a strange state, even if something inside fails
-    B.draw = (c, b) => { c.save(); try { draw(c, b); if (b.ascended && !b.gone) G2.drawBeams(c, b); } catch (e) { console.warn(e); } finally { c.restore(); } };
-    const ll = Game.loadLevel.bind(Game); Game.loadLevel = function (id, cp) { G2.beams = []; G2.skillCap = null; return ll(id, cp); };
+    B.draw = (c, b) => { c.save(); try { draw(c, b); if (b.ascended && !b.gone) { G2.drawBeams(c, b); G2.drawLasers(c, b); } } catch (e) { console.warn(e); } finally { c.restore(); } };
+    const ll = Game.loadLevel.bind(Game); Game.loadLevel = function (id, cp) { G2.beams = []; G2.lasers = []; G2.skillCap = null; return ll(id, cp); };
     // the skill being cast, under the god's health bar
     const hd = HUD.draw.bind(HUD); HUD.draw = function (c) {
         hd(c); const S = G2.skillCap; if (!S || Game.state !== 'play' || G.letterbox) return; S.t++; if (S.t > 130) { G2.skillCap = null; return; }
@@ -206,6 +273,6 @@ G2.heaven = function (c, k) {
     };
 })();
 Object.assign(VI, {
-    'JUDGEMENT RAY': 'THÁNH QUANG PHÁN XÉT', 'DAWN SCYTHE': 'LƯỠI HÁI BÌNH MINH', 'ECHOES OF THE DAYS': 'TIẾNG VỌNG NHỮNG NGÀY XƯA', 'DAWNLINE': 'TIA RẠNG ĐÔNG', 'COLONNADE': 'HÀNG CỘT ÁNH SÁNG',
+    'JUDGEMENT RAY': 'THÁNH QUANG PHÁN XÉT', 'TWIN RAY': 'SONG QUANG PHÁN XÉT', 'FINAL VERDICT': 'PHÁN QUYẾT CUỐI CÙNG', 'WAVE OF LIGHT': 'SÓNG ÁNH SÁNG', 'SEARING GAZE': 'ÁNH NHÌN THIÊU ĐỐT', 'FEATHER RAIN': 'MƯA LÔNG VŨ', 'TURNING CROWN': 'VƯƠNG MIỆN XOAY', 'PILLARS OF DAWN': 'CỘT BÌNH MINH', 'RISE. EVERYONE SHE EVER FACED, RISE.': 'TRỖI DẬY. TẤT CẢ NHỮNG KẺ CON BÉ TỪNG ĐỐI MẶT, TRỖI DẬY.', 'YOUR OLD ENEMIES REMEMBER YOU.': 'KẺ THÙ CŨ CỦA NGƯƠI VẪN CÒN NHỚ NGƯƠI ĐẤY.', 'COME BACK. ALL OF YOU. FIGHT FOR ME.': 'QUAY VỀ ĐÂY. TẤT CẢ CÁC NGƯƠI. CHIẾN ĐẤU VÌ TA.', 'DAWN SCYTHE': 'LƯỠI HÁI BÌNH MINH', 'ECHOES OF THE DAYS': 'TIẾNG VỌNG NHỮNG NGÀY XƯA', 'DAWNLINE': 'TIA RẠNG ĐÔNG', 'COLONNADE': 'HÀNG CỘT ÁNH SÁNG',
     'Echo of': 'Tiếng Vọng của', 'Echo': 'Tiếng Vọng'
 });
