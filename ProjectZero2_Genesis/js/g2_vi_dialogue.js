@@ -6,6 +6,7 @@
  *   Gods and bosses: "ta" and "ngươi" (or "con" when they mean it kindly).
  */
 Object.assign(VI, {
+    'This day has not dawned yet.': 'Ngày này còn chưa rạng.',
     'You. Little one. They say you slept. Is it true? What is it like?': 'Này, bé con. Người ta đồn con ngủ được. Thật hả? Ngủ là cảm giác thế nào?',
     'It is like... the light goes soft. And then it is morning.': 'Giống như... ánh sáng dịu dần đi. Rồi mở mắt ra là trời sáng.',
     'My daughter has not slept in four hundred days. She laughs all the time. I am afraid of that laughter.': 'Con gái tôi bốn trăm ngày rồi chưa chợp mắt. Nó cứ cười suốt. Tôi sợ tiếng cười đó lắm.',

@@ -199,7 +199,9 @@ Object.assign(CUTS, {
 });
 
 G2.bladeZero = a => { a.rig.S = Object.assign({}, a.rig.S, { weaponF: Gear.aocalyst, weaponLen: 54 }); return a; };
-G2.cut = function (id, after) { Game.state = 'cine'; Cine.play(CUTS[id], () => { Game.state = 'play'; Music.play(G.level.theme.music, 'calm'); if (after) after(); }); };
+// a cut scene never plays under a menu (the Gate of Seven Days stayed open over a day's opening)
+G2.cut = function (id, after) { if (UI.cur) UI.hide(); Input.held = {}; Game.state = 'cine'; Cine.play(CUTS[id], () => { Game.state = 'play'; Music.play(G.level.theme.music, 'calm'); if (after) after(); }); };
+(function () { const cp = Cine.play.bind(Cine); Cine.play = function (...a) { if (UI.cur && UI.cur !== 'credits') UI.hide(); return cp(...a); }; })();
 G2.enterGarden = function () {
     const g = Save.data.g2;
     if (G2.grantPart1Bonus()) G.delay(90, () => { G.say('ZERO', 'This was in my pocket. A ticket from Line 3. Keep it, Nyx.', 200); G.toast(tr('Relic') + ': ' + tr(RELICS.ticket3.name), '#ffdd33'); });
