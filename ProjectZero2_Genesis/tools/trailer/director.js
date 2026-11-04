@@ -140,7 +140,7 @@ const SHOTS = [
     liveShot(46.74, 49.0, () => R.final(2.5, { team: true }), { cam: (lt, u) => { const b = B(); return [b.x, G2.cy(b) + 100, .75 - u * .1]; }, speed: 2,
         over: (c, lt) => sub(c, 'THE ARCHITECT', 'VẬY THÌ HÃY CHIÊM NGƯỠNG HÌNH THÁI TỐI THƯỢNG CỦA TA.', Math.min(1, lt / .2)), fade: (lt, d) => lt > d - .12 ? 1 : 0 }),
     // ---- III. the silence: only the eye ----
-    liveShot(49.0, 52.66, () => R.final(10.25, { team: true }), { cam: (lt, u) => { const b = B(); return [b.x, G2.cy(b), 1.8 + u * .6]; }, speed: .55, grade: .2, noFlash: true,
+    liveShot(49.0, 52.66, () => R.final(10.25, { team: true }), { cam: (lt, u) => { const b = B(); b.eye = ease(clamp((lt - .45) / 2.4, 0, 1)); b.blink = 0; b.lookX = b.x; b.lookY = G2.cy(b); b.tgt = null; b.dilate = 1 - ease(u) * .75; return [b.x, G2.cy(b), 1.8 + u * .6]; }, speed: .55, grade: .2, noFlash: true,
         over: (c, lt) => { const sp = c.createRadialGradient(W / 2, H / 2, 70, W / 2, H / 2, 420); sp.addColorStop(0, 'rgba(0,0,0,.15)'); sp.addColorStop(.45, 'rgba(0,0,0,.8)'); sp.addColorStop(1, 'rgba(0,0,0,.97)'); c.fillStyle = sp; c.fillRect(0, 0, W, H); sub(c, 'ZERO', 'Nyx. Lần này, ở cạnh chú nhé.', Math.min(1, (lt - .6) / .3, (2.3 - lt) / .3)); sub(c, 'NYX', 'Luôn luôn.', Math.min(1, (lt - 2.5) / .3, (3.6 - lt) / .2)); }, fade: fadeIO(.6, 0) }),
     // ---- IV. the drop ----
     liveShot(52.66, 53.74, () => R.final(24, { team: true }), { cam: (lt, u) => { const b = B(); return [b.x, b.A.y - 500, .52 + u * .05]; }, speed: 1.4, leak: true, flare: () => { const b = B(), cam = G.cam; return [(b.x - cam.x) * cam.zoom, (G2.cy(b) - cam.y) * cam.zoom]; },
