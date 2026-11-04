@@ -130,7 +130,7 @@ Cấu trúc bài được đo bằng FFT: 172.27 BPM, phách đầu ở 0.232 gi
 - Camera lùi xa để thấy cả đội.
 - Cân bằng:
   - mỗi đồng đội gây khoảng 28% sát thương;
-  - ở hình thái tối thượng, boss có máu gấp 5 lần khi chọn Cùng chiến đấu.
+  - ở hình thái tối thượng, boss có máu gấp 3 lần khi chọn Cùng chiến đấu.
 - Nyx học Bài Ru Gọi Về từ Sable (Tử Thần) cuối Ngày Thứ Năm, ngay sau khi gặp Tứ Kỵ Sĩ. Từ đó, ngoài màn cuối, thanh Linh Lực đầy cũng cứu người chơi khỏi một đòn chí mạng.
 - Bot giả lập (người chơi không né) đánh thắng trận cuối khi có cả đội, với 7 lần gục và 4 lần hồi sinh.
 
@@ -182,11 +182,22 @@ Có ba nguyên nhân, đều đã tái hiện bằng bot trên bản cũ (chiêu
 - **Hiệu năng** (đo trong trình duyệt, thời gian vẽ mỗi khung hình): 27 ms còn 6 ms, không bỏ hiệu ứng nào.
   - Thủ phạm chính là địa hình: lưu ở độ phân giải gấp đôi, mỗi khung phải thu nhỏ khoảng 20 tấm 1024×1024 khi camera kéo xa (18,5 ms). Giờ khi camera xa, game dùng bản 1/4 kích thước, trông như nhau (0,1 ms).
   - 1400 hạt sáng được vẽ theo 8 dải độ sáng thay vì từng hạt một (3,6 ms còn 2 ms).
-- **Nhạc chuyển đoạn mượt:** mọi lần đổi chỗ trong bài (sang đoạn mới, lặp lại, nhảy tới cảnh chết) đều chờ hết câu nhạc 4 ô nhịp rồi hòa tiếng nửa giây, thay vì cắt ngang ở vạch nhịp kế tiếp.
+- **Nhạc theo đúng hình dạng bản thu:**
+  - Khi máu chưa tới mốc, thân đoạn hiện tại lặp theo từng khối 8 ô nhịp.
+  - Khi tới mốc, nhạc sang 2 ô nhịp dẫn cuối chính đoạn đó, rồi tự chảy sang đoạn sau như trong bài gốc. Không còn nhảy cóc sang giữa đoạn khác.
+  - Trong vài giây chờ nhạc chuyển, máu boss dừng ở mốc, kèm một vòng sáng.
+  - Mọi lần đổi chỗ đều hòa tiếng nửa giây.
+- **Sét:** từ mốc thứ ba, cột sáng thành Sấm Sét Giáng, hàng cột thành Hàng Sấm. Sét đánh từ trời xuống có nhánh, chớp và tiếng sấm. Phông nền có sét chớp, dày hơn ở mốc cuối.
+- **Tối ưu thêm (giữ nguyên hình):**
+  - lông cánh vẽ theo nhóm 4 chiếc, vòng mắt và gai hào quang theo nhóm màu, tia sáng một lần;
+  - bỏ làm mờ bóng ở vết nứt và khung thanh máu;
+  - bloom lấy mẫu cách khung;
+  - tắt hạt thời tiết của màn khi bầu trời hóa thần đã phủ kín;
+  - tự hạ độ phân giải khi FPS thật dưới 48 (trước chỉ xét thời gian chạy code).
 - **Thanh máu trùm cuối:** rộng và dày hơn, viền vàng tím, vệt sáng chạy dọc, vệt trắng tụt theo sát thương, mốc các đoạn hình thoi, chữ "FINAL BOSS" và tên lớn; viền đỏ khi máu thấp.
 - **Điện Ngai:** một hàng cột đá đứng sau đấu trường. Khi boss biến hình, các cột nứt lần lượt (gần trước, xa sau), vỡ thành từng khối, bị giật lên, xoáy vào con mắt rồi biến mất.
 - **"FINAL BOSS":** ở 0:46 màn hình hiện chữ FINAL BOSS lớn, giữ đến cú cắt vào trận ở 0:49.
-- **Cùng chiến đấu:** máu boss ở hình thái tối thượng gấp 5 lần.
+- **Cùng chiến đấu:** máu boss ở hình thái tối thượng gấp 3 lần (đã thử 5 lần, rồi đưa về 3 theo yêu cầu: gấp 3 khớp với độ dài bài nhạc khi đánh liên tục).
 
 ### Kiểm thử (đều do bot)
 - `node tools/e2e2.js`: chương 1 bằng Nyx (cả tha và giết), 7 nhân vật đánh thật Hiệp Sĩ và Seraphina: PASS.

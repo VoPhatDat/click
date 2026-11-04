@@ -61,11 +61,11 @@ G2.song = {
     setLoop(seg) { const key = seg ? seg.a + ':' + seg.b : null; if (key === this.loopKey) return; this.loopKey = key; this.loop = seg ? { a: SONG.t(seg.a), b: SONG.t(seg.b) } : null; },
     schedule(T, to) { if (this.useAudio) { this.fadeOut(this.voice, T); this.voice = this.mk(to, T, true); } this.jump = { T, to }; },
     /** Continue from a bar: at the end of the current four-bar phrase (or the next bar line when forced). */
-    jumpTo(bar, force) {
+    jumpTo(bar, force, unit = 4) {
         if (this.jump && !force) return;
         if (this.jump && force) { if (this.useAudio && this.voice) { try { this.voice.src.stop(); } catch (e) { } } this.p = this.jump.to + Math.max(0, this.now() - this.jump.T); this.last = this.now(); this.jump = null; }
         const pos = this.p, curBar = (pos - SONG.first) / SONG.bar, seg = CUE.seg.find(s => curBar >= s.a && curBar < s.b), base = seg ? seg.a : 0;
-        let nb = Math.ceil(curBar + .001); if (!force) { nb = base + Math.ceil((nb - base) / 4) * 4; if (seg) nb = Math.min(nb, seg.b); }
+        let nb = Math.ceil(curBar + .001); if (!force) { nb = base + Math.ceil((nb - base) / unit) * unit; if (seg) nb = Math.min(nb, seg.b); }
         this.setLoop(null); this.schedule(this.now() + Math.max(.02, SONG.t(nb) - pos), SONG.t(bar));
     },
     update() {
@@ -104,7 +104,7 @@ G2.fx = {
         if (!front) {
             const k = U.clamp(F.sky, 0, 1); if (k > 0) { const g = c.createLinearGradient(0, 0, 0, VH); g.addColorStop(0, `rgba(60,20,110,${.55 * k})`); g.addColorStop(.55, `rgba(160,90,40,${.35 * k})`); g.addColorStop(1, `rgba(255,210,140,${.25 * k})`); c.fillStyle = g; c.fillRect(0, 0, VW, VH);
                 c.save(); c.globalCompositeOperation = 'lighter'; c.strokeStyle = `rgba(255,230,170,${.12 * k})`; c.lineWidth = 3; for (let r = 0; r < 4; r++) { c.beginPath(); c.ellipse(cx, cy, 300 + r * 160, (300 + r * 160) * .32, Math.sin(G.time * .002 + r) * .3, 0, TAU); c.stroke(); }
-                for (let i = 0; i < 14; i++) { const a = i / 14 * TAU + G.time * .0015; c.fillStyle = `rgba(255,236,190,${.035 * k})`; c.beginPath(); c.moveTo(cx, cy); c.lineTo(cx + Math.cos(a - .04) * 1600, cy + Math.sin(a - .04) * 1600); c.lineTo(cx + Math.cos(a + .04) * 1600, cy + Math.sin(a + .04) * 1600); c.fill(); }
+                c.fillStyle = `rgba(255,236,190,${.035 * k})`; c.beginPath(); for (let i = 0; i < 14; i++) { const a = i / 14 * TAU + G.time * .0015; c.moveTo(cx, cy); c.lineTo(cx + Math.cos(a - .04) * 1600, cy + Math.sin(a - .04) * 1600); c.lineTo(cx + Math.cos(a + .04) * 1600, cy + Math.sin(a + .04) * 1600); c.closePath(); } c.fill();
                 c.restore(); }
             if (F.cracks > 0) { c.save(); c.strokeStyle = `rgba(255,255,255,${.5 * F.cracks})`; c.lineWidth = 1.6; const R = U.mulberry(41); for (let i = 0; i < 22 * F.cracks; i++) { let x = R() * VW, y = R() * VH * .5; c.beginPath(); c.moveTo(x, y); for (let k2 = 0; k2 < 6; k2++) { x += (R() - .5) * 120; y += R() * 50; c.lineTo(x, y); } c.stroke(); } c.restore(); }
         }
@@ -174,10 +174,12 @@ G2.wings = {
             // four rows of feathers: long primaries at the back, then secondaries, then two rows of small coverts
             const ROWS = 4, PER = 4, sway = G.time * .06;
             for (let row = ROWS - 1; row >= 0; row--) for (let i = 1; i < W.n; i++) { const A = P[i - 1], B = P[i], dx = B.x - A.x, dy = B.y - A.y, d = Math.hypot(dx, dy) || 1, nx = -dy / d * W.side, ny = dx / d * W.side, u = i / (W.n - 1);
+                // the four feathers of a segment share one fill and one outline (same shapes, a quarter of the draw calls)
+                const spines = []; c.beginPath();
                 for (let f = 0; f < PER; f++) { const m = f / PER, px = A.x + dx * m, py = A.y + dy * m, j = Math.sin(i * 3.1 + f * 1.7 + row) * .5 + .5, len = (36 + u * 150 + (ROWS - 1 - row) * 26) * (1 - row * .2) * (.86 + j * .22) * W.k, tilt = .3 + u * .5 + row * .08 + Math.sin(sway + i + f) * .025, ex = px + (nx * Math.cos(tilt) + dx / d * Math.sin(tilt)) * len, ey = py + (ny * Math.cos(tilt) + dy / d * Math.sin(tilt)) * len + len * .32, w2 = 6.5 - row * 1.2;
-                    c.globalAlpha = alpha * (row === 0 ? 1 : .86); c.fillStyle = row === 0 ? (j > .5 ? '#fff8e4' : '#f6ecd4') : row === 1 ? '#ecdeff' : row === 2 ? '#ffe6b8' : '#fff4dc';
-                    c.beginPath(); c.moveTo(px - nx * w2, py - ny * w2); c.quadraticCurveTo((px + ex) / 2 + dx / d * w2 * 2, (py + ey) / 2 + dy / d * w2 * 2, ex, ey); c.quadraticCurveTo((px + ex) / 2 - dx / d * w2, (py + ey) / 2 - dy / d * w2, px + nx * w2, py + ny * w2); c.fill();
-                    if (row < 2) { c.globalAlpha = alpha * .5; c.strokeStyle = row === 0 ? '#c8a050' : '#8a6ad8'; c.lineWidth = 1; c.stroke(); c.globalAlpha = alpha * .35; c.beginPath(); c.moveTo(px, py); c.lineTo(ex, ey); c.stroke(); } } }
+                    c.moveTo(px - nx * w2, py - ny * w2); c.quadraticCurveTo((px + ex) / 2 + dx / d * w2 * 2, (py + ey) / 2 + dy / d * w2 * 2, ex, ey); c.quadraticCurveTo((px + ex) / 2 - dx / d * w2, (py + ey) / 2 - dy / d * w2, px + nx * w2, py + ny * w2); c.closePath(); if (row < 2) spines.push(px, py, ex, ey); }
+                c.globalAlpha = alpha * (row === 0 ? 1 : .86); c.fillStyle = row === 0 ? ((i % 2) ? '#fff8e4' : '#f6ecd4') : row === 1 ? '#ecdeff' : row === 2 ? '#ffe6b8' : '#fff4dc'; c.fill();
+                if (row < 2) { c.globalAlpha = alpha * .5; c.strokeStyle = row === 0 ? '#c8a050' : '#8a6ad8'; c.lineWidth = 1; c.stroke(); c.globalAlpha = alpha * .35; c.beginPath(); for (let q = 0; q < spines.length; q += 4) { c.moveTo(spines[q], spines[q + 1]); c.lineTo(spines[q + 2], spines[q + 3]); } c.stroke(); } }
             c.globalAlpha = alpha; c.strokeStyle = '#fff4d0'; c.lineWidth = 6; c.beginPath(); c.moveTo(P[0].x, P[0].y); for (const p of P) c.lineTo(p.x, p.y); c.stroke();
             c.globalCompositeOperation = 'lighter'; c.globalAlpha = alpha * .4; c.lineWidth = 18; c.strokeStyle = '#ffd890'; c.stroke(); c.globalCompositeOperation = 'source-over'; }
         c.restore();
@@ -198,8 +200,9 @@ G2.drawAscendedBody = function (c, b) {
     G2.wings.draw(c, b, near);
     for (let r = 0; r < 4; r++) { c.save(); c.translate(x, y); c.rotate((b.rings ? b.rings[r % 3] : 0) * (1 + r * .3) + t * .004 * (r % 2 ? -1 : 1)); c.scale(1, .28 + r * .16); const R = (230 - r * 26) * (1 - ab * .5 + (b.eye ? .55 : 0));
         c.strokeStyle = r % 2 ? 'rgba(200,176,255,.85)' : 'rgba(255,216,107,.9)'; c.lineWidth = 7 - r; c.beginPath(); c.arc(0, 0, R, 0, TAU); c.stroke();
-        for (let i = 0; i < 12; i++) { const a = i / 12 * TAU, ex = Math.cos(a) * R, ey = Math.sin(a) * R; Paint.disc(c, ex, ey, 7, '#f0e8d0'); Paint.disc(c, ex + Math.cos(a) * 1.5, ey, 3.5, b.eye ? '#ff4a1a' : '#3a2a10'); } c.restore(); }
-    c.save(); c.translate(x, y); c.rotate(t * .005); for (let i = 0; i < 28; i++) { c.rotate(TAU / 28); c.fillStyle = i % 2 ? 'rgba(255,232,160,.75)' : 'rgba(200,176,255,.55)'; c.beginPath(); c.moveTo(-6, -170); c.lineTo(0, -260 - (i % 3) * 26); c.lineTo(6, -170); c.fill(); } c.restore();
+        c.fillStyle = '#f0e8d0'; c.beginPath(); for (let i = 0; i < 12; i++) { const a = i / 12 * TAU, ex = Math.cos(a) * R, ey = Math.sin(a) * R; c.moveTo(ex + 7, ey); c.arc(ex, ey, 7, 0, TAU); } c.fill();
+        c.fillStyle = b.eye ? '#ff4a1a' : '#3a2a10'; c.beginPath(); for (let i = 0; i < 12; i++) { const a = i / 12 * TAU, ex = Math.cos(a) * R + Math.cos(a) * 1.5, ey = Math.sin(a) * R; c.moveTo(ex + 3.5, ey); c.arc(ex, ey, 3.5, 0, TAU); } c.fill(); c.restore(); }
+    c.save(); c.translate(x, y); for (const odd of [1, 0]) { c.fillStyle = odd ? 'rgba(255,232,160,.75)' : 'rgba(200,176,255,.55)'; c.beginPath(); for (let i = 0; i < 28; i++) { if (i % 2 !== odd) continue; const a = t * .005 + (i + 1) * TAU / 28, ca = Math.cos(a), sa = Math.sin(a), P = (px, py) => [px * ca - py * sa, px * sa + py * ca]; const [x1, y1] = P(-6, -170), [x2, y2] = P(0, -260 - (i % 3) * 26), [x3, y3] = P(6, -170); c.moveTo(x1, y1); c.lineTo(x2, y2); c.lineTo(x3, y3); c.closePath(); } c.fill(); } c.restore();
     Paint.glow(c, x, y, 190, '#ffffff'); const cg = c.createRadialGradient(x, y, 20, x, y, 120); cg.addColorStop(0, '#fffdf4'); cg.addColorStop(1, 'rgba(255,230,170,0)'); c.fillStyle = cg; c.beginPath(); c.arc(x, y, 120, 0, TAU); c.fill();
     const f2 = b.form2 || 0;
     if (f2 > 0) { // what it became after the drop: a second, wider halo of eyes, a crown of spires, a ring of swords of light
@@ -259,7 +262,7 @@ G2.ascendIntro = function* (b) {
     yield* waitBar(CUE.fight);
     // 0:49 hard cut to the fight, with a fresh health bar
     G.g2final = null; G.g2title = null; G.flash = .9; G.addShake(26); G.letterbox = 0; G.cineCam = null; G.lockInput = false; P.inv = Math.max(P.inv, 60); b.scale = 1.45; b.form2 = 1;
-    b.maxHp = b.hp = Math.round(4800 * Game.diff.bossHp * (G2.team && G.g2team ? 5 : 1)); b.hbar = 1; b.dilate = 0;
+    b.maxHp = b.hp = Math.round(4800 * Game.diff.bossHp * (G2.team && G.g2team ? 3 : 1)); b.hbar = 1; b.dilate = 0;
 };
 
 /* ------------------------------ THE FIGHT, CUT TO THE SONG ------------------------------ */
@@ -281,11 +284,16 @@ G2.ascendBeat = function (b, bar, bi) {
 const ASCEND_MOVES = { *conduct(b) { let last = -1; for (; ;) { const n = G2.song.beatN(); if (n !== last && !b.dead && !b.dying) { last = n; G2.ascendBeat(b, Math.floor(n / 4), ((n % 4) + 4) % 4); } if (b.dilate > 0) b.dilate = Math.max(0, b.dilate - .02); yield 1; } } };
 // The song follows the health bar: loop the section until the mark is reached, skip ahead if it falls faster.
 G2.ascendMusic = function (b) {
+    // The song follows the recording's own shape. While the section's mark is not reached, the body of the
+    // section loops in whole 8-bar groups. Once it is reached, the song goes to the last two bars of that same
+    // section, the lead-in the recording itself uses, and flows into the next section by itself. The boss's
+    // health holds at the mark until the music gets there (a few seconds), so the song never has to skip.
     const S = G2.song; if (!S.active || b.dying || b.dead || b.hp <= 0 || b.transition || !b.ascended || S.jump) return;
     const pos = S.pos(), cur = CUE.seg.findIndex(s => pos >= SONG.t(s.a) && pos < SONG.t(s.b)); if (cur < 0) return;
-    const want = G2.ascendSeg(b), f = b.hp / b.maxHp;
-    if (want > cur && pos > SONG.t(CUE.seg[cur].a) + SONG.bar * 4 && pos < SONG.t(CUE.seg[cur].b) - SONG.bar) { S.jumpTo(CUE.seg[want].a); return; }
-    S.setLoop(f > CUE.seg[cur].thr ? CUE.seg[cur] : null);
+    const seg = CUE.seg[cur], f = b.hp / b.maxHp, bar = (pos - SONG.first) / SONG.bar;
+    if (f > seg.thr + .0005) { const len = Math.max(8, Math.floor((seg.b - seg.a) / 8) * 8); S.setLoop({ a: seg.a, b: seg.a + len }); return; }
+    S.setLoop(null);
+    if (cur < CUE.seg.length - 1 && seg.b - bar > 3) S.jumpTo(seg.b - 2, false, 2);
 };
 
 /* ------------------------------ DYING, 2:31-2:45, AND DEATH ------------------------------ */

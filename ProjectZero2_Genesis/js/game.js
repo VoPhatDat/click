@@ -385,8 +385,9 @@ const Game = {
         // Auto resolution holds 60fps on weak machines: it steps down before the player notices.
         if (this.state === 'play' && !Settings.renderScale && ++this.perfN >= 150) {
             this.perfN = 0;
-            if (this.frameMs > 14 && this.scale > 1) { this.scaleCap = Math.max(1, this.scale - .25); this.applyVideo(); }
-            else if (this.frameMs > 14 && !Post.noBloom) Post.noBloom = true;
+            const slow = this.frameMs > 14 || this.fps < 48;
+            if (slow && this.scale > 1) { this.scaleCap = Math.max(1, this.scale - .25); this.applyVideo(); }
+            else if (slow && !Post.noBloom && this.fps < 40) Post.noBloom = true;
         }
     },
     tick() {

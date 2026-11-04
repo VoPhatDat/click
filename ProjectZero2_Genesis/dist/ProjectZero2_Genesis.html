@@ -7004,8 +7004,9 @@ const Game = {
         // Auto resolution holds 60fps on weak machines: it steps down before the player notices.
         if (this.state === 'play' && !Settings.renderScale && ++this.perfN >= 150) {
             this.perfN = 0;
-            if (this.frameMs > 14 && this.scale > 1) { this.scaleCap = Math.max(1, this.scale - .25); this.applyVideo(); }
-            else if (this.frameMs > 14 && !Post.noBloom) Post.noBloom = true;
+            const slow = this.frameMs > 14 || this.fps < 48;
+            if (slow && this.scale > 1) { this.scaleCap = Math.max(1, this.scale - .25); this.applyVideo(); }
+            else if (slow && !Post.noBloom && this.fps < 40) Post.noBloom = true;
         }
     },
     tick() {
@@ -11507,11 +11508,11 @@ G2.song = {
     setLoop(seg) { const key = seg ? seg.a + ':' + seg.b : null; if (key === this.loopKey) return; this.loopKey = key; this.loop = seg ? { a: SONG.t(seg.a), b: SONG.t(seg.b) } : null; },
     schedule(T, to) { if (this.useAudio) { this.fadeOut(this.voice, T); this.voice = this.mk(to, T, true); } this.jump = { T, to }; },
     /** Continue from a bar: at the end of the current four-bar phrase (or the next bar line when forced). */
-    jumpTo(bar, force) {
+    jumpTo(bar, force, unit = 4) {
         if (this.jump && !force) return;
         if (this.jump && force) { if (this.useAudio && this.voice) { try { this.voice.src.stop(); } catch (e) { } } this.p = this.jump.to + Math.max(0, this.now() - this.jump.T); this.last = this.now(); this.jump = null; }
         const pos = this.p, curBar = (pos - SONG.first) / SONG.bar, seg = CUE.seg.find(s => curBar >= s.a && curBar < s.b), base = seg ? seg.a : 0;
-        let nb = Math.ceil(curBar + .001); if (!force) { nb = base + Math.ceil((nb - base) / 4) * 4; if (seg) nb = Math.min(nb, seg.b); }
+        let nb = Math.ceil(curBar + .001); if (!force) { nb = base + Math.ceil((nb - base) / unit) * unit; if (seg) nb = Math.min(nb, seg.b); }
         this.setLoop(null); this.schedule(this.now() + Math.max(.02, SONG.t(nb) - pos), SONG.t(bar));
     },
     update() {
@@ -11550,7 +11551,7 @@ G2.fx = {
         if (!front) {
             const k = U.clamp(F.sky, 0, 1); if (k > 0) { const g = c.createLinearGradient(0, 0, 0, VH); g.addColorStop(0, `rgba(60,20,110,${.55 * k})`); g.addColorStop(.55, `rgba(160,90,40,${.35 * k})`); g.addColorStop(1, `rgba(255,210,140,${.25 * k})`); c.fillStyle = g; c.fillRect(0, 0, VW, VH);
                 c.save(); c.globalCompositeOperation = 'lighter'; c.strokeStyle = `rgba(255,230,170,${.12 * k})`; c.lineWidth = 3; for (let r = 0; r < 4; r++) { c.beginPath(); c.ellipse(cx, cy, 300 + r * 160, (300 + r * 160) * .32, Math.sin(G.time * .002 + r) * .3, 0, TAU); c.stroke(); }
-                for (let i = 0; i < 14; i++) { const a = i / 14 * TAU + G.time * .0015; c.fillStyle = `rgba(255,236,190,${.035 * k})`; c.beginPath(); c.moveTo(cx, cy); c.lineTo(cx + Math.cos(a - .04) * 1600, cy + Math.sin(a - .04) * 1600); c.lineTo(cx + Math.cos(a + .04) * 1600, cy + Math.sin(a + .04) * 1600); c.fill(); }
+                c.fillStyle = `rgba(255,236,190,${.035 * k})`; c.beginPath(); for (let i = 0; i < 14; i++) { const a = i / 14 * TAU + G.time * .0015; c.moveTo(cx, cy); c.lineTo(cx + Math.cos(a - .04) * 1600, cy + Math.sin(a - .04) * 1600); c.lineTo(cx + Math.cos(a + .04) * 1600, cy + Math.sin(a + .04) * 1600); c.closePath(); } c.fill();
                 c.restore(); }
             if (F.cracks > 0) { c.save(); c.strokeStyle = `rgba(255,255,255,${.5 * F.cracks})`; c.lineWidth = 1.6; const R = U.mulberry(41); for (let i = 0; i < 22 * F.cracks; i++) { let x = R() * VW, y = R() * VH * .5; c.beginPath(); c.moveTo(x, y); for (let k2 = 0; k2 < 6; k2++) { x += (R() - .5) * 120; y += R() * 50; c.lineTo(x, y); } c.stroke(); } c.restore(); }
         }
@@ -11620,10 +11621,12 @@ G2.wings = {
             // four rows of feathers: long primaries at the back, then secondaries, then two rows of small coverts
             const ROWS = 4, PER = 4, sway = G.time * .06;
             for (let row = ROWS - 1; row >= 0; row--) for (let i = 1; i < W.n; i++) { const A = P[i - 1], B = P[i], dx = B.x - A.x, dy = B.y - A.y, d = Math.hypot(dx, dy) || 1, nx = -dy / d * W.side, ny = dx / d * W.side, u = i / (W.n - 1);
+                // the four feathers of a segment share one fill and one outline (same shapes, a quarter of the draw calls)
+                const spines = []; c.beginPath();
                 for (let f = 0; f < PER; f++) { const m = f / PER, px = A.x + dx * m, py = A.y + dy * m, j = Math.sin(i * 3.1 + f * 1.7 + row) * .5 + .5, len = (36 + u * 150 + (ROWS - 1 - row) * 26) * (1 - row * .2) * (.86 + j * .22) * W.k, tilt = .3 + u * .5 + row * .08 + Math.sin(sway + i + f) * .025, ex = px + (nx * Math.cos(tilt) + dx / d * Math.sin(tilt)) * len, ey = py + (ny * Math.cos(tilt) + dy / d * Math.sin(tilt)) * len + len * .32, w2 = 6.5 - row * 1.2;
-                    c.globalAlpha = alpha * (row === 0 ? 1 : .86); c.fillStyle = row === 0 ? (j > .5 ? '#fff8e4' : '#f6ecd4') : row === 1 ? '#ecdeff' : row === 2 ? '#ffe6b8' : '#fff4dc';
-                    c.beginPath(); c.moveTo(px - nx * w2, py - ny * w2); c.quadraticCurveTo((px + ex) / 2 + dx / d * w2 * 2, (py + ey) / 2 + dy / d * w2 * 2, ex, ey); c.quadraticCurveTo((px + ex) / 2 - dx / d * w2, (py + ey) / 2 - dy / d * w2, px + nx * w2, py + ny * w2); c.fill();
-                    if (row < 2) { c.globalAlpha = alpha * .5; c.strokeStyle = row === 0 ? '#c8a050' : '#8a6ad8'; c.lineWidth = 1; c.stroke(); c.globalAlpha = alpha * .35; c.beginPath(); c.moveTo(px, py); c.lineTo(ex, ey); c.stroke(); } } }
+                    c.moveTo(px - nx * w2, py - ny * w2); c.quadraticCurveTo((px + ex) / 2 + dx / d * w2 * 2, (py + ey) / 2 + dy / d * w2 * 2, ex, ey); c.quadraticCurveTo((px + ex) / 2 - dx / d * w2, (py + ey) / 2 - dy / d * w2, px + nx * w2, py + ny * w2); c.closePath(); if (row < 2) spines.push(px, py, ex, ey); }
+                c.globalAlpha = alpha * (row === 0 ? 1 : .86); c.fillStyle = row === 0 ? ((i % 2) ? '#fff8e4' : '#f6ecd4') : row === 1 ? '#ecdeff' : row === 2 ? '#ffe6b8' : '#fff4dc'; c.fill();
+                if (row < 2) { c.globalAlpha = alpha * .5; c.strokeStyle = row === 0 ? '#c8a050' : '#8a6ad8'; c.lineWidth = 1; c.stroke(); c.globalAlpha = alpha * .35; c.beginPath(); for (let q = 0; q < spines.length; q += 4) { c.moveTo(spines[q], spines[q + 1]); c.lineTo(spines[q + 2], spines[q + 3]); } c.stroke(); } }
             c.globalAlpha = alpha; c.strokeStyle = '#fff4d0'; c.lineWidth = 6; c.beginPath(); c.moveTo(P[0].x, P[0].y); for (const p of P) c.lineTo(p.x, p.y); c.stroke();
             c.globalCompositeOperation = 'lighter'; c.globalAlpha = alpha * .4; c.lineWidth = 18; c.strokeStyle = '#ffd890'; c.stroke(); c.globalCompositeOperation = 'source-over'; }
         c.restore();
@@ -11644,8 +11647,9 @@ G2.drawAscendedBody = function (c, b) {
     G2.wings.draw(c, b, near);
     for (let r = 0; r < 4; r++) { c.save(); c.translate(x, y); c.rotate((b.rings ? b.rings[r % 3] : 0) * (1 + r * .3) + t * .004 * (r % 2 ? -1 : 1)); c.scale(1, .28 + r * .16); const R = (230 - r * 26) * (1 - ab * .5 + (b.eye ? .55 : 0));
         c.strokeStyle = r % 2 ? 'rgba(200,176,255,.85)' : 'rgba(255,216,107,.9)'; c.lineWidth = 7 - r; c.beginPath(); c.arc(0, 0, R, 0, TAU); c.stroke();
-        for (let i = 0; i < 12; i++) { const a = i / 12 * TAU, ex = Math.cos(a) * R, ey = Math.sin(a) * R; Paint.disc(c, ex, ey, 7, '#f0e8d0'); Paint.disc(c, ex + Math.cos(a) * 1.5, ey, 3.5, b.eye ? '#ff4a1a' : '#3a2a10'); } c.restore(); }
-    c.save(); c.translate(x, y); c.rotate(t * .005); for (let i = 0; i < 28; i++) { c.rotate(TAU / 28); c.fillStyle = i % 2 ? 'rgba(255,232,160,.75)' : 'rgba(200,176,255,.55)'; c.beginPath(); c.moveTo(-6, -170); c.lineTo(0, -260 - (i % 3) * 26); c.lineTo(6, -170); c.fill(); } c.restore();
+        c.fillStyle = '#f0e8d0'; c.beginPath(); for (let i = 0; i < 12; i++) { const a = i / 12 * TAU, ex = Math.cos(a) * R, ey = Math.sin(a) * R; c.moveTo(ex + 7, ey); c.arc(ex, ey, 7, 0, TAU); } c.fill();
+        c.fillStyle = b.eye ? '#ff4a1a' : '#3a2a10'; c.beginPath(); for (let i = 0; i < 12; i++) { const a = i / 12 * TAU, ex = Math.cos(a) * R + Math.cos(a) * 1.5, ey = Math.sin(a) * R; c.moveTo(ex + 3.5, ey); c.arc(ex, ey, 3.5, 0, TAU); } c.fill(); c.restore(); }
+    c.save(); c.translate(x, y); for (const odd of [1, 0]) { c.fillStyle = odd ? 'rgba(255,232,160,.75)' : 'rgba(200,176,255,.55)'; c.beginPath(); for (let i = 0; i < 28; i++) { if (i % 2 !== odd) continue; const a = t * .005 + (i + 1) * TAU / 28, ca = Math.cos(a), sa = Math.sin(a), P = (px, py) => [px * ca - py * sa, px * sa + py * ca]; const [x1, y1] = P(-6, -170), [x2, y2] = P(0, -260 - (i % 3) * 26), [x3, y3] = P(6, -170); c.moveTo(x1, y1); c.lineTo(x2, y2); c.lineTo(x3, y3); c.closePath(); } c.fill(); } c.restore();
     Paint.glow(c, x, y, 190, '#ffffff'); const cg = c.createRadialGradient(x, y, 20, x, y, 120); cg.addColorStop(0, '#fffdf4'); cg.addColorStop(1, 'rgba(255,230,170,0)'); c.fillStyle = cg; c.beginPath(); c.arc(x, y, 120, 0, TAU); c.fill();
     const f2 = b.form2 || 0;
     if (f2 > 0) { // what it became after the drop: a second, wider halo of eyes, a crown of spires, a ring of swords of light
@@ -11705,7 +11709,7 @@ G2.ascendIntro = function* (b) {
     yield* waitBar(CUE.fight);
     // 0:49 hard cut to the fight, with a fresh health bar
     G.g2final = null; G.g2title = null; G.flash = .9; G.addShake(26); G.letterbox = 0; G.cineCam = null; G.lockInput = false; P.inv = Math.max(P.inv, 60); b.scale = 1.45; b.form2 = 1;
-    b.maxHp = b.hp = Math.round(4800 * Game.diff.bossHp * (G2.team && G.g2team ? 5 : 1)); b.hbar = 1; b.dilate = 0;
+    b.maxHp = b.hp = Math.round(4800 * Game.diff.bossHp * (G2.team && G.g2team ? 3 : 1)); b.hbar = 1; b.dilate = 0;
 };
 
 /* ------------------------------ THE FIGHT, CUT TO THE SONG ------------------------------ */
@@ -11727,11 +11731,16 @@ G2.ascendBeat = function (b, bar, bi) {
 const ASCEND_MOVES = { *conduct(b) { let last = -1; for (; ;) { const n = G2.song.beatN(); if (n !== last && !b.dead && !b.dying) { last = n; G2.ascendBeat(b, Math.floor(n / 4), ((n % 4) + 4) % 4); } if (b.dilate > 0) b.dilate = Math.max(0, b.dilate - .02); yield 1; } } };
 // The song follows the health bar: loop the section until the mark is reached, skip ahead if it falls faster.
 G2.ascendMusic = function (b) {
+    // The song follows the recording's own shape. While the section's mark is not reached, the body of the
+    // section loops in whole 8-bar groups. Once it is reached, the song goes to the last two bars of that same
+    // section, the lead-in the recording itself uses, and flows into the next section by itself. The boss's
+    // health holds at the mark until the music gets there (a few seconds), so the song never has to skip.
     const S = G2.song; if (!S.active || b.dying || b.dead || b.hp <= 0 || b.transition || !b.ascended || S.jump) return;
     const pos = S.pos(), cur = CUE.seg.findIndex(s => pos >= SONG.t(s.a) && pos < SONG.t(s.b)); if (cur < 0) return;
-    const want = G2.ascendSeg(b), f = b.hp / b.maxHp;
-    if (want > cur && pos > SONG.t(CUE.seg[cur].a) + SONG.bar * 4 && pos < SONG.t(CUE.seg[cur].b) - SONG.bar) { S.jumpTo(CUE.seg[want].a); return; }
-    S.setLoop(f > CUE.seg[cur].thr ? CUE.seg[cur] : null);
+    const seg = CUE.seg[cur], f = b.hp / b.maxHp, bar = (pos - SONG.first) / SONG.bar;
+    if (f > seg.thr + .0005) { const len = Math.max(8, Math.floor((seg.b - seg.a) / 8) * 8); S.setLoop({ a: seg.a, b: seg.a + len }); return; }
+    S.setLoop(null);
+    if (cur < CUE.seg.length - 1 && seg.b - bar > 3) S.jumpTo(seg.b - 2, false, 2);
 };
 
 /* ------------------------------ DYING, 2:31-2:45, AND DEATH ------------------------------ */
@@ -12286,8 +12295,9 @@ G2.drawLasers = function (c, b) {
 G2.drawRage = function (c, b, x, y) {
     const r = b.rage || 0; if (r <= .02) return;
     c.save(); c.globalCompositeOperation = 'lighter'; c.globalAlpha = Math.min(.5, r * .15); c.drawImage(Glow.get('#ff3a1a'), x - 520, y - 460, 1040, 920); c.restore();
-    if (r > 1.2) { const k = Math.min(1, (r - 1.2) / 1.5), R = U.mulberry(19); c.save(); c.globalCompositeOperation = 'lighter'; c.strokeStyle = `rgba(255,90,40,${.75 * k})`; c.lineWidth = 3; c.shadowColor = '#ff3a1a'; c.shadowBlur = 12;
-        for (let i = 0; i < 14; i++) { const a = R() * TAU; let px = x + Math.cos(a) * 110, py = y + Math.sin(a) * 110; c.beginPath(); c.moveTo(px, py); for (let j = 0; j < 4; j++) { px += Math.cos(a) * 40 + (R() - .5) * 50; py += Math.sin(a) * 40 + (R() - .5) * 50; c.lineTo(px, py); } c.stroke(); } c.restore(); }
+    if (r > 1.2) { const k = Math.min(1, (r - 1.2) / 1.5), R = U.mulberry(19); c.save(); c.globalCompositeOperation = 'lighter'; c.lineCap = 'round';
+        c.beginPath(); for (let i = 0; i < 14; i++) { const a = R() * TAU; let px = x + Math.cos(a) * 110, py = y + Math.sin(a) * 110; c.moveTo(px, py); for (let j = 0; j < 4; j++) { px += Math.cos(a) * 40 + (R() - .5) * 50; py += Math.sin(a) * 40 + (R() - .5) * 50; c.lineTo(px, py); } }
+        c.strokeStyle = `rgba(255,58,26,${.3 * k})`; c.lineWidth = 12; c.stroke(); c.strokeStyle = `rgba(255,120,60,${.85 * k})`; c.lineWidth = 3; c.stroke(); c.restore(); }
 };
 
 /* ------------------------------ THE CORE, OPENED ------------------------------ */
@@ -12377,7 +12387,7 @@ Object.assign(VI, {
         c.font = 'bold 12px "Palatino Linotype", "Times New Roman", serif'; c.fillStyle = '#ff6a4a'; UIText.spaced(c, tr('FINAL BOSS'), VW / 2, y - 34, 6);
         c.font = 'bold 26px "Palatino Linotype", "Times New Roman", serif'; c.lineWidth = 4; c.strokeStyle = 'rgba(20,6,0,.9)'; const name = tr('THE ARCHITECT, ASCENDED'); c.strokeText(name, VW / 2, y - 9); const ng = c.createLinearGradient(0, y - 30, 0, y - 6); ng.addColorStop(0, '#fff6d8'); ng.addColorStop(1, '#ffb040'); c.fillStyle = ng; c.fillText(name, VW / 2, y - 9);
         // frame
-        c.shadowColor = rage > 2 ? '#ff3a1a' : '#ffd86b'; c.shadowBlur = 16; c.fillStyle = 'rgba(8,4,14,.85)'; c.fillRect(x - 6, y - 4, w + 12, h + 8); c.shadowBlur = 0;
+        c.fillStyle = 'rgba(8,4,14,.85)'; c.fillRect(x - 6, y - 4, w + 12, h + 8); c.strokeStyle = rage > 2 ? 'rgba(255,58,26,.35)' : 'rgba(255,216,107,.3)'; c.lineWidth = 6; c.strokeRect(x - 9, y - 7, w + 18, h + 14);
         const fg = c.createLinearGradient(x, 0, x + w, 0); fg.addColorStop(0, '#ffd86b'); fg.addColorStop(.5, '#c8b0ff'); fg.addColorStop(1, '#ffd86b'); c.strokeStyle = fg; c.lineWidth = 2; c.strokeRect(x - 6, y - 4, w + 12, h + 8); c.strokeStyle = 'rgba(255,240,200,.35)'; c.lineWidth = 1; c.strokeRect(x - 2, y, w + 4, h);
         // chip, then the health itself
         c.fillStyle = 'rgba(255,255,255,.75)'; c.fillRect(x, y + 2, w * b.chip, h - 4);
@@ -12452,6 +12462,76 @@ G2.drawFinalCard = function (c, F) {
     c.restore();
 };
 (function () { const hd = HUD.draw.bind(HUD); HUD.draw = function (c) { hd(c); const F = G.g2final; if (!F) return; F.t = (F.t || 0) + 1; G2.drawFinalCard(c, F); }; })();
+
+/* ------------------------------ LIGHTER FRAMES, SAME PICTURE ------------------------------ */
+(function () {
+    // the level's own drifting motes are hidden behind the final form's sky anyway: skip them while it shows
+    const wd = Weather.draw.bind(Weather); Weather.draw = function (...a) { const b = G.boss; if (b && b.ascended && G.g2fx && G.g2fx.sky > .9) return; return wd(...a); };
+    // bloom: take the small bright copy every other frame and reuse it in between
+    const bl = Post.bloom.bind(Post); Post.bloom = function (ctx, canvas) { const b = G.boss; if (!(b && b.ascended) || !this.bl || G.time % 2 === 0) return bl(ctx, canvas); if (Settings.quality < 2 || this.noBloom) return; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = .46; ctx.imageSmoothingEnabled = true; ctx.drawImage(this.bl, 0, 0, VW, VH); ctx.restore(); };
+})();
+
+/* ------------------------------ LIGHTNING ------------------------------ */
+// From the third section on, the columns of light become lightning: the same marks a beat ahead, then a
+// bolt from the top of the sky with branches, a flash and thunder. The sky behind forks with lightning too,
+// more often at the end.
+G2.bolts = []; G2.skyBolts = [];
+G2.boltPath = function (x0, y0, x1, y1, jag, R = Math.random) {
+    const pts = [[x0, y0]], n = 14; for (let i = 1; i < n; i++) { const u = i / n; pts.push([U.lerp(x0, x1, u) + (R() - .5) * jag * (1 - Math.abs(u - .5)), U.lerp(y0, y1, u)]); } pts.push([x1, y1]);
+    const br = []; for (let i = 3; i < n - 2; i += 3) if (R() < .7) { const [bx, by] = pts[i], d = (R() < .5 ? -1 : 1), L = 60 + R() * 120; const b = [[bx, by]]; for (let k = 1; k <= 4; k++) b.push([bx + d * L * k / 4 + (R() - .5) * 20, by + L * .6 * k / 4]); br.push(b); }
+    return { pts, br };
+};
+G2.SK.thunder = function (b, tele, xs) {
+    const A = b.A; for (const x0 of xs) { const x = U.clamp(x0, A.x0 + 50, A.x1 - 50);
+        Combat.warn({ shape: 'rect', x: x - 48, y: A.y - 900, w: 96, h: 900, t: tele, dmg: b.D(18), src: b, col: '#bfe4ff', onFire: () => {
+            const top = G.cam.y - 40; G2.bolts.push(Object.assign(G2.boltPath(x, top, x, A.y, 90), { life: 16, age: 0 })); G.flash = Math.max(G.flash, .28); G.addShake(10); Sound.sfx('bigboom', { v: .45 }); Sound.sfx('crumble', { v: .3 });
+            VFX.burst(x, A.y - 6, '#e8f6ff', 22, 9, 28, 7, 1); VFX.ring(x, A.y - 10, 140, '#bfe4ff', 14, 6); Light.add(x, A.y - 200, 700, '#cfe8ff', 1.4); } }); }
+};
+G2.SK.thunderRow = function (b, tele, odd) { const A = b.A, w = (A.x1 - A.x0) / 8, xs = []; for (let i = 0; i < 8; i++) if ((i % 2 === 1) === !!odd) xs.push(A.x0 + i * w + w / 2); G2.SK.thunder(b, tele, xs); };
+G2.drawBolts = function (c) {
+    for (const B of G2.bolts) { const k = 1 - B.age / B.life, flick = B.age % 3 === 1 ? .55 : 1; c.save(); c.globalCompositeOperation = 'lighter'; c.lineJoin = 'round'; c.lineCap = 'round';
+        const path = P => { c.beginPath(); c.moveTo(P[0][0], P[0][1]); for (let i = 1; i < P.length; i++) c.lineTo(P[i][0], P[i][1]); };
+        const sky = B.sky ? 1.6 : 1;
+        c.globalAlpha = .45 * k * flick; c.strokeStyle = '#7fb8ff'; c.lineWidth = 46 * sky; path(B.pts); c.stroke();
+        c.globalAlpha = .95 * k * flick; c.strokeStyle = '#e8f6ff'; c.lineWidth = 13 * sky; path(B.pts); c.stroke(); c.strokeStyle = '#ffffff'; c.lineWidth = 5 * sky; c.stroke();
+        c.globalAlpha = .8 * k * flick; c.strokeStyle = '#cfe8ff'; c.lineWidth = 5 * sky; for (const br of B.br) { path(br); c.stroke(); }
+        const end = B.pts[B.pts.length - 1]; c.globalAlpha = .9 * k; c.drawImage(Glow.get('#cfe8ff'), end[0] - 160, end[1] - 120, 320, 200); c.drawImage(Glow.get('#ffffff'), end[0] - 60, end[1] - 50, 120, 80);
+        c.restore(); }
+};
+(function () {
+    // floor columns become lightning from the third section
+    const beat = G2.ascendBeat; G2.ascendBeat = function (b, bar, bi) {
+        const seg = CUE.seg.findIndex(s => bar >= s.a && bar < s.b);
+        if (seg >= 2) { const sk = G2.SK, p = sk.pillar, cl = sk.colonnade, cast = G2.castSkill, P = G.player, tele = Math.round(SONG.beat * 60 * 2); let pillars = [];
+            sk.pillar = (bb, t, x) => { pillars.push(x); }; sk.colonnade = (bb, t, odd) => sk.thunderRow(bb, t, odd);
+            G2.castSkill = (name, col) => cast(name === 'PILLARS OF DAWN' ? 'THUNDER STRIKE' : name === 'COLONNADE' ? 'THUNDER ROW' : name, name === 'PILLARS OF DAWN' || name === 'COLONNADE' ? '#bfe4ff' : col);
+            try { beat(b, bar, bi); } finally { sk.pillar = p; sk.colonnade = cl; G2.castSkill = cast; }
+            if (pillars.length) { if (seg === 3) pillars.push(P.x + U.pick([-1, 1]) * 620); sk.thunder(b, tele, pillars); }
+            return; }
+        return beat(b, bar, bi);
+    };
+    const tick = BOSSES.architect2.tick; BOSSES.architect2.tick = b => { tick(b); for (const B of G2.bolts) B.age++; G2.bolts = G2.bolts.filter(B => B.age < B.life); for (const B of G2.skyBolts) B.age++; G2.skyBolts = G2.skyBolts.filter(B => B.age < B.life);
+        const r = b.rage || 0; if (b.ascended && !b.dying && r > 1.4 && Math.random() < (r > 2.5 ? .03 : .012)) { const x = U.rand(VW * .05, VW * .95); G2.skyBolts.push(Object.assign(G2.boltPath(x, -20, x + U.rand(-200, 200), VH * U.rand(.35, .7), 140), { life: 14, age: 0, sky: true })); if (Math.random() < .5) Sound.sfx('distant_boom', { v: .3 }); } };
+    const draw = BOSSES.architect2.draw; BOSSES.architect2.draw = (c, b) => { draw(c, b); if (G2.bolts.length) { c.save(); try { G2.drawBolts(c); } finally { c.restore(); } } };
+    // the sky's lightning, in screen space behind everything, with a flash of the clouds
+    const hv = G2.heaven; G2.heaven = function (c, k) { hv(c, k); if (!G2.skyBolts.length || k <= 0) return; c.save(); for (const B of G2.skyBolts) { const f = 1 - B.age / B.life; c.globalAlpha = .2 * f * k; c.fillStyle = '#cfe0ff'; c.fillRect(0, 0, VW, VH); } c.globalAlpha = k; G2.drawBolts.call(null, c, G2.skyBolts); c.restore(); };
+    const db = G2.drawBolts; G2.drawBolts = function (c, list) { const keep = G2.bolts; if (list) G2.bolts = list; try { db(c); } finally { G2.bolts = keep; } };
+    const ll = Game.loadLevel.bind(Game); Game.loadLevel = function (id, cp) { G2.bolts = []; G2.skyBolts = []; return ll(id, cp); };
+})();
+Object.assign(VI, { 'THUNDER STRIKE': 'SẤM SÉT GIÁNG', 'THUNDER ROW': 'HÀNG SẤM' });
+
+/* ------------------------------ THE MARK HOLDS UNTIL THE MUSIC ARRIVES ------------------------------ */
+(function () {
+    const bh = Boss.prototype.hurt; Boss.prototype.hurt = function (dmg, o) {
+        if (this.def.id === 'architect2' && this.ascended && !this.dying && G2.song.active) {
+            const pos = G2.song.pos(), cur = CUE.seg.findIndex(s => pos >= SONG.t(s.a) && pos < SONG.t(s.b));
+            if (cur >= 0 && cur < CUE.seg.length - 1) { const floor = Math.ceil(CUE.seg[cur].thr * this.maxHp) + 1; if (this.hp - dmg * (this.dmgTakenMult || 1) < floor) { if (this.hp <= floor) { this.capT = 24; return 0; } dmg = (this.hp - floor) / (this.dmgTakenMult || 1); this.capT = 24; } }
+        }
+        return bh.call(this, dmg, o);
+    };
+    // a ring of light shows the mark is holding
+    const draw = BOSSES.architect2.draw; BOSSES.architect2.draw = (c, b) => { draw(c, b); if (b.capT > 0 && b.ascended && !b.gone) { b.capT--; const y = G2.cy(b), k = b.capT / 24; c.save(); c.globalCompositeOperation = 'lighter'; c.globalAlpha = .6 * k; c.strokeStyle = '#ffe8a0'; c.lineWidth = 6; c.beginPath(); c.arc(b.x, y, 230 * (b.scale || 1) * (1.05 - k * .05), 0, TAU); c.stroke(); c.restore(); } };
+})();
 
 </script>
 <script>

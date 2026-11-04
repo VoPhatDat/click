@@ -200,8 +200,9 @@ G2.drawLasers = function (c, b) {
 G2.drawRage = function (c, b, x, y) {
     const r = b.rage || 0; if (r <= .02) return;
     c.save(); c.globalCompositeOperation = 'lighter'; c.globalAlpha = Math.min(.5, r * .15); c.drawImage(Glow.get('#ff3a1a'), x - 520, y - 460, 1040, 920); c.restore();
-    if (r > 1.2) { const k = Math.min(1, (r - 1.2) / 1.5), R = U.mulberry(19); c.save(); c.globalCompositeOperation = 'lighter'; c.strokeStyle = `rgba(255,90,40,${.75 * k})`; c.lineWidth = 3; c.shadowColor = '#ff3a1a'; c.shadowBlur = 12;
-        for (let i = 0; i < 14; i++) { const a = R() * TAU; let px = x + Math.cos(a) * 110, py = y + Math.sin(a) * 110; c.beginPath(); c.moveTo(px, py); for (let j = 0; j < 4; j++) { px += Math.cos(a) * 40 + (R() - .5) * 50; py += Math.sin(a) * 40 + (R() - .5) * 50; c.lineTo(px, py); } c.stroke(); } c.restore(); }
+    if (r > 1.2) { const k = Math.min(1, (r - 1.2) / 1.5), R = U.mulberry(19); c.save(); c.globalCompositeOperation = 'lighter'; c.lineCap = 'round';
+        c.beginPath(); for (let i = 0; i < 14; i++) { const a = R() * TAU; let px = x + Math.cos(a) * 110, py = y + Math.sin(a) * 110; c.moveTo(px, py); for (let j = 0; j < 4; j++) { px += Math.cos(a) * 40 + (R() - .5) * 50; py += Math.sin(a) * 40 + (R() - .5) * 50; c.lineTo(px, py); } }
+        c.strokeStyle = `rgba(255,58,26,${.3 * k})`; c.lineWidth = 12; c.stroke(); c.strokeStyle = `rgba(255,120,60,${.85 * k})`; c.lineWidth = 3; c.stroke(); c.restore(); }
 };
 
 /* ------------------------------ THE CORE, OPENED ------------------------------ */
@@ -291,7 +292,7 @@ Object.assign(VI, {
         c.font = 'bold 12px "Palatino Linotype", "Times New Roman", serif'; c.fillStyle = '#ff6a4a'; UIText.spaced(c, tr('FINAL BOSS'), VW / 2, y - 34, 6);
         c.font = 'bold 26px "Palatino Linotype", "Times New Roman", serif'; c.lineWidth = 4; c.strokeStyle = 'rgba(20,6,0,.9)'; const name = tr('THE ARCHITECT, ASCENDED'); c.strokeText(name, VW / 2, y - 9); const ng = c.createLinearGradient(0, y - 30, 0, y - 6); ng.addColorStop(0, '#fff6d8'); ng.addColorStop(1, '#ffb040'); c.fillStyle = ng; c.fillText(name, VW / 2, y - 9);
         // frame
-        c.shadowColor = rage > 2 ? '#ff3a1a' : '#ffd86b'; c.shadowBlur = 16; c.fillStyle = 'rgba(8,4,14,.85)'; c.fillRect(x - 6, y - 4, w + 12, h + 8); c.shadowBlur = 0;
+        c.fillStyle = 'rgba(8,4,14,.85)'; c.fillRect(x - 6, y - 4, w + 12, h + 8); c.strokeStyle = rage > 2 ? 'rgba(255,58,26,.35)' : 'rgba(255,216,107,.3)'; c.lineWidth = 6; c.strokeRect(x - 9, y - 7, w + 18, h + 14);
         const fg = c.createLinearGradient(x, 0, x + w, 0); fg.addColorStop(0, '#ffd86b'); fg.addColorStop(.5, '#c8b0ff'); fg.addColorStop(1, '#ffd86b'); c.strokeStyle = fg; c.lineWidth = 2; c.strokeRect(x - 6, y - 4, w + 12, h + 8); c.strokeStyle = 'rgba(255,240,200,.35)'; c.lineWidth = 1; c.strokeRect(x - 2, y, w + 4, h);
         // chip, then the health itself
         c.fillStyle = 'rgba(255,255,255,.75)'; c.fillRect(x, y + 2, w * b.chip, h - 4);
@@ -366,3 +367,73 @@ G2.drawFinalCard = function (c, F) {
     c.restore();
 };
 (function () { const hd = HUD.draw.bind(HUD); HUD.draw = function (c) { hd(c); const F = G.g2final; if (!F) return; F.t = (F.t || 0) + 1; G2.drawFinalCard(c, F); }; })();
+
+/* ------------------------------ LIGHTER FRAMES, SAME PICTURE ------------------------------ */
+(function () {
+    // the level's own drifting motes are hidden behind the final form's sky anyway: skip them while it shows
+    const wd = Weather.draw.bind(Weather); Weather.draw = function (...a) { const b = G.boss; if (b && b.ascended && G.g2fx && G.g2fx.sky > .9) return; return wd(...a); };
+    // bloom: take the small bright copy every other frame and reuse it in between
+    const bl = Post.bloom.bind(Post); Post.bloom = function (ctx, canvas) { const b = G.boss; if (!(b && b.ascended) || !this.bl || G.time % 2 === 0) return bl(ctx, canvas); if (Settings.quality < 2 || this.noBloom) return; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = .46; ctx.imageSmoothingEnabled = true; ctx.drawImage(this.bl, 0, 0, VW, VH); ctx.restore(); };
+})();
+
+/* ------------------------------ LIGHTNING ------------------------------ */
+// From the third section on, the columns of light become lightning: the same marks a beat ahead, then a
+// bolt from the top of the sky with branches, a flash and thunder. The sky behind forks with lightning too,
+// more often at the end.
+G2.bolts = []; G2.skyBolts = [];
+G2.boltPath = function (x0, y0, x1, y1, jag, R = Math.random) {
+    const pts = [[x0, y0]], n = 14; for (let i = 1; i < n; i++) { const u = i / n; pts.push([U.lerp(x0, x1, u) + (R() - .5) * jag * (1 - Math.abs(u - .5)), U.lerp(y0, y1, u)]); } pts.push([x1, y1]);
+    const br = []; for (let i = 3; i < n - 2; i += 3) if (R() < .7) { const [bx, by] = pts[i], d = (R() < .5 ? -1 : 1), L = 60 + R() * 120; const b = [[bx, by]]; for (let k = 1; k <= 4; k++) b.push([bx + d * L * k / 4 + (R() - .5) * 20, by + L * .6 * k / 4]); br.push(b); }
+    return { pts, br };
+};
+G2.SK.thunder = function (b, tele, xs) {
+    const A = b.A; for (const x0 of xs) { const x = U.clamp(x0, A.x0 + 50, A.x1 - 50);
+        Combat.warn({ shape: 'rect', x: x - 48, y: A.y - 900, w: 96, h: 900, t: tele, dmg: b.D(18), src: b, col: '#bfe4ff', onFire: () => {
+            const top = G.cam.y - 40; G2.bolts.push(Object.assign(G2.boltPath(x, top, x, A.y, 90), { life: 16, age: 0 })); G.flash = Math.max(G.flash, .28); G.addShake(10); Sound.sfx('bigboom', { v: .45 }); Sound.sfx('crumble', { v: .3 });
+            VFX.burst(x, A.y - 6, '#e8f6ff', 22, 9, 28, 7, 1); VFX.ring(x, A.y - 10, 140, '#bfe4ff', 14, 6); Light.add(x, A.y - 200, 700, '#cfe8ff', 1.4); } }); }
+};
+G2.SK.thunderRow = function (b, tele, odd) { const A = b.A, w = (A.x1 - A.x0) / 8, xs = []; for (let i = 0; i < 8; i++) if ((i % 2 === 1) === !!odd) xs.push(A.x0 + i * w + w / 2); G2.SK.thunder(b, tele, xs); };
+G2.drawBolts = function (c) {
+    for (const B of G2.bolts) { const k = 1 - B.age / B.life, flick = B.age % 3 === 1 ? .55 : 1; c.save(); c.globalCompositeOperation = 'lighter'; c.lineJoin = 'round'; c.lineCap = 'round';
+        const path = P => { c.beginPath(); c.moveTo(P[0][0], P[0][1]); for (let i = 1; i < P.length; i++) c.lineTo(P[i][0], P[i][1]); };
+        const sky = B.sky ? 1.6 : 1;
+        c.globalAlpha = .45 * k * flick; c.strokeStyle = '#7fb8ff'; c.lineWidth = 46 * sky; path(B.pts); c.stroke();
+        c.globalAlpha = .95 * k * flick; c.strokeStyle = '#e8f6ff'; c.lineWidth = 13 * sky; path(B.pts); c.stroke(); c.strokeStyle = '#ffffff'; c.lineWidth = 5 * sky; c.stroke();
+        c.globalAlpha = .8 * k * flick; c.strokeStyle = '#cfe8ff'; c.lineWidth = 5 * sky; for (const br of B.br) { path(br); c.stroke(); }
+        const end = B.pts[B.pts.length - 1]; c.globalAlpha = .9 * k; c.drawImage(Glow.get('#cfe8ff'), end[0] - 160, end[1] - 120, 320, 200); c.drawImage(Glow.get('#ffffff'), end[0] - 60, end[1] - 50, 120, 80);
+        c.restore(); }
+};
+(function () {
+    // floor columns become lightning from the third section
+    const beat = G2.ascendBeat; G2.ascendBeat = function (b, bar, bi) {
+        const seg = CUE.seg.findIndex(s => bar >= s.a && bar < s.b);
+        if (seg >= 2) { const sk = G2.SK, p = sk.pillar, cl = sk.colonnade, cast = G2.castSkill, P = G.player, tele = Math.round(SONG.beat * 60 * 2); let pillars = [];
+            sk.pillar = (bb, t, x) => { pillars.push(x); }; sk.colonnade = (bb, t, odd) => sk.thunderRow(bb, t, odd);
+            G2.castSkill = (name, col) => cast(name === 'PILLARS OF DAWN' ? 'THUNDER STRIKE' : name === 'COLONNADE' ? 'THUNDER ROW' : name, name === 'PILLARS OF DAWN' || name === 'COLONNADE' ? '#bfe4ff' : col);
+            try { beat(b, bar, bi); } finally { sk.pillar = p; sk.colonnade = cl; G2.castSkill = cast; }
+            if (pillars.length) { if (seg === 3) pillars.push(P.x + U.pick([-1, 1]) * 620); sk.thunder(b, tele, pillars); }
+            return; }
+        return beat(b, bar, bi);
+    };
+    const tick = BOSSES.architect2.tick; BOSSES.architect2.tick = b => { tick(b); for (const B of G2.bolts) B.age++; G2.bolts = G2.bolts.filter(B => B.age < B.life); for (const B of G2.skyBolts) B.age++; G2.skyBolts = G2.skyBolts.filter(B => B.age < B.life);
+        const r = b.rage || 0; if (b.ascended && !b.dying && r > 1.4 && Math.random() < (r > 2.5 ? .03 : .012)) { const x = U.rand(VW * .05, VW * .95); G2.skyBolts.push(Object.assign(G2.boltPath(x, -20, x + U.rand(-200, 200), VH * U.rand(.35, .7), 140), { life: 14, age: 0, sky: true })); if (Math.random() < .5) Sound.sfx('distant_boom', { v: .3 }); } };
+    const draw = BOSSES.architect2.draw; BOSSES.architect2.draw = (c, b) => { draw(c, b); if (G2.bolts.length) { c.save(); try { G2.drawBolts(c); } finally { c.restore(); } } };
+    // the sky's lightning, in screen space behind everything, with a flash of the clouds
+    const hv = G2.heaven; G2.heaven = function (c, k) { hv(c, k); if (!G2.skyBolts.length || k <= 0) return; c.save(); for (const B of G2.skyBolts) { const f = 1 - B.age / B.life; c.globalAlpha = .2 * f * k; c.fillStyle = '#cfe0ff'; c.fillRect(0, 0, VW, VH); } c.globalAlpha = k; G2.drawBolts.call(null, c, G2.skyBolts); c.restore(); };
+    const db = G2.drawBolts; G2.drawBolts = function (c, list) { const keep = G2.bolts; if (list) G2.bolts = list; try { db(c); } finally { G2.bolts = keep; } };
+    const ll = Game.loadLevel.bind(Game); Game.loadLevel = function (id, cp) { G2.bolts = []; G2.skyBolts = []; return ll(id, cp); };
+})();
+Object.assign(VI, { 'THUNDER STRIKE': 'SẤM SÉT GIÁNG', 'THUNDER ROW': 'HÀNG SẤM' });
+
+/* ------------------------------ THE MARK HOLDS UNTIL THE MUSIC ARRIVES ------------------------------ */
+(function () {
+    const bh = Boss.prototype.hurt; Boss.prototype.hurt = function (dmg, o) {
+        if (this.def.id === 'architect2' && this.ascended && !this.dying && G2.song.active) {
+            const pos = G2.song.pos(), cur = CUE.seg.findIndex(s => pos >= SONG.t(s.a) && pos < SONG.t(s.b));
+            if (cur >= 0 && cur < CUE.seg.length - 1) { const floor = Math.ceil(CUE.seg[cur].thr * this.maxHp) + 1; if (this.hp - dmg * (this.dmgTakenMult || 1) < floor) { if (this.hp <= floor) { this.capT = 24; return 0; } dmg = (this.hp - floor) / (this.dmgTakenMult || 1); this.capT = 24; } }
+        }
+        return bh.call(this, dmg, o);
+    };
+    // a ring of light shows the mark is holding
+    const draw = BOSSES.architect2.draw; BOSSES.architect2.draw = (c, b) => { draw(c, b); if (b.capT > 0 && b.ascended && !b.gone) { b.capT--; const y = G2.cy(b), k = b.capT / 24; c.save(); c.globalCompositeOperation = 'lighter'; c.globalAlpha = .6 * k; c.strokeStyle = '#ffe8a0'; c.lineWidth = 6; c.beginPath(); c.arc(b.x, y, 230 * (b.scale || 1) * (1.05 - k * .05), 0, TAU); c.stroke(); c.restore(); } };
+})();
