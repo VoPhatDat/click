@@ -324,9 +324,10 @@ Object.assign(LEVELS, {
         const d = b.done(); d.g2sepia = true; return d;
     },
     architect2() {
-        const b = new LB('architect2', 80, 40, { name: 'THE SKY TORN OPEN', sub: 'The Seventh Day: the Architect rises', region: 'city', theme: THEMES.arch7, bg: 'arch7', spawn: { x: 4, y: 32 }, weather: 'motes', indoors: true, noAlly: true });
-        b.at(0, 32).flat(80); b.fill(0, 0, 1, 39); b.fill(78, 0, 79, 39); b.beacon(3, 32); b.gate(8, 22, 10, 'arena_l'); b.plat(18, 27, 5).plat(56, 27, 5).plat(37, 23, 5);
-        b.bossArena('architect2', 9, 77, 32, 44, 32, { trigger: 11 }); return b.done();
+        // tall, so the god of the last card fits on screen with its wings and crown
+        const b = new LB('architect2', 80, 50, { name: 'THE SKY TORN OPEN', sub: 'The Seventh Day: the Architect rises', region: 'city', theme: THEMES.arch7, bg: 'arch7', spawn: { x: 4, y: 42 }, weather: 'motes', indoors: true, noAlly: true });
+        b.at(0, 42).flat(80); b.fill(0, 0, 1, 49); b.fill(78, 0, 79, 49); b.beacon(3, 42); b.gate(8, 32, 10, 'arena_l'); b.plat(18, 37, 5).plat(56, 37, 5).plat(37, 33, 5);
+        b.bossArena('architect2', 9, 77, 42, 44, 42, { trigger: 11 }); return b.done();
     },
     weariness() {
         const b = new LB('weariness', 60, 30, { name: 'THE THRONE, BROKEN', sub: 'Good Night', region: 'city', theme: THEMES.throne7, bg: 'throne7', spawn: { x: 4, y: 24 }, weather: 'ash', indoors: true, noAlly: true, forceChar: 'nyx' });

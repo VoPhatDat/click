@@ -207,6 +207,15 @@ Object.assign(CUTS, {
         yield* c.say('ROOK', 'He is gone, then...', 140);
         yield* c.say('ROOK', 'Then from now on, we follow you.', 200);
         yield* c.say('', 'War, Death, Plague and Famine knelt in the sand in front of a girl of fourteen.', 240);
+        // Death teaches her the one song that brings people back (the Lullaby of Return).
+        yield* c.say('SABLE', 'You were humming to the wolves back there. I heard it from the other side of the dune.', 230);
+        yield* c.say('NYX', 'Uncle Zero used to sing it when I could not sleep. It is the only song I know.', 220);
+        yield* c.say('SABLE', 'I have carried the dead for a long time, kid. I know every song that sends people away.', 230);
+        yield* c.say('SABLE', 'Yours goes the other way. Give me your hands. I will teach you the rest of it.', 220);
+        yield* c.say('', 'Under the first stars, Sable taught her the Lullaby of Return: a song that pulls a fallen friend back from the edge, if the one singing still has the strength to finish it.', 300);
+        yield* c.say('SABLE', 'It takes everything you have. Wait until your spirit is full. And do not waste it on me.', 230);
+        yield* c.say('NYX', 'I will waste it on all of you. Every time.', 180);
+        Save.data.g2.reviveLearned = 1; G.toast && G.toast(tr('Learned: Lullaby of Return'), '#e0d0ff');
         c.fade(1, 60); yield 66;
     }
 });
@@ -216,9 +225,16 @@ REGIONS[4].level = 'desert2';
 LEVEL_ORDER.push('desert2', 'lilith');
 Object.assign(OBJECTIVES, { desert2: 'Cross the Desert of the Pack, alone', lilith: 'Face the Queen of the Pack' });
 G2.DAYS[5].open = 'g2ch5open';
-G2.DAYS[5].after = () => { const D = Save.data; for (const id of ['rook', 'sable', 'mirae', 'ysolde']) if (!D.unlocked.includes(id)) D.unlocked.push(id); Save.write(); };
+G2.DAYS[5].after = () => { const D = Save.data; D.g2.reviveLearned = 1; for (const id of ['rook', 'sable', 'mirae', 'ysolde']) if (!D.unlocked.includes(id)) D.unlocked.push(id); Save.write(); };
 
 Object.assign(VI, {
+    'You were humming to the wolves back there. I heard it from the other side of the dune.': 'Lúc nãy nhóc ngân nga cho bầy sói nghe. Đứng bên kia đồi cát mà tôi vẫn nghe thấy.',
+    'Uncle Zero used to sing it when I could not sleep. It is the only song I know.': 'Hồi em mất ngủ, chú Zero hay hát bài đó. Em chỉ thuộc mỗi bài ấy thôi.',
+    'I have carried the dead for a long time, kid. I know every song that sends people away.': 'Tôi đưa người chết đi lâu lắm rồi, nhóc ạ. Bài hát tiễn người ta đi, bài nào tôi cũng thuộc.',
+    'Yours goes the other way. Give me your hands. I will teach you the rest of it.': 'Còn bài của nhóc thì ngược lại. Đưa tay đây. Tôi dạy nốt phần còn lại cho.',
+    'Under the first stars, Sable taught her the Lullaby of Return: a song that pulls a fallen friend back from the edge, if the one singing still has the strength to finish it.': 'Dưới những vì sao đầu tiên, Sable dạy cô bé Bài Ru Gọi Về: khúc hát kéo một người bạn đã gục quay lại từ bờ vực, miễn là người hát còn đủ sức hát trọn bài.',
+    'It takes everything you have. Wait until your spirit is full. And do not waste it on me.': 'Nó rút cạn sức nhóc đấy. Đợi Linh Lực Đêm đầy hẵng hát. Và đừng phí nó cho tôi.',
+    'I will waste it on all of you. Every time.': 'Em sẽ phí nó cho tất cả mọi người. Lần nào cũng vậy.', 'Learned: Lullaby of Return': 'Đã học: Bài Ru Gọi Về',
     'THE DESERT OF THE PACK': 'HOANG MẠC BẦY ĐÀN', 'The Fifth Day: the beasts of fear': 'Ngày Thứ Năm: muông thú của nỗi sợ', 'THE HOLLOW OF THE PACK': 'HỐC CỦA BẦY SÓI', 'The Fifth Day: Lilith-Varga': 'Ngày Thứ Năm: Lilith-Varga',
     'Wolf of Fear': 'Sói Sợ Hãi', 'Many-Eyed Eagle': 'Đại Bàng Nhiều Mắt', 'Red Sand Scorpion': 'Bọ Cạp Cát Đỏ', 'Alpha of the Pack': 'Sói Đầu Đàn', 'The alpha sleeps. You let it be.': 'Con sói đầu đàn đã ngủ. Em để nó yên.',
     'THE FIRE-HORNED ANTELOPE': 'LINH DƯƠNG SỪNG LỬA', 'IT RUNS FROM WHAT IT IS': 'NÓ CHẠY TRỐN CHÍNH MÌNH', 'It is not attacking. It is running away from its own fire...': 'Nó không tấn công. Nó đang chạy trốn ngọn lửa của chính nó...',

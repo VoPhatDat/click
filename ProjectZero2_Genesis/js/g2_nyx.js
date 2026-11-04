@@ -109,17 +109,18 @@ G2.zeroBrain = function (z) {
     const upd = base.update, hurt = base.hurt, draw = base.draw, tc = base.tryCombat, fo = base.fallOut, rts = base.returnToSafe;
     base.update = function () {
         if (this.isAlly) {
-            const keep = Input.simulated, lock = G.lockInput; Input.simulated = G.lockInput ? {} : G2.zeroBrain(this);
+            const keep = Input.simulated, lock = G.lockInput; Input.simulated = G.lockInput ? {} : (this.brain || G2.zeroBrain)(this);
             try { upd.call(this); } finally { Input.simulated = keep; }
-            Light.add(this.x, this.y - 30, 200, '#00ffff', .5); return;
+            if (!this.isTeam) Light.add(this.x, this.y - 30, 200, '#00ffff', .5); return;
         }
         upd.call(this);
         // A child heals quickly once the danger passes; Zero keeps her safe in the meantime.
         if (this.id === 'nyx' && this.state !== 'dead' && this.lastHurt > 150 && this.hp < this.maxHp && G.time % 8 === 0) this.heal(1, true);
         if (this === G.player && G.ally) G.ally.update();
+        if (this === G.player && G.allies) for (const a of G.allies) if (!a.down) a.update();
     };
-    base.hurt = function (dmg, src) { if (this.isAlly) return false; if (this.id === 'nyx') dmg *= (NYX_AGES[Save.data.g2.chapter || 1] || 6) < 10 ? .45 : .75; const r = hurt.call(this, dmg, src); if (r && this.id === 'nyx') { this.inv = Math.max(this.inv, src && src.tick ? 16 : 75); if (G.ally) G.ally.aiCall = Math.max(G.ally.aiCall || 0, 1); } return r; };
-    base.fallOut = function () { if (this.isAlly) { const N = G.player; this.x = N.x - 50; this.y = N.y; this.vy = 0; return; } return fo.call(this); };
+    base.hurt = function (dmg, src) { if (this.isAlly && !this.isTeam) return false; if (this.id === 'nyx') dmg *= (NYX_AGES[Save.data.g2.chapter || 1] || 6) < 10 ? .45 : .75; const r = hurt.call(this, dmg, src); if (r && this.id === 'nyx') { this.inv = Math.max(this.inv, src && src.tick ? 16 : 75); if (G.ally) G.ally.aiCall = Math.max(G.ally.aiCall || 0, 1); } return r; };
+    base.fallOut = function () { if (this.isAlly && this.isTeam) { this.x = G.player.x - 60; this.y = G.player.y - 40; this.vy = 0; return; } if (this.isAlly) { const N = G.player; this.x = N.x - 50; this.y = N.y; this.vy = 0; return; } return fo.call(this); };
     base.returnToSafe = function () { if (this.isAlly) { const N = G.player; this.x = N.x - 50; this.y = N.y; this.vx = this.vy = 0; this.state = 'move'; this.script = null; this.noGrav = false; return; } return rts.call(this); };
     base.tryCombat = function (In) {
         if (this.def.noAttack) {
@@ -131,6 +132,8 @@ G2.zeroBrain = function (z) {
     };
     base.draw = function (ctx) {
         if (this === G.player && G.ally) { const z = G.ally; Scene.shadow(ctx, z.x, z.grounded ? z.y : -999, 22); z.draw(ctx); }
+        if (this === G.player && G.allies) for (const a of G.allies) if (!a.down) { Scene.shadow(ctx, a.x, a.grounded ? a.y : -999, 20); a.draw(ctx); }
+        if (this.g2hide) return;
         if (this.id === 'nyx') { // the only shadow in the city lies under her
             ctx.save(); ctx.globalAlpha = .55; ctx.fillStyle = '#1a1030'; ctx.beginPath(); ctx.ellipse(this.x, this.y, 26, 6, 0, 0, TAU); ctx.fill(); ctx.restore();
             if (G2Night.nyxHidden()) { ctx.globalAlpha = .5; }
