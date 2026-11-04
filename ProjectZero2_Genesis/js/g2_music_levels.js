@@ -44,6 +44,7 @@ const G2_GAINS = {
  "g2end5cfight": 2.864,
  "g2end5d": 2.812,
  "g2hum": 2.215,
- "g2ash": 1.951
+ "g2ash": 1.951,
+ "g2ending": 1.242
 };
 for (const k in G2_GAINS) if (TRACKS[k]) TRACKS[k].gain = G2_GAINS[k];

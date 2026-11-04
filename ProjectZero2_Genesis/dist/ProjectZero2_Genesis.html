@@ -11205,7 +11205,7 @@ Object.assign(LEVELS, {
         const d = b.done(); d.g2sepia = true; return d;
     },
     architect2() {
-        // tall, so the god of the last card fits on screen with its wings and crown
+        // tall, so the god of the final form fits on screen with its wings and crown
         const b = new LB('architect2', 80, 50, { name: 'THE SKY TORN OPEN', sub: 'The Seventh Day: the Architect rises', region: 'city', theme: THEMES.arch7, bg: 'arch7', spawn: { x: 4, y: 42 }, weather: 'motes', indoors: true, noAlly: true });
         b.at(0, 42).flat(80); b.fill(0, 0, 1, 49); b.fill(78, 0, 79, 49); b.beacon(3, 42); b.gate(8, 32, 10, 'arena_l'); b.plat(18, 37, 5).plat(56, 37, 5).plat(37, 33, 5);
         b.bossArena('architect2', 9, 77, 42, 44, 42, { trigger: 11 }); return b.done();
@@ -11366,7 +11366,7 @@ Object.assign(VI, {
 <script>
 'use strict';
 /**
- * THE LAST CARD. At 12% the Architect swallows the Throne and ascends into a false god, and from then
+ * THE FINAL FORM. At 12% the Architect swallows the Throne and ascends into a false god, and from then
  * on the music is a recorded track and everything is cut to it.
  *
  * Music: "GameChanger" boss theme by Photon Arts and Carameii, https://www.youtube.com/watch?v=K_9j1k3jH-Q
@@ -11387,7 +11387,7 @@ Object.assign(VI, {
  */
 const SONG = { bpm: 172.27, first: .232, beat: 60 / 172.27 };
 SONG.bar = SONG.beat * 4; SONG.t = b => SONG.first + b * SONG.bar;
-const CUE = { eye: 7, build: 8, drop: 16, name: 33, fight: 35, dying: 108, die: 118, boom1: 120, boom2: 121, end: 122,
+const CUE = { eye: 7, eyeT: SONG.t(7) + SONG.beat * 2, build: 8, drop: 16, name: 33, fight: 35, dying: 108, die: 118, boom1: 120, boom2: 121, end: 122,
     seg: [{ a: 35, b: 59, thr: .66 }, { a: 59, b: 76, thr: .4 }, { a: 76, b: 91, thr: .15 }, { a: 91, b: 108, thr: 0 }] };
 
 /* ------------------------------ THE TRACK ------------------------------ */
@@ -11423,7 +11423,7 @@ G2.song = {
         if (this.jump && n >= this.jump.T) { this.p = this.jump.to + (n - this.jump.T); this.jump = null; } else this.p += dt;
         if (this.loop && this.p >= this.loop.b) this.p -= this.loop.b - this.loop.a;
     },
-    pos() { return this.p || 0; },
+    pos() { const c = this.useAudio && Sound.ctx, lat = c ? Math.min(.3, (c.outputLatency || 0) + (c.baseLatency || 0)) : 0; return Math.max(0, (this.p || 0) - lat); },
     bar() { return Math.floor((this.pos() - SONG.first) / SONG.bar); },
     beatN() { return Math.floor((this.pos() - SONG.first) / SONG.beat); },
     stop(fade = 1.5) { if (!this.active) return; this.active = false; this.loopKey = null; if (this.useAudio && this.gain) { const c = Sound.ctx, s = this.src; this.gain.gain.setTargetAtTime(0, c.currentTime, fade / 3); setTimeout(() => { try { s.stop(); } catch (e) { } }, fade * 1000 + 200); } this.src = null; }
@@ -11471,7 +11471,7 @@ G2.fx = {
 G2.drawEye = function (c, x, y, R, b) {
     const P = G.player, open = U.clamp(b.eye || 0, 0, 1) * (1 - (b.blink || 0)), t = b.anim;
     if (open <= .03) { c.strokeStyle = '#ffe8a0'; c.lineWidth = 4; c.beginPath(); c.moveTo(x - R, y); c.quadraticCurveTo(x, y + R * .2, x + R, y); c.stroke(); return; }
-    const look = P ? U.clamp((P.x - b.x) / 600, -1, 1) : 0, lookY = P ? U.clamp((P.y - 40 - (G2.cy(b))) / 600, -1, 1) : 0, H = R * .62 * open;
+    const LX = b.lookX !== undefined ? b.lookX : P ? P.x : b.x, LY = b.lookY !== undefined ? b.lookY : P ? P.y - 40 : G2.cy(b), look = U.clamp((LX - b.x) / 600, -1, 1), lookY = U.clamp((LY - G2.cy(b)) / 600, -1, 1), H = R * .62 * open;
     c.save(); c.beginPath(); c.moveTo(x - R, y); c.bezierCurveTo(x - R * .5, y - H * 1.25, x + R * .5, y - H * 1.25, x + R, y); c.bezierCurveTo(x + R * .5, y + H * 1.25, x - R * .5, y + H * 1.25, x - R, y); c.closePath();
     c.save(); c.clip();
     const sg = c.createRadialGradient(x, y, R * .1, x, y, R); sg.addColorStop(0, '#fffaf0'); sg.addColorStop(.6, '#f2dfca'); sg.addColorStop(1, '#9a6656'); c.fillStyle = sg; c.fillRect(x - R, y - R, R * 2, R * 2);
@@ -11525,7 +11525,7 @@ G2.wings = {
     }
 };
 G2.drawAscended = function (c, b) {
-    if (b.gone) return; const sc = b.scale || 1; c.save(); c.translate(b.x, b.y); c.scale(sc, sc); c.translate(-b.x, -b.y); G2.drawAscendedBody(c, b); c.restore();
+    if (b.gone) { G2.dn.draw(c); return; } const sc = b.scale || 1; c.save(); c.translate(b.x, b.y); c.scale(sc, sc); c.translate(-b.x, -b.y); G2.drawAscendedBody(c, b); c.restore();
     G2.dn.draw(c);
     const P = G.player; if (!G2.dn.actors && P && Math.abs(P.x - b.x) < 560 * sc) { c.strokeStyle = 'rgba(180,140,255,.9)'; c.lineWidth = 2; c.beginPath(); c.ellipse(P.x, P.y, 26, 7, 0, 0, TAU); c.stroke(); }
 };
@@ -11548,10 +11548,8 @@ G2.drawAscendedBody = function (c, b) {
         for (let i = 0; i < 8; i++) { const a = i / 8 * TAU + t * .012, r = 300 * f2, sx = x + Math.cos(a) * r, sy = y + Math.sin(a) * r * .45; c.save(); c.translate(sx, sy); c.rotate(a + Math.PI / 2); c.globalAlpha = .85 * f2; const g = c.createLinearGradient(0, -70, 0, 50); g.addColorStop(0, '#ffffff'); g.addColorStop(1, 'rgba(200,176,255,.2)'); c.fillStyle = g; c.beginPath(); c.moveTo(0, -80); c.lineTo(9, 30); c.lineTo(0, 44); c.lineTo(-9, 30); c.fill(); c.fillStyle = '#ffd86b'; c.fillRect(-16, 30, 32, 5); c.restore(); }
     }
     if (!b.open) G2.drawEye(c, x, y, 92, b);
-    else { c.fillStyle = '#1a1a24'; c.beginPath(); c.arc(x, y, 64, 0, TAU); c.fill(); c.fillStyle = '#00ffff'; c.fillRect(x - 4, y - 32, 8, 50); Paint.disc(c, x, y - 40, 10, '#1a1a24'); c.fillStyle = 'rgba(200,240,255,.9)'; c.fillRect(x + 5, y - 38 + (t % 20) * .7, 2, 5); }
+    else G2.drawCoreFace(c, x, y, b);
     if (b.crack) { c.strokeStyle = `rgba(255,255,255,${b.crack})`; c.lineWidth = 2.4; const R = U.mulberry(3); for (let i = 0; i < 22 * b.crack; i++) { c.beginPath(); let px = x, py = y; c.moveTo(px, py); for (let k = 0; k < 5; k++) { px += (R() - .5) * 220; py += (R() - .5) * 200; c.lineTo(px, py); } c.stroke(); } }
-    if (b.slashGold) { c.strokeStyle = '#ffd86b'; c.lineWidth = 12; c.beginPath(); c.moveTo(x - 420, y - 340); c.lineTo(x + 420, y + 340); c.stroke(); }
-    if (b.slashNight) { c.strokeStyle = '#8a5aff'; c.lineWidth = 12; c.beginPath(); c.moveTo(x + 420, y - 340); c.lineTo(x - 420, y + 340); c.stroke(); }
 };
 
 G2.cy = b => b.y - 380 * (b.scale || 1);
@@ -11563,11 +11561,12 @@ G2.ascendIntro = function* (b) {
     // the camera stays far back for most of it: the point is how big this is, and how small everyone else is
     const WIDE = .52, cx = (b.A.x0 + b.A.x1) / 2, floorCam = s => b.A.y - 350 * s;
     G.lockInput = true; G.letterbox = 1; G.cineCam = { x: cx, y: b.A.y - 300, zoom: .9 };
-    G.say('THE ARCHITECT', 'THEN I WILL PLAY MY LAST CARD.', 150);
+    G.say('THE ARCHITECT', 'THEN BEHOLD WHAT I TRULY AM.', 150);
+    G2.team.arrive();
     S.start(0); b.ascended = 1; b.wings = 0; b.eye = 0; b.absorb = 0; b.open = 0; b.wingS = null; b.lb = -1; b.scale = .8; b.form2 = 0; G.g2fx = { sky: 0, motes: 0, cracks: 0, mode: 'pull' };
     yield* b.moveTo(cx, b.A.y + 40, 60);
     // 0:00-0:10 it swallows the Throne: the light, the rings, the walls are drawn into it
-    while (S.pos() < SONG.t(CUE.eye)) { const k = S.pos() / SONG.t(CUE.eye); b.absorb = k; b.scale = .8 + k * .2; G.g2fx.motes = .2 + k * .5; G.g2fx.sky = k * .3; G.cineCam.zoom = U.lerp(.9, WIDE + .08, k); G.cineCam.x = cx; G.cineCam.y = floorCam(b.scale);
+    while (S.pos() < CUE.eyeT) { const k = S.pos() / CUE.eyeT; b.absorb = k; b.scale = .8 + k * .2; G.g2fx.motes = .2 + k * .5; G.g2fx.sky = k * .3; G.cineCam.zoom = U.lerp(.9, WIDE + .08, k); G.cineCam.x = cx; G.cineCam.y = floorCam(b.scale);
         if (S.bar() !== b.lb) { b.lb = S.bar(); G.flash = .1; G.addShake(2 + k * 5); if (b.lb === 3) G.say('VESPER', 'It is eating the Throne... the light, the walls, all of it.', 150); } yield 1; }
     // 0:10 the eye opens: one close look, then straight back out
     G.flash = 1; G.addShake(24); b.eye = 1; b.dilate = 1; G.g2fx.cracks = .2; VFX.ring(b.x, G2.cy(b), 600, '#ffffff', 30, 14); G.say('NYX', 'It opened its eye. It is looking right at me.', 110); G.cineCam.zoom = 1.25; G.cineCam.y = G2.cy(b);
@@ -11577,6 +11576,8 @@ G2.ascendIntro = function* (b) {
         if (S.bar() !== b.lb) { b.lb = S.bar(); G.addShake(3 + k * 8); G.flash = .15; if (b.lb === 10) G.say('ZERO', 'Wings. Meridian always wanted a god with wings.', 120); if (b.lb === 13) G.say('ROOK', 'It is still growing. Everyone, fall back to Nyx!', 120); } yield 1; }
     // 0:22 the drop: the god in full, a crown, a second halo, swords of light; the sky breaks
     b.wings = 6; G.flash = 1; G.addShake(34); G.g2fx.mode = 'swirl'; G.g2fx.sky = 1; G.g2fx.cracks = .6; G.g2fx.motes = 1; for (let i = 0; i < 4; i++) VFX.ring(b.x, G2.cy(b), 500 + i * 300, i % 2 ? '#c8b0ff' : '#ffe8a0', 30 + i * 8, 16); G.cineCam.zoom = WIDE;
+    // the name comes in on the drop, then sinks to the bottom of the screen so it does not cover the god
+    G.g2title = { name: tr('THE ARCHITECT, ASCENDED'), sub: tr('THE GOD THAT WAS NEVER ASKED FOR'), t: 0, sinkAt: SONG.t(CUE.drop + 4) };
     // 0:22-0:46 the reveal: a slow wide drift round the god while it speaks
     while (S.pos() < SONG.t(CUE.name) - .02) { const bar = S.bar(), k = (S.pos() - SONG.t(CUE.drop)) / (SONG.t(CUE.name) - SONG.t(CUE.drop));
         b.scale = Math.min(1.45, 1.3 + k * .6); b.form2 = Math.min(1, k * 3); G.cineCam.x = cx + Math.sin(k * Math.PI * 2) * 160; G.cineCam.y = floorCam(b.scale) + Math.cos(k * Math.PI * 2) * 30; G.cineCam.zoom = WIDE + Math.sin(k * Math.PI) * .12; G.g2fx.cracks = .6 + k * .4;
@@ -11586,14 +11587,14 @@ G2.ascendIntro = function* (b) {
             if (bar === 24) G.say('THE ARCHITECT', 'THEN I WILL BE THE GOD NOBODY ASKED FOR.', 160);
             if (bar === 28) G.say('ZERO', 'Nyx. Stay by my side this time.', 110);
             if (bar === 30) G.say('NYX', 'Always.', 80);
-            if (bar === 31) G.g2title = { name: tr('THE ARCHITECT, ASCENDED'), sub: tr('THE GOD THAT WAS NEVER ASKED FOR'), t: 0 }; }
+        }
         yield 1; }
     // 0:46 the name is whole; it holds on the quiet bars
     G.lines = []; G.sayQ = []; G.sayCur = null; if (!G.g2title) G.g2title = { name: tr('THE ARCHITECT, ASCENDED'), sub: tr('THE GOD THAT WAS NEVER ASKED FOR'), t: 0 }; G.cineCam = { x: b.x, y: floorCam(b.scale), zoom: WIDE + .1 };
     yield* waitBar(CUE.fight);
     // 0:49 hard cut to the fight, with a fresh health bar
     G.g2title = null; G.flash = .9; G.addShake(26); G.letterbox = 0; G.cineCam = null; G.lockInput = false; P.inv = Math.max(P.inv, 60); b.scale = 1.45; b.form2 = 1;
-    b.maxHp = b.hp = Math.round(4800 * Game.diff.bossHp * (G2.team && G.g2team ? 1.8 : 1)); b.hbar = 1; b.dilate = 0;
+    b.maxHp = b.hp = Math.round(4800 * Game.diff.bossHp * (G2.team && G.g2team ? 2.3 : 1)); b.hbar = 1; b.dilate = 0;
 };
 
 /* ------------------------------ THE FIGHT, CUT TO THE SONG ------------------------------ */
@@ -11624,6 +11625,19 @@ G2.ascendMusic = function (b) {
 
 /* ------------------------------ DYING, 2:31-2:45, AND DEATH ------------------------------ */
 // Day and Night: two stand-ins for Zero and Nyx (the real ones step aside for a moment), moved on the beat.
+// A sword cut of light: a crescent that grows with the blade that makes it, white at the edge,
+// coloured in the body, with a soft bloom; it stays in the air like a scar while the god cracks.
+G2.drawSlash = function (c, S) {
+    const dx = S.ex - S.sx, dy = S.ey - S.sy, L = Math.hypot(dx, dy) || 1, nx = -dy / L, ny = dx / L, bulge = L * .1, W = 34, N = 40, k = U.clamp(S.k, 0, 1); if (k <= 0) return;
+    const age = (G.time - S.born) / 60, pulse = .85 + Math.sin(G.time * .2) * .15, pt = u => { const q = 4 * u * (1 - u); return [S.sx + dx * u + nx * bulge * q, S.sy + dy * u + ny * bulge * q]; };
+    const shape = wm => { c.beginPath(); for (let i = 0; i <= N; i++) { const [x, y] = pt(i / N * k), w = W * wm * Math.pow(Math.sin(Math.PI * i / N), .7); i ? c.lineTo(x + nx * w, y + ny * w) : c.moveTo(x, y); } for (let i = N; i >= 0; i--) { const [x, y] = pt(i / N * k), w = W * wm * .22 * Math.sin(Math.PI * i / N); c.lineTo(x - nx * w, y - ny * w); } c.closePath(); };
+    c.save(); c.globalCompositeOperation = 'lighter';
+    c.shadowColor = S.col; c.shadowBlur = 40; c.globalAlpha = .45 * pulse; c.fillStyle = S.col; shape(1.9); c.fill(); c.shadowBlur = 0;
+    c.globalAlpha = .9; const [hx, hy] = pt(k), g = c.createLinearGradient(S.sx, S.sy, hx, hy); g.addColorStop(0, U.rgba(S.col, .15)); g.addColorStop(.7, S.col); g.addColorStop(1, '#ffffff'); c.fillStyle = g; shape(1); c.fill();
+    c.globalAlpha = .95; c.fillStyle = '#ffffff'; shape(.32); c.fill();
+    if (k < 1) { c.globalAlpha = 1; c.drawImage(Glow.get(S.col), hx - 70, hy - 70, 140, 140); c.drawImage(Glow.get('#ffffff'), hx - 30, hy - 30, 60, 60); }
+    c.restore();
+};
 G2.dn = {
     actors: null,
     start(b) {
@@ -11638,12 +11652,12 @@ G2.dn = {
             a.px = a.x; a.py = a.y;
             if (p < t0 - 2 * bt) { a.x = home; a.y = b.A.y; a.facing = -s; this.play(a, 'crouch'); }
             else if (p < t0) { const k = (p - (t0 - 2 * bt)) / (2 * bt), e = 1 - (1 - k) * (1 - k); a.x = U.lerp(home, sx, e); a.y = U.lerp(b.A.y, sy, e) - Math.sin(k * Math.PI) * 60; a.facing = -s; this.play(a, 'djump'); }
-            else if (p < t0 + .4 * bt) { const k = (p - t0) / (.4 * bt); a.x = U.lerp(sx, ex, k); a.y = U.lerp(sy, ey, k); a.facing = -s; this.play(a, 'dodge'); for (let i = 0; i < 4; i++) VFX.add(U.lerp(a.px, a.x, i / 4), U.lerp(a.py, a.y, i / 4) - 30, 0, 0, a.col, 26, 6, 1, 0); }
-            else if (p < t0 + 1.2 * bt) { const k = (p - t0 - .4 * bt) / (.8 * bt); a.x = U.lerp(ex, land, k); a.y = U.lerp(ey, b.A.y, k * k); a.facing = s; this.play(a, 'fall'); }
-            else { a.x = land; a.y = b.A.y; a.facing = s; this.play(a, 'kneel'); }
+            else if (p < t0 + .8 * bt) { const k = (p - t0) / (.8 * bt), e = k < .5 ? 2 * k * k : 1 - 2 * (1 - k) * (1 - k); a.x = U.lerp(sx, ex, e); a.y = U.lerp(sy, ey, e); a.facing = -s; this.play(a, 'dodge'); a.slash = a.slash || { sx, sy: sy - 50, ex, ey: ey - 50, col: a.col, k: 0, born: G.time }; a.slash.k = e; for (let i = 0; i < 3; i++) VFX.add(a.x + U.rand(-10, 10), a.y - 50 + U.rand(-10, 10), U.rand(-2, 2), U.rand(-2, 2), i ? a.col : '#ffffff', 22, 4, 1, 0); for (let i = 0; i < 4; i++) VFX.add(U.lerp(a.px, a.x, i / 4), U.lerp(a.py, a.y, i / 4) - 30, 0, 0, a.col, 26, 6, 1, 0); }
+            else if (p < t0 + 1.6 * bt) { if (a.slash) a.slash.k = 1; const k = (p - t0 - .8 * bt) / (.8 * bt); a.x = U.lerp(ex, land, k); a.y = U.lerp(ey, b.A.y, k * k); a.facing = s; this.play(a, 'fall'); }
+            else { if (a.slash) a.slash.k = 1; a.x = land; a.y = b.A.y; a.facing = s; this.play(a, 'kneel'); }
             a.rig.ground = true; a.rig.gaitAmt = .2; a.rig.tick(); a.rig.updateChain(a.x, a.y, a.facing, 0); Light.add(a.x, a.y - 30, 160, a.col, .7); }
     },
-    draw(c) { if (!this.actors) return; for (const a of this.actors) { c.save(); Paint.glow(c, a.x, a.y - 50, 110, a.col); c.translate(a.x, a.y); c.scale(1.7, 1.7); c.translate(-a.x, -a.y); a.rig.draw(c, a.x, a.y, a.facing, 1); c.restore(); } },
+    draw(c) { if (!this.actors) return; for (const a of this.actors) if (a.slash) G2.drawSlash(c, a.slash); for (const a of this.actors) { c.save(); Paint.glow(c, a.x, a.y - 50, 110, a.col); c.translate(a.x, a.y); c.scale(1.7, 1.7); c.translate(-a.x, -a.y); a.rig.draw(c, a.x, a.y, a.facing, 1); c.restore(); } },
     end() { for (const p of [G.player, ...(G.allies || []), G.ally].filter(Boolean)) p.g2hide = false; this.actors = null; }
 };
 G2.ascendDeath = function* (b) {
@@ -11657,13 +11671,13 @@ G2.ascendDeath = function* (b) {
     G2.dn.start(b); G.cineCam = { x: b.x, y: b.A.y - 500, zoom: .56 };
     const T0 = SONG.t(CUE.dying + 6); let cutG = false, cutN = false;
     while (S.pos() < T0 + SONG.beat * 4) { const p = S.pos(); G2.dn.step(b, p, T0);
-        if (!cutG && p >= T0) { cutG = true; Sound.sfx('swing_h'); G.flash = .7; G.addShake(16); b.slashGold = 1; VFX.slash(b.x, G2.cy(b), 520, 1, '#ffd86b'); G.say('ZERO', 'Day.', 50); }
-        if (!cutN && p >= T0 + SONG.beat * 2) { cutN = true; Sound.sfx('swing_h'); G.flash = .7; G.addShake(16); b.slashNight = 1; VFX.slash(b.x, G2.cy(b), 520, -1, '#8a5aff'); G.say('NYX', 'Night.', 50); G.g2title = { name: tr('DAY AND NIGHT'), sub: '', t: 0, dur: 60 }; }
+        if (!cutG && p >= T0) { cutG = true; Sound.sfx('swing_h'); G.flash = .35; G.addShake(16); G.say('ZERO', 'Day.', 50); }
+        if (!cutN && p >= T0 + SONG.beat * 2) { cutN = true; Sound.sfx('swing_h'); G.flash = .35; G.addShake(16); G.say('NYX', 'Night.', 50); G.g2title = { name: tr('DAY AND NIGHT'), sub: '', t: 0, dur: 60 }; }
         yield 1; }
     let lb = -1; while (S.pos() < SONG.t(CUE.die) - .01) { G2.dn.step(b, S.pos(), T0); const n = S.beatN(); if (n !== lb) { lb = n; b.crack = Math.min(1, (b.crack || 0) + .04); for (let i = 0; i < 14; i++) VFX.add(b.x + U.rand(-600, 600), b.y - 760 + U.rand(-100, 60), U.rand(-1, 1), U.rand(3, 7), i % 2 ? '#ffe8a0' : '#cfe8ff', 90, 3, 1, 0); if (n % 4 === 0) G.addShake(5); } G.cineCam.zoom = Math.max(.56, G.cineCam.zoom - .0003); if (S.bar() >= CUE.dying + 8) G.g2title = null; yield 1; }
     // 2:45 death, then the two last hits
     G.flash = 1; G.addShake(20); b.wings = 0; G.say('', tr('The false god shattered into a million pieces of glass, falling like shooting stars.'), Math.round(SONG.bar * 60 * 2));
-    for (const hit of [CUE.boom1, CUE.boom2]) { yield* waitBar(hit); G.flash = 1; G.addShake(36); Sound.sfx('bigboom'); for (let i = 0; i < 5; i++) VFX.ring(b.x, G2.cy(b), 300 + i * 240, i % 2 ? '#8a5aff' : '#ffe8a0', 30 + i * 6, 16); VFX.burst(b.x, G2.cy(b), '#ffffff', 90, 15, 60, 12, 1); if (hit === CUE.boom2) { b.gone = true; if (G.g2fx) { G.g2fx.sky = 0; G.g2fx.cracks = 0; } } }
+    for (const hit of [CUE.boom1, CUE.boom2]) { yield* waitBar(hit); G.flash = 1; G.addShake(36); Sound.sfx('bigboom'); for (let i = 0; i < 5; i++) VFX.ring(b.x, G2.cy(b), 300 + i * 240, i % 2 ? '#8a5aff' : '#ffe8a0', 30 + i * 6, 16); VFX.burst(b.x, G2.cy(b), '#ffffff', 90, 15, 60, 12, 1); if (hit === CUE.boom2) { b.gone = true; if (G2.dn.actors) G2.dn.actors.forEach(a => { a.slash = null; }); if (G.g2fx) { G.g2fx.sky = 0; G.g2fx.cracks = 0; } } }
     yield* waitBar(CUE.end); G.flash = 1; S.stop(3); yield 90;
     G2.dn.end(); G.g2fx = null; G.cineCam = null; G.letterbox = 0; G.lockInput = false; G2.F.setAct(4); G2.cut('g2choiceScene', () => G2.throneChoice());
 };
@@ -11671,8 +11685,8 @@ G2.ascendDeath = function* (b) {
 // The name card: the band fades in, then the name comes in letter by letter out of the light, the way a
 // name is remembered rather than announced; the subtitle follows once the name is whole.
 G2.drawTitle = function (c, T) {
-    const Y0 = VH * .7, dur = T.dur || 200, name = T.name, n = name.length, band = Math.min(1, T.t / 40), sp = 5;
-    c.save(); c.globalAlpha = band; const bg = c.createLinearGradient(0, 0, VW, 0); bg.addColorStop(0, 'rgba(6,4,12,0)'); bg.addColorStop(.2, 'rgba(6,4,12,.7)'); bg.addColorStop(.8, 'rgba(6,4,12,.7)'); bg.addColorStop(1, 'rgba(6,4,12,0)'); c.fillStyle = bg; c.fillRect(0, Y0 - 78, VW, 130);
+    const sk = T.sinkAt !== undefined && G2.song.active ? U.clamp((G2.song.pos() - T.sinkAt) / 1.4, 0, 1) : 0, ek = sk * sk * (3 - 2 * sk), Y0 = U.lerp(VH * .62, VH * .86, ek), dur = T.dur || 200, name = T.name, n = name.length, band = Math.min(1, T.t / 40) * (1 - ek * .45), sp = 5;
+    c.save(); if (ek > 0) { const z = 1 - ek * .42; c.translate(VW / 2, Y0); c.scale(z, z); c.translate(-VW / 2, -Y0); } c.globalAlpha = band; const bg = c.createLinearGradient(0, 0, VW, 0); bg.addColorStop(0, 'rgba(6,4,12,0)'); bg.addColorStop(.2, 'rgba(6,4,12,.7)'); bg.addColorStop(.8, 'rgba(6,4,12,.7)'); bg.addColorStop(1, 'rgba(6,4,12,0)'); c.fillStyle = bg; c.fillRect(0, Y0 - 78, VW, 130);
     const lw = Math.min(1, T.t / 60) * VW * .36; c.fillStyle = 'rgba(255,216,107,.85)'; c.fillRect(VW / 2 - lw, Y0 - 78, lw * 2, 1.5); c.fillRect(VW / 2 - lw, Y0 + 50, lw * 2, 1.5);
     c.font = 'bold 60px "Palatino Linotype", "Times New Roman", serif'; c.textAlign = 'left'; c.textBaseline = 'alphabetic';
     const ws = [...name].map(ch => c.measureText(ch).width + sp), W = ws.reduce((a, b) => a + b, 0) - sp; let x = VW / 2 - W / 2;
@@ -11729,7 +11743,7 @@ Object.assign(VI, {
     'Nobody asked for you. Not him, not me, not anyone.': 'Không ai cần đến ngươi cả. Không phải chú ấy, không phải em, không một ai.',
     'THEN I WILL BE THE GOD NOBODY ASKED FOR.': 'VẬY TA SẼ LÀ VỊ THẦN KHÔNG AI CẦU XIN.',
     'Nyx. Stay by my side this time.': 'Nyx. Lần này, ở cạnh chú nhé.', 'Always.': 'Luôn luôn.',
-    'THEN I WILL PLAY MY LAST CARD.': 'VẬY TA SẼ TUNG CON BÀI CUỐI CÙNG.', 'It is opening its eye...': 'Nó đang mở mắt...', 'This is its last card.': 'Đây là con bài cuối cùng của nó.', 'Then this is ours. Together, Uncle!': 'Vậy đây cũng là của mình. Cùng nhau, chú ơi!',
+    'THEN BEHOLD WHAT I TRULY AM.': 'VẬY THÌ HÃY CHIÊM NGƯỠNG HÌNH THÁI TỐI THƯỢNG CỦA TA.', 'It is opening its eye...': 'Nó đang mở mắt...', 'This is its last card.': 'Đây là con bài cuối cùng của nó.', 'Then this is ours. Together, Uncle!': 'Vậy đây cũng là của mình. Cùng nhau, chú ơi!',
     'It is not a god. It is every hurt he never let heal.': 'Nó không phải thần. Nó là mọi vết thương hắn chưa từng để lành.', 'Then we hurt it back. Shields up!': 'Vậy thì đánh trả. Giơ khiên lên!', 'Nyx. Lead.': 'Nyx. Dẫn đường.', 'Everyone. Together!': 'Mọi người. Cùng nhau!',
     'THE ARCHITECT, ASCENDED': 'THE ARCHITECT HÓA THẦN', 'THE GOD THAT WAS NEVER ASKED FOR': 'Vị thần không ai cầu xin', 'Then let us heal you. Uncle, now!': 'Vậy để bọn em chữa lành cho. Chú ơi, ngay bây giờ!',
     'The false god shattered into a million pieces of glass, falling like shooting stars.': 'Vị thần giả vỡ thành hàng triệu mảnh kính, rơi như mưa sao băng.',
@@ -11753,9 +11767,9 @@ G2.term = {
         chapter: ['chapter <1-7>: set the current day (Nyx\'s age follows)', a => { const n = U.clamp(+a[0] || 1, 1, 7); Save.data.g2.chapter = n; Save.write(); return 'Day ' + n + '. Nyx is ' + NYX_AGES[n] + '.'; }],
         god: ['toggle invulnerability', () => { G2.term.godMode = !G2.term.godMode; return 'God mode ' + (G2.term.godMode ? 'ON' : 'OFF') + '.'; }],
         heal: ['full health and energy', () => { const P = G.player; if (!P) return 'No one to heal.'; P.hp = P.maxHp; P.energy = P.def.energy || 100; return 'Healed.'; }],
-        lastcard: ['go straight to the Architect\'s last card', () => { G2.term.cmds.unlock[1](); G2.term.toggle(false); Game.loadLevel('architect2'); Game.state = 'play'; G.player.x = G.arena.trigger + 40; G.startBoss(); G2.term.wantLast = true; return 'The Architect. It is about to play its last card.'; }],
+        lastcard: ['go straight to the Architect\'s final form', () => { G2.term.cmds.unlock[1](); G2.term.toggle(false); Game.loadLevel('architect2'); Game.state = 'play'; G.player.x = G.arena.trigger + 40; G.startBoss(); G2.term.wantLast = true; return 'The Architect. It is about to show its final form.'; }],
         ending: ['ending <5a|5b|5c|5d>: play an ending', a => { const e = (a[0] || '').toLowerCase(); if (!['5a', '5b', '5c', '5d'].includes(e)) return 'Endings: 5a 5b 5c 5d.'; G2.term.toggle(false); G2.playEnding(e); return 'Playing ending ' + e + '.'; }],
-        music: ['music <track>: play a track (try g2act3, g2lul7, lastcard)', a => { Sound.resume && Sound.resume(); if (a[0] === 'lastcard') { G2.song.load(); setTimeout(() => G2.song.start(0), 600); return 'The Last Card.'; } if (!TRACKS[a[0]]) return 'Tracks: ' + Object.keys(TRACKS).filter(k => k.startsWith('g2')).join(' '); Music.cut(a[0], 'boss'); return 'Playing ' + a[0] + '.'; }],
+        music: ['music <track>: play a track (try g2act3, g2lul7, lastcard = the final form theme)', a => { Sound.resume && Sound.resume(); if (a[0] === 'lastcard') { G2.song.load(); setTimeout(() => G2.song.start(0), 600); return 'The final form.'; } if (!TRACKS[a[0]]) return 'Tracks: ' + Object.keys(TRACKS).filter(k => k.startsWith('g2')).join(' '); Music.cut(a[0], 'boss'); return 'Playing ' + a[0] + '.'; }],
         spare: ['spare every boss so far (for the true ending)', () => { const g = Save.data.g2; for (const k of ['seraphina', 'mareva', 'gardener', 'astraea', 'lilith', 'archon']) { g.spared[k] = 1; delete g.killed[k]; } Save.write(); return 'Everyone spared.'; }],
         shards: ['all seven Shards of Peace', () => { const g = Save.data.g2; for (const k of ['light', 'water', 'earth', 'stars', 'beasts', 'mankind', 'rest']) g.shards[k] = 1; Save.write(); return 'Seven Shards of Peace.'; }],
         clear: ['clear the screen', () => { G2.term.out.textContent = ''; return ''; }],
@@ -11816,6 +11830,8 @@ const TEAM_IDS = ['nyx', 'zero', 'vesper', 'rook', 'sable', 'mirae', 'ysolde'];
 G2.spirit = { v: 0, add(n) { if (!Save.data || !Save.data.g2.reviveLearned) return; this.v = Math.min(100, this.v + n); } };
 G2.team = {
     on: false,
+    // the companions join only when the god shows its final form; before that the party fights by switching
+    arrive() { if (this.on) return; this.spawn(this.want !== false); const A = G.arena, P = G.player; (G.allies || []).forEach((a, i) => { a.x = U.clamp(P.x + (i % 2 ? 1 : -1) * (70 + (i >> 1) * 70), A.x0 + 60, A.x1 - 60); a.y = A.y - 2; a.safe = { x: a.x, y: a.y }; a.vx = a.vy = 0; a.inv = 120; const col = CHARS[a.id].style.col.glow; VFX.ring(a.x, a.y - 34, 120, col, 22, 8); VFX.burst(a.x, a.y - 34, col, 20, 6, 30, 6, 1); }); },
     spawn(full) {
         const P = G.player, ids = full ? TEAM_IDS.filter(id => id !== P.id && CHARS[id] && (id !== 'zero' || Save.data.g2.zeroBack || true)) : ['zero'].filter(id => id !== P.id);
         G.allies = []; G.ally = null;
@@ -11842,6 +11858,8 @@ G2.teamBrain = function (z) {
     if (!b || b.dead || b.intro || b.untargetable || b.transition) { const want = G.player.x + (z.lane || -80) * .6; if (Math.abs(want - z.x) > 40) go(want - z.x); return S; }
     const a = b.aim(), box = b.box(), ranged = z.def.ranged, tx = U.clamp(a.x + (ranged ? z.lane * 2.2 : z.lane * .6), A.x0 + 40, A.x1 - 40), dx = tx - z.x;
     if (Math.abs(dx) > (ranged ? 50 : 30)) go(dx); else z.facing = U.sign(a.x - z.x) || 1;
+    // dash to close the distance, like anyone would
+    if (Math.abs(dx) > 380 && z.dodgeCd <= 0 && z.grounded && (G.time + z.slot * 7) % 45 === 0) { z.facing = U.sign(dx); S['!dodge'] = true; }
     const reach = !ranged && Math.abs(a.x - z.x) < box.w / 2 + 70 && z.y > box.y && z.y - 80 < box.y + box.h;
     if (ranged || reach) { z.facing = U.sign(a.x - z.x) || 1; if ((G.time + z.slot * 3) % (ranged ? 5 : 4) === 0) { S['!attack'] = true; S.attack = true; } else S.attack = ranged; }
     if (!ranged && box.y + box.h < z.y - 60 && z.grounded && (G.time + z.slot * 11) % 50 === 0) S['!jump'] = S.jump = true;
@@ -11885,7 +11903,7 @@ G2.teamHits = function () {
     const eh = Enemy.prototype.hurt; if (eh) Enemy.prototype.hurt = function (...a) { const r = eh.apply(this, a); if (r) G2.spirit.add(.5); return r; };
     const tick = G.tick.bind(G);
     G.tick = function () {
-        tick(); if (!G2.team.on || !G.level) return; const B = G.boss; if (B && G.g2team && !B._team) { B._team = 1; B.maxHp = Math.round(B.maxHp * 1.8); B.hp = Math.round(B.hp * 1.8); } G2.teamHits(); G2.spirit.add(.015);
+        tick(); if (!G2.team.on || !G.level) return; const B = G.boss; G2.teamHits(); G2.spirit.add(.015);
         // keep everyone inside the arena once its gate has closed (a companion left outside could never come back)
         const Ar = G.arena; if (B && Ar) for (const z of [G.player, ...(G.allies || [])]) { if (z.x < Ar.x0 + 24 || z.x > Ar.x1 - 24) { z.x = U.clamp(z.x, Ar.x0 + 40, Ar.x1 - 40); z.vx = 0; } if (z.safe.x < Ar.x0 + 24 || z.safe.x > Ar.x1 - 24) z.safe = { x: U.clamp(G.player.x, Ar.x0 + 60, Ar.x1 - 60), y: Ar.y - 2 }; }
         const fallen = G2.team.down(); if (G2.spirit.v >= 100 && fallen.length) { const z = fallen[0]; G2.spirit.v = 0; z.down = false; z.hp = Math.round(z.maxHp * .6); z.inv = 120; z.state = 'move'; z.x = G.player.x - 60; z.y = G.player.y; z.vy = 0; VFX.ring(z.x, z.y - 34, 240, '#b48cff', 32, 14); VFX.burst(z.x, z.y - 34, '#e0d0ff', 30, 6, 40, 6, 1); Sound.sfx('checkpoint'); G.say('NYX', tr(U.pick(['Come back. I am singing for you.', 'Not yet. Wake up!', 'Back to us. Please.'])), 110); G.toast(tr('Lullaby of Return') + ': ' + CHARS[z.id].name, '#e0d0ff'); }
@@ -11904,10 +11922,10 @@ G2.teamHits = function () {
     const ll = Game.loadLevel.bind(Game);
     Game.loadLevel = function (id, cp) {
         G2.team.on = false; G.allies = null; G.g2team = false; ll(id, cp);
-        if (id === 'architect2') { const ask = () => { if (HEADLESS) { G2.team.spawn(G.flags.noTeam ? false : true); return; } if (cp && G2.team.last !== undefined) { G2.team.spawn(G2.team.last); return; } Game.state = 'menu'; UI.show('g2teamup'); }; G.delay ? G.delay(20, ask) : ask(); }
+        if (id === 'architect2') { const ask = () => { if (HEADLESS) { G2.team.want = !G.flags.noTeam; return; } if (cp && G2.team.last !== undefined) { G2.team.want = G2.team.last; return; } Game.state = 'menu'; UI.show('g2teamup'); }; G.delay ? G.delay(20, ask) : ask(); }
     };
     Object.assign(UI.screens, { g2teamup() { const n = TEAM_IDS.filter(id => CHARS[id] && id !== 'nyx').length; return `<div class="panel small"><h2>${tr('TEAM UP?')}</h2><p>${tr('The last battle is close. Everyone who walked this road with Nyx is here.')}</p><p class="hint">${tr('Team Up: all your companions fight at once, each on their own. They can fall; Nyx\'s Lullaby of Return brings them back when her Night Spirit is full. Otherwise: Nyx and Zero, side by side, and the others by switching.')}</p><nav><button data-do="g2team" data-arg="1" autofocus>${tr('TEAM UP')} (${n + 1})</button><button data-do="g2team" data-arg="0">${tr('Nyx and Zero')}</button></nav></div>`; } });
-    const act = UI.act.bind(UI); UI.act = function (w, arg, el) { if (w === 'g2team') { UI.hide(); Game.state = 'play'; G2.team.last = arg === '1'; G2.team.spawn(arg === '1'); Input.held = {}; return; } return act(w, arg, el); };
+    const act = UI.act.bind(UI); UI.act = function (w, arg, el) { if (w === 'g2team') { UI.hide(); Game.state = 'play'; G2.team.last = G2.team.want = arg === '1'; Input.held = {}; return; } return act(w, arg, el); };
     // HUD: the Night Spirit, and the party's health.
     const hd = HUD.draw.bind(HUD); HUD.draw = function (c) {
         hd(c); if (!Save.data || !Save.data.g2.reviveLearned || !G.player || Game.state !== 'play' || G.letterbox) return;
@@ -11921,6 +11939,211 @@ Object.assign(VI, {
     'Team Up: all your companions fight at once, each on their own. They can fall; Nyx\'s Lullaby of Return brings them back when her Night Spirit is full. Otherwise: Nyx and Zero, side by side, and the others by switching.': 'Cùng chiến đấu: tất cả đồng đội cùng lúc lao vào trận, mỗi người tự đánh theo cách của mình. Họ có thể gục; khi thanh Linh Lực Đêm đầy, Bài Ru Gọi Về của Nyx sẽ đưa họ trở lại. Nếu không: Nyx và Zero sánh vai, những người khác đổi vào bằng phím đổi người.',
     'TEAM UP': 'CÙNG CHIẾN ĐẤU', 'Nyx and Zero': 'Chỉ Nyx và Zero', 'has fallen': 'đã gục', '...Nyx. Sorry.': '...Nyx. Xin lỗi.', 'I am down!': 'Tôi gục rồi!', 'Keep going without me...': 'Đánh tiếp đi, đừng lo cho tôi...',
     'Lullaby of Return': 'Bài Ru Gọi Về', 'Come back. I am singing for you.': 'Quay về đi. Em đang hát gọi đây.', 'Not yet. Wake up!': 'Chưa được đâu. Dậy đi!', 'Back to us. Please.': 'Quay lại với bọn em đi. Làm ơn.', 'Night Spirit': 'Linh Lực Đêm'
+});
+
+</script>
+<script>
+'use strict';
+/**
+ * G2 ASCEND 2: the god's final form, second pass.
+ *   - Its eye follows someone: the nearest of the party most of the time, now and then someone at random.
+ *   - Named skills, announced under its health bar:
+ *       Judgement Ray     a column of light called down on whoever the eye is on
+ *       Dawn Scythe       a beam that sweeps one stretch of the floor, marked a beat ahead
+ *       Echoes of the Days summons weaker echoes of the bosses of earlier days, each with a health bar
+ *       Dawnline          one low or high beam across the arena, on the beat, never both at once
+ *       Colonnade         columns of light in alternating gaps
+ *   - The world behind it changes: a torn heaven with a great halo and the Throne's pieces rising.
+ *   - The core, when it opens, shows Zero kneeling on the altar, not a symbol.
+ *   - Melee fighters jump higher in this fight, just enough to reach the god's core.
+ */
+G2.beams = [];
+G2.skillCap = null;
+G2.castSkill = function (name, col = '#ffe8a0') { G2.skillCap = { name: tr(name), col, t: 0 }; Sound.sfx('charge', { v: .5 }); };
+
+/* ------------------------------ WHO THE EYE IS ON ------------------------------ */
+G2.pickTarget = function (b) {
+    const L = [G.player, ...G2.team.alive()].filter(p => p && p.state !== 'dead');
+    if (!L.length) return G.player;
+    if (Math.random() < .35) return U.pick(L);
+    return L.reduce((a, p) => (Math.abs(p.x - b.x) < Math.abs(a.x - b.x) ? p : a), L[0]);
+};
+G2.eyeTick = function (b) {
+    if (!b.tgt || b.tgt.down || b.tgt.state === 'dead' || --b.tgtT <= 0) { b.tgt = G2.pickTarget(b); b.tgtT = 140 + Math.random() * 160; }
+    const T = b.tgt || G.player; b.lookX = U.lerp(b.lookX === undefined ? T.x : b.lookX, T.x, .06); b.lookY = U.lerp(b.lookY === undefined ? T.y - 40 : b.lookY, T.y - 40, .06);
+};
+
+/* ------------------------------ BEAMS OF LIGHT ------------------------------ */
+// { kind: 'ray', x, life } a column from the eye to the floor; { kind: 'sweep', x0, x1, start, dur } a beam whose foot moves.
+G2.beamsTick = function () { for (const m of G2.beams) m.age = (m.age || 0) + 1; G2.beams = G2.beams.filter(m => m.age < m.life); };
+G2.drawBeams = function (c, b) {
+    const ex = b.x, ey = G2.cy(b), fy = b.A.y;
+    c.save(); c.globalCompositeOperation = 'lighter';
+    for (const m of G2.beams) {
+        let fx, k;
+        if (m.kind === 'ray') { fx = m.x; k = 1 - m.age / m.life; }
+        else { if (m.age < m.delay) continue; const u = U.clamp((m.age - m.delay) / m.dur, 0, 1); fx = U.lerp(m.x0, m.x1, u); k = m.age - m.delay > m.dur ? 1 - (m.age - m.delay - m.dur) / 12 : 1; if (k <= 0) continue; }
+        const w = (m.w || 46) * (.6 + .4 * k), g = c.createLinearGradient(ex, ey, fx, fy); g.addColorStop(0, `rgba(255,255,255,${.9 * k})`); g.addColorStop(1, U.rgba(m.col || '#ffe8a0', .85 * k));
+        c.fillStyle = g; c.beginPath(); c.moveTo(ex - 10, ey); c.lineTo(fx - w, fy); c.lineTo(fx + w, fy); c.lineTo(ex + 10, ey); c.fill();
+        c.fillStyle = `rgba(255,255,255,${.8 * k})`; c.beginPath(); c.moveTo(ex - 3, ey); c.lineTo(fx - w * .3, fy); c.lineTo(fx + w * .3, fy); c.lineTo(ex + 3, ey); c.fill();
+        c.globalAlpha = k; c.drawImage(Glow.get(m.col || '#ffe8a0'), fx - w * 3, fy - w * 2, w * 6, w * 3);
+        if (G.time % 2 === 0) VFX.add(fx + U.rand(-w, w), fy - 4, U.rand(-2, 2), U.rand(-5, -1), '#fff4d0', 20, 4, 1, 0); c.globalAlpha = 1;
+    }
+    c.restore();
+};
+
+/* ------------------------------ SKILLS ------------------------------ */
+G2.SK = {
+    // a thin mark on the target, then a column of light from the eye
+    ray(b, tele, tgt) {
+        const A = b.A, T = tgt || b.tgt || G.player, x = U.clamp(T.x, A.x0 + 50, A.x1 - 50), w = 104; b.dilate = 1;
+        Combat.warn({ shape: 'rect', x: x - w / 2, y: A.y - 900, w, h: 900, t: tele, dmg: b.D(18), src: b, col: '#fff4c0', onFire: () => { G2.beams.push({ kind: 'ray', x, life: 26, w: 56 }); G.addShake(9); VFX.ring(x, A.y - 10, 160, '#fff4d0', 16, 8); Sound.sfx('bigboom', { v: .5 }); } });
+    },
+    // a stretch of the floor is marked, then the beam's foot runs across it
+    scythe(b, tele) {
+        const A = b.A, P = b.tgt || G.player, span = 720, dir = Math.random() < .5 ? 1 : -1, c0 = U.clamp(P.x, A.x0 + span / 2, A.x1 - span / 2), x0 = c0 - dir * span / 2, x1 = c0 + dir * span / 2, n = 12, run = 30;
+        Combat.warn({ shape: 'rect', x: Math.min(x0, x1), y: A.y - 120, w: span, h: 120, t: tele, dmg: 0, src: b, col: '#ffb070' });
+        for (let i = 0; i < n; i++) { const xa = U.lerp(x0, x1, i / n), xb = U.lerp(x0, x1, (i + 1) / n); Combat.warn({ shape: 'rect', x: Math.min(xa, xb), y: A.y - 110, w: Math.abs(xb - xa), h: 110, t: tele + Math.round(i / n * run), dmg: b.D(14), src: b, col: 'rgba(0,0,0,0)' }); }
+        G2.beams.push({ kind: 'sweep', x0, x1, delay: tele, dur: run, life: tele + run + 12, w: 40, col: '#ffb070' });
+    },
+    // one beam across the arena: low (jump it) or high (stay down)
+    line(b, tele, high) {
+        const A = b.A, P = G.player;
+        Combat.warn({ shape: 'rect', x: A.x0, y: high ? A.y - 210 : A.y - 76, w: A.x1 - A.x0, h: high ? 100 : 76, t: tele + 10, dmg: b.D(15), src: b, col: high ? '#c8b0ff' : '#ffe8a0', onFire: () => { VFX.slash(b.x, high ? A.y - 160 : A.y - 40, 900, P.x > b.x ? 1 : -1, high ? '#e8dcff' : '#fff0c8'); G.addShake(8); } });
+    },
+    // eight columns, every other one; the next bar, the other set
+    colonnade(b, tele, odd) {
+        const A = b.A, w = (A.x1 - A.x0) / 8;
+        for (let i = 0; i < 8; i++) if ((i % 2 === 1) === !!odd) Combat.warn({ shape: 'rect', x: A.x0 + i * w + 6, y: A.y - 700, w: w - 12, h: 700, t: tele, dmg: b.D(15), src: b, col: '#ffe8a0', onFire: () => { VFX.burst(A.x0 + i * w + w / 2, A.y - 10, '#fff4d0', 12, 8, 26, 7, 1); } });
+    },
+    volley(b, n, sp = .14) { const P = b.tgt || G.player, cy = G2.cy(b); b.dilate = 1; for (let i = 0; i < n; i++) { const a = Math.atan2(P.y - 36 - cy, P.x - b.x) + (i - (n - 1) / 2) * sp; Combat.eshoot(b, 'bolt', b.x, cy + 40, a, 11, b.D(10), { r: 7, life: 150, col: '#ffd0a0', len: 30 }); } },
+    ring(b, n, bar) { const cy = G2.cy(b); for (let i = 0; i < n; i++) Combat.eshoot(b, 'orb', b.x, cy, i / n * TAU + bar * .2, 4.6, b.D(9), { r: 10, life: 220, col: '#ffe8a0' }); },
+    // weaker echoes of earlier bosses, each with its own health bar
+    echoes(b, n) {
+        const pool = ['seraphina', 'mareva', 'gardener', 'astraea', 'lilith', 'archon'].filter(k => !(b.echoed || (b.echoed = {}))[k]), A = b.A;
+        if (G.enemies.filter(e => e.g2echo && !e.dead).length >= 2) return;
+        for (let i = 0; i < n && pool.length; i++) {
+            const k = pool.splice(Math.floor(Math.random() * pool.length), 1)[0]; b.echoed[k] = 1;
+            const x = U.clamp(b.x + (i % 2 ? 1 : -1) * U.rand(320, 620), A.x0 + 80, A.x1 - 80), e = new Enemy('echo_' + k, x, A.y - 4, { summoned: true });
+            e.g2echo = k; e.name = tr('Echo of') + ' ' + tr(BOSSES[k] ? BOSSES[k].name : k); e.spawnT = 30; G.enemies.push(e);
+            VFX.ring(x, A.y - 40, 160, ECHO_COL[k], 26, 10); VFX.burst(x, A.y - 40, ECHO_COL[k], 30, 7, 40, 7, 1); G.toast(e.name, ECHO_COL[k]);
+            // some of the party (not all) turn on the echo first
+            for (const z of G2.team.alive()) if (Math.random() < .45) z.focusE = e;
+        }
+    }
+};
+const ECHO_COL = { seraphina: '#ffe8a0', mareva: '#7ad8ff', gardener: '#9aff8a', astraea: '#d8c0ff', lilith: '#ff8a5a', archon: '#ffb0d0' };
+(function () {
+    const base = { seraphina: 'dawnwarden', mareva: 'tidewarden', gardener: 'hollowstag', astraea: 'orrery', lilith: 'alpha', archon: 'inquisitor' };
+    for (const [k, id] of Object.entries(base)) if (ENEMIES[id]) ENEMIES['echo_' + k] = Object.assign({}, ENEMIES[id], { name: 'Echo', hp: 300, xp: 0, elite: true, col: Object.assign({}, ENEMIES[id].col, { g: ECHO_COL[k] }) });
+    // echoes are a little see-through, glow in their boss's colour and always show their health
+    const draw = Enemy.prototype.draw; Enemy.prototype.draw = function (ctx) {
+        if (!this.g2echo) return draw.call(this, ctx);
+        ctx.save(); ctx.globalAlpha = .82; Paint.glow(ctx, this.x, this.y - this.h / 2, 70, ECHO_COL[this.g2echo]); draw.call(this, ctx); ctx.restore();
+        if (this.dead) return; const w = 96, px = this.x - w / 2, py = this.y - this.h - 26;
+        ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(px - 1, py - 1, w + 2, 7); ctx.fillStyle = ECHO_COL[this.g2echo]; ctx.fillRect(px, py, w * Math.max(0, this.hp / this.maxHp), 5);
+        ctx.font = '11px "Palatino Linotype", serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#f4ecff'; ctx.fillText(this.name, this.x, py - 4);
+    };
+})();
+
+/* ------------------------------ THE FIGHT, BY SECTION ------------------------------ */
+// Every bar has at most one attack that covers the floor; the rest are aimed, so there is always a way out.
+G2.ascendBeat = function (b, bar, bi) {
+    const A = b.A, P = G.player, tele = Math.round(SONG.beat * 60 * 2), seg = CUE.seg.findIndex(s => bar >= s.a && bar < s.b), SK = G2.SK;
+    if (bi === 0) { G.addShake(2); if (bar % 4 === 0) VFX.ring(b.x, G2.cy(b), 300, '#ffe8a0', 18, 6); }
+    const segStart = seg >= 0 && bar === CUE.seg[seg].a && bi === 0;
+    if (segStart && seg >= 1) { G2.castSkill('ECHOES OF THE DAYS', '#d8c0ff'); SK.echoes(b, seg === 3 ? 2 : 1); return; }
+    const pillar = (x, w = 110) => { x = U.clamp(x, A.x0 + w / 2, A.x1 - w / 2); Combat.warn({ shape: 'rect', x: x - w / 2, y: A.y - 620, w, h: 620, t: tele, dmg: b.D(16), src: b, col: '#ffe8a0', onFire: () => { VFX.burst(x, A.y - 10, '#fff4d0', 24, 9, 30, 8, 1); G.addShake(5); } }); };
+    if (seg === 0) {
+        const k = bar % 4;
+        if (bi === 0 && k === 1) { G2.castSkill('JUDGEMENT RAY'); SK.ray(b, tele); }
+        else if (bi === 0 && k !== 1) { const gap = U.pick([-1, 1]); pillar(P.x); pillar(P.x + gap * 320); }
+        if (bi === 2) SK.volley(b, 5);
+        if (bi === 0 && k === 3) SK.ring(b, 14, bar);
+    } else if (seg === 1) {
+        // one beam on the beat, low then high, and columns that alternate in between
+        const k = bar % 4;
+        if (k === 3) { if (bi === 0) { G2.castSkill('DAWN SCYTHE', '#ffb070'); SK.scythe(b, tele); } if (bi === 2) SK.volley(b, 3, .25); return; }
+        if (bi === 0) { if (k === 0) G2.castSkill('DAWNLINE'); SK.line(b, tele, bar % 2 === 1); }
+        if (bi === 2) { if (k === 1) G2.castSkill('COLONNADE'); SK.colonnade(b, tele, bar % 2 === 0); }
+    } else if (seg === 2) {
+        const k = bar % 4;
+        if (bi === 0 && k === 0) { G2.castSkill('DAWN SCYTHE', '#ffb070'); SK.scythe(b, tele); }
+        if (bi === 0 && k === 2) { const dir = P.x > b.x ? -1 : 1, x0 = dir > 0 ? A.x0 : A.x1; b.dilate = 1; for (let i = 0; i < 8; i++) { const x = x0 + dir * i * (A.x1 - A.x0) / 8; Combat.warn({ shape: 'rect', x: Math.min(x, x + dir * 130), y: A.y - 420, w: 130, h: 420, t: tele + i * 6, dmg: b.D(17), src: b, col: '#ff8a4a' }); } }
+        if (bi === 2 && k % 2 === 1) { G2.castSkill('JUDGEMENT RAY'); SK.ray(b, tele); }
+        if (bi === 3) SK.volley(b, 4, .2);
+    } else if (seg === 3) {
+        const k = bar % 4;
+        if (bi === 0 && k === 0) { G2.castSkill('COLONNADE'); SK.colonnade(b, tele * 2, (bar >> 2) % 2); }
+        if (bi === 0 && k === 2) SK.line(b, tele, bar % 8 < 4);
+        if (bi === 2 && k === 1) { G2.castSkill('JUDGEMENT RAY'); SK.ray(b, tele); const o = G2.team.alive()[0]; if (o) SK.ray(b, tele + 6, o); }
+        if (bi === 2 && k === 3) { G2.castSkill('DAWN SCYTHE', '#ffb070'); SK.scythe(b, tele); }
+        if (bi === 3) SK.volley(b, 5, .12);
+        if (bi === 0 && k === 1) SK.ring(b, 18, bar);
+    }
+};
+
+/* ------------------------------ THE CORE, OPENED ------------------------------ */
+// When it is dying the eye gives way, and inside is what it was made from: Zero, kneeling, as on the altar.
+G2.drawCoreFace = function (c, x, y, b) {
+    const t = b.anim, R = 74;
+    if (!b.coreRig) { b.coreRig = new Rig(CHARS.zero.style); b.coreRig.owner = { element: 0, charge: 0 }; b.coreRig.play('kneel', 0); }
+    const r = b.coreRig; r.ground = true; r.gaitAmt = .2; r.tick(); r.updateChain(x, y + 44, 1, 0);
+    c.save(); const g = c.createRadialGradient(x, y, 10, x, y, R); g.addColorStop(0, '#2a2440'); g.addColorStop(.8, '#120e1c'); g.addColorStop(1, '#3a2a50'); c.fillStyle = g; c.beginPath(); c.arc(x, y, R, 0, TAU); c.fill();
+    c.clip(); c.globalAlpha = .55 + .2 * Math.sin(t * .05); c.drawImage(Glow.get('#7ad8ff'), x - 60, y - 70, 120, 120); c.globalAlpha = 1;
+    c.translate(x, y + 44); c.scale(1.5, 1.5); c.translate(-x, -(y + 44)); r.draw(c, x, y + 44, 1, .95); c.restore();
+    c.save(); c.globalCompositeOperation = 'lighter'; c.strokeStyle = 'rgba(255,240,210,.8)'; c.lineWidth = 3; c.beginPath(); c.arc(x, y, R, 0, TAU); c.stroke(); c.lineWidth = 1.2; c.strokeStyle = 'rgba(200,230,255,.5)'; c.beginPath(); c.arc(x, y, R + 8 + Math.sin(t * .08) * 3, 0, TAU); c.stroke(); c.restore();
+};
+
+/* ------------------------------ THE TORN HEAVEN ------------------------------ */
+// What lies behind the god once it rises: a deep violet sky, a halo the size of the world, the Throne's
+// broken pieces drifting up, auroras of gold. It fades in with the transformation.
+G2.heaven = function (c, k) {
+    if (k <= 0) return; const t = G.time, b = G.boss, cam = G.cam, hx = b ? (b.x - cam.x) * cam.zoom * .35 + VW * .32 : VW / 2, hy = VH * .34;
+    c.save(); c.globalAlpha = k;
+    const g = c.createLinearGradient(0, 0, 0, VH); g.addColorStop(0, '#07041a'); g.addColorStop(.45, '#2a1250'); g.addColorStop(.8, '#6a3050'); g.addColorStop(1, '#c87a48'); c.fillStyle = g; c.fillRect(0, 0, VW, VH);
+    const R = U.mulberry(77); for (let i = 0; i < 160; i++) { const sx = R() * VW, sy = R() * VH * .7, tw = .4 + .6 * Math.abs(Math.sin(t * .02 + i)); c.fillStyle = `rgba(255,255,255,${.5 * tw})`; c.fillRect(sx, sy, R() < .1 ? 2 : 1, R() < .1 ? 2 : 1); }
+    c.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < 3; i++) { c.beginPath(); for (let x = 0; x <= VW; x += 20) { const y = VH * (.22 + i * .08) + Math.sin(x * .004 + t * .006 + i * 2) * 40 + Math.sin(x * .011 - t * .004) * 14; x ? c.lineTo(x, y) : c.moveTo(x, y); } c.strokeStyle = i % 2 ? 'rgba(200,170,255,.14)' : 'rgba(255,210,140,.14)'; c.lineWidth = 34 - i * 8; c.stroke(); }
+    for (let r = 0; r < 3; r++) { c.strokeStyle = `rgba(255,224,160,${.22 - r * .05})`; c.lineWidth = 6 - r * 1.5; c.beginPath(); c.ellipse(hx, hy, 520 + r * 70, 150 + r * 22, Math.sin(t * .001) * .05, 0, TAU); c.stroke(); }
+    for (let i = 0; i < 48; i++) { const a = i / 48 * TAU + t * .0008; c.fillStyle = 'rgba(255,240,200,.5)'; c.fillRect(hx + Math.cos(a) * 520 - 1, hy + Math.sin(a) * 150 - 1, 3, 3); }
+    c.globalCompositeOperation = 'source-over';
+    const P = U.mulberry(5); for (let i = 0; i < 16; i++) { const px = P() * VW, sp = .2 + P() * .5, py = VH + 60 - ((t * sp + P() * 900) % (VH + 160)), w = 20 + P() * 60, h = 10 + P() * 40, rot = t * .002 * (P() - .5) + P() * 6; c.save(); c.translate(px, py); c.rotate(rot); c.fillStyle = 'rgba(30,18,40,.85)'; c.fillRect(-w / 2, -h / 2, w, h); c.strokeStyle = 'rgba(255,210,140,.35)'; c.lineWidth = 1; c.strokeRect(-w / 2, -h / 2, w, h); c.restore(); }
+    c.restore();
+};
+
+/* ------------------------------ WIRING ------------------------------ */
+(function () {
+    // the torn heaven goes behind everything else of the final form
+    const fd = G2.fx.draw.bind(G2.fx); G2.fx.draw = function (c, F, front) { if (!front) G2.heaven(c, U.clamp(F.sky, 0, 1)); return fd(c, F, front); };
+    // the god: eye target and beams each tick
+    const B = BOSSES.architect2, tick = B.tick, draw = B.draw;
+    B.tick = b => { tick(b); if (b.ascended && !b.dying) G2.eyeTick(b); if (b.dying) { b.lookX = U.lerp(b.lookX || b.x, b.x, .05); for (const e of G.enemies) if (e.g2echo && !e.dead) { e.hp = 0; e.die({ dir: 0 }); } } G2.beamsTick(); };
+    B.draw = (c, b) => { draw(c, b); if (b.ascended && !b.gone) G2.drawBeams(c, b); };
+    const ll = Game.loadLevel.bind(Game); Game.loadLevel = function (id, cp) { G2.beams = []; G2.skillCap = null; return ll(id, cp); };
+    // the skill being cast, under the god's health bar
+    const hd = HUD.draw.bind(HUD); HUD.draw = function (c) {
+        hd(c); const S = G2.skillCap; if (!S || Game.state !== 'play' || G.letterbox) return; S.t++; if (S.t > 130) { G2.skillCap = null; return; }
+        const a = Math.min(1, S.t / 10, (130 - S.t) / 20); c.save(); c.globalAlpha = a; c.textAlign = 'center'; c.font = 'italic bold 20px "Palatino Linotype", "Times New Roman", serif'; c.lineWidth = 4; c.strokeStyle = 'rgba(10,6,20,.85)'; c.strokeText('✦ ' + S.name + ' ✦', VW / 2, 104); c.fillStyle = S.col; c.fillText('✦ ' + S.name + ' ✦', VW / 2, 104); c.restore();
+    };
+    // melee fighters jump higher against the god, just enough to reach its core
+    const dj = Player.prototype.doJump; Player.prototype.doJump = function (air) { dj.call(this, air); const b = G.boss; if (b && b.ascended && !b.dying && !this.def.ranged) this.vy *= 1.22; };
+    // companions: some go for the echoes first, then back to the god
+    const brain = G2.teamBrain; G2.teamBrain = function (z) {
+        const e = z.focusE; if (e && (e.dead || e.hp <= 0)) z.focusE = null;
+        if (!z.focusE || !G.boss || G.boss.dying) return brain(z);
+        const S = {}, go = d => { if (d < 0) S.left = true; else if (d > 0) S.right = true; };
+        for (const w of G.warns) if (w.dmg && w.t < 30 && w.shape === 'rect' && z.x > w.x - 14 && z.x < w.x + w.w + 14 && z.y > w.y && z.y - 60 < w.y + w.h) { go(z.x < w.x + w.w / 2 ? -1 : 1); if (w.t < 9 && z.dodgeCd <= 0) S['!dodge'] = true; return S; }
+        const ranged = z.def.ranged, want = ranged ? 240 : 50, dx = e.x - z.x; z.facing = U.sign(dx) || 1;
+        if (Math.abs(dx) > want) { go(dx); if (Math.abs(dx) > 420 && z.dodgeCd <= 0 && G.time % 40 === z.slot) S['!dodge'] = true; } else if (ranged && Math.abs(dx) < 150) go(-dx);
+        if (Math.abs(dx) < want + 40 && (G.time + z.slot * 3) % (ranged ? 5 : 4) === 0) { S['!attack'] = S.attack = true; }
+        if ((G.time + z.slot * 37) % 300 === 60) S['!skill1'] = true;
+        return S;
+    };
+})();
+Object.assign(VI, {
+    'JUDGEMENT RAY': 'THÁNH QUANG PHÁN XÉT', 'DAWN SCYTHE': 'LƯỠI HÁI BÌNH MINH', 'ECHOES OF THE DAYS': 'TIẾNG VỌNG NHỮNG NGÀY XƯA', 'DAWNLINE': 'TIA RẠNG ĐÔNG', 'COLONNADE': 'HÀNG CỘT ÁNH SÁNG',
+    'Echo of': 'Tiếng Vọng của', 'Echo': 'Tiếng Vọng'
 });
 
 </script>
@@ -12569,6 +12792,49 @@ if (typeof B_SERA !== 'undefined') B_SERA.music = 'g2sera';
 <script>
 'use strict';
 /**
+ * G2 ENDING: "Seven Days, and Then Rest", the ending theme. Piano and orchestra, slow (66 BPM, B-flat major).
+ *   bars 0-7    piano alone: broken chords in the left hand, the lullaby in the right
+ *   bars 8-15   the strings come in under it; a cello answers with Zero's theme
+ *   bars 16-23  everything: violins take the Genesis theme, horns, harp, a soft choir, timpani swells
+ *   bars 24-31  it falls back to the piano and a held string chord; the last lullaby phrase
+ * Plays under the endings and the credits.
+ */
+const END_PROG = [0, 4, 5, 3, 0, 4, 3, 4, 5, 3, 0, 4, 5, 2, 3, 4, 0, 4, 5, 3, 1, 4, 3, 4, 5, 3, 0, 4, 3, 4, 0, 0];
+Object.assign(Arr, {
+    g2ending(m) {
+        const X = g2x(m), { S, t, pos, bar, sd } = m, b = bar % 32, sec = b >> 3, L = sd * 16;
+        // left hand: a broken chord in eighths, one octave lower in the big section
+        const ch = X.ch(sec === 2 ? -1 : 0), arp = [0, 1, 2, 1, 0, 2, 1, 2];
+        if (pos % 2 === 0) Inst.piano2(S.arp, t, ch[arp[(pos >> 1) % 8]], sd * 3, sec === 2 ? .2 : .26, -.15);
+        if (pos === 0) Inst.piano2(S.bass, t, X.rootHz(-1), L * .9, sec === 3 && b === 31 ? .5 : .38, 0);
+        // right hand: the lullaby (0, 3) or Zero's theme on piano (1)
+        if (sec === 0 || sec === 3) X.line(LUL16, (hz, d, v) => Inst.piano2(S.mel, t, hz, d * 1.4, v * .62, .15), 1);
+        if (sec === 1) { X.line(LUL16, (hz, d, v) => Inst.piano2(S.mel, t, hz, d * 1.4, v * .5, .15), 1); X.line(THEME, (hz, d, v) => Inst.cello(S.brass, t, hz, d, v * .75, -.25), 0); }
+        // strings: enter in section 1, swell in 2, one held chord in 3
+        if (sec >= 1 && pos === 0) X.ch(0).forEach((hz, i) => Inst.strings(S.pad, t, hz, L * (sec === 3 ? 1.6 : 1), (i - 1) * .4, sec === 2 ? .05 : .035));
+        if (sec === 2) {
+            X.line(THEME_GENESIS, (hz, d, v) => Inst.violin(S.str, t, hz, d, v * .85, .2), 1);
+            X.line(THEME, (hz, d, v) => Inst.horn(S.brass, t, hz, d, v * .45, -.2), 0);
+            if (pos % 4 === 2) Inst.harp(S.ost, t, X.ch(1)[(pos >> 2) % 3], .3, .3);
+            if (pos === 0) { X.ch(1).forEach((hz, i) => Inst.choir(S.choir, t, hz, L * .95, 'a', .26, (i - 1) * .4)); if (b % 4 === 0) Inst.timpani(S.taiko, t, X.rootHz(-1), b === 16 ? .75 : .45); if (b === 16) Inst.cymbal(S.metal, t); }
+        }
+        if (sec === 3 && b >= 28 && pos === 0) Inst.celesta(S.ost, t, X.ch(2)[b % 3], .35, .2);
+    }
+});
+TRACKS.g2ending = MK({ arr: 'g2ending', steps: 16, bpm: 66, key: 'A#', oct: 3, scale: 'major', prog: END_PROG, keep: { pad: .9, mel: 1, arp: .9, bass: .8, str: .9, brass: .8, choir: .7, ost: .7, taiko: .6, metal: .4 }, drop: ['kick', 'snare', 'hat'], reverb: 'hall' },
+    { genre: 'piano and orchestra elegy', meter: '4/4', key: 'B-flat major', lead: 'piano', tempo: 66, sections: 4, quote: 'Part I theme' });
+(function () {
+    // the endings and the credits use it
+    const cut = Music.cut.bind(Music);
+    Music.cut = function (id, st) { if (id === 'g2credits' || (id === 'g2end5a' && G.g2ending === '5a')) id = 'g2ending'; return cut(id, st); };
+    const pe = G2.playEnding; G2.playEnding = function (id) { G.g2ending = id; return pe(id); };
+})();
+Object.assign(VI, { 'Seven Days, and Then Rest': 'Bảy Ngày, Rồi Nghỉ Ngơi' });
+
+</script>
+<script>
+'use strict';
+/**
  * G2 EPIC: one sound for the whole of Part II, at the player's request (they sent an epic boss-fight
  * reference: ~172 BPM, harmonic minor, bright hybrid orchestra, long builds, big hits).
  * Every region, mini-boss and boss track now runs on the same epic orchestral engine: string
@@ -12739,7 +13005,8 @@ const G2_GAINS = {
  "g2end5cfight": 2.864,
  "g2end5d": 2.812,
  "g2hum": 2.215,
- "g2ash": 1.951
+ "g2ash": 1.951,
+ "g2ending": 1.242
 };
 for (const k in G2_GAINS) if (TRACKS[k]) TRACKS[k].gain = G2_GAINS[k];
 
@@ -12840,7 +13107,7 @@ Object.assign(UI.screens, {
     g2music(a) {
         const heard = (Save.data && Save.data.g2.heard) || {}, all = Save.data && Save.data.g2.ngplus; this.back = () => { Music.cut('g2title', 'calm'); this.show('title'); };
         return `<div class="panel wide"><h2>${tr('MUSIC ROOM')}</h2><div class="grid">${MUSIC_ROOM.map((id, i) => { const T = TRACKS[id], open = all || heard[id] || i < 2; return `<button class="card" data-do="g2play" data-arg="${id}" ${open ? '' : 'disabled'}><b>${open ? tr(T.meta.genre) : '???'}</b><span>${open ? T.meta.meter + ' · ' + T.meta.key + ' · ' + T.meta.tempo + ' BPM' : tr('Not heard yet')}</span><em>${open ? tr(T.meta.lead) : ''}</em></button>`; }).join('')}</div>
-        <button class="card" data-do="g2lastcard"><b>THE LAST CARD</b><span>Photon Arts &amp; Carameii · 172 BPM</span><em>${tr('Final boss theme')}</em></button>
+        <button class="card" data-do="g2lastcard"><b>GAMECHANGER</b><span>Photon Arts &amp; Carameii · 172 BPM</span><em>${tr('Final boss theme')}</em></button>
         <p class="hint">${tr('Every track is synthesised live in your browser. No one but you has listened to them yet: tell us which ones work.')}</p><nav class="row"><button data-do="title" autofocus>${tr('BACK')}</button></nav></div>`;
     }
 });
@@ -12861,6 +13128,58 @@ Object.assign(UI.screens, {
     const sk = HUD.skills; HUD.skills = function (c, P, d) { sk.call(this, c, P, d); if ((Save.data.g2.chapter || 1) >= 6 && G2.party().length > 1) { c.font = '11px "Palatino Linotype", serif'; c.textAlign = 'left'; c.fillStyle = '#e8d8ff'; c.fillText(tr('Switch') + ' [' + this.keyName(Settings.binds.party) + ']: ' + G2.party().map(id => CHARS[id].name).join(' · '), VW / 2 - 214, VH - 126); } };
 })();
 Object.assign(VI, { 'MUSIC ROOM': 'PHÒNG NHẠC', 'Not heard yet': 'Chưa nghe thấy', 'Every track is synthesised live in your browser. No one but you has listened to them yet: tell us which ones work.': 'Mọi bài nhạc được tổng hợp trực tiếp trong trình duyệt của bạn. Ngoài bạn ra chưa ai nghe chúng: hãy cho chúng tôi biết bài nào ổn.', 'BACK': 'QUAY LẠI', 'Switch': 'Đổi người', 'A WOLF OF THE PACK': 'MỘT CON SÓI TRONG BẦY', 'You came to guard the Garden? Good wolf.': 'Em đến canh Vườn à? Sói ngoan.', 'NEW GAME+': 'CHƠI LẠI+' });
+
+</script>
+<script>
+'use strict';
+/**
+ * G2 SHOP: the Peddler of the Seventh Road, at the Ash Forge in the Garden. Relics for Seeds of Genesis (✿).
+ * Relics are worn by the whole party: the companions who fight beside Nyx (AI or switched in) get the
+ * same bonuses as whoever you control. Some relics only matter in the last battle, with the team.
+ */
+Object.assign(RELICS, {
+    dunecharm: { name: 'Dune Charm', desc: '+15% max HP.', mod: { hp: .15 } },
+    stardust: { name: 'Fallen Stardust', desc: '+10% crit chance, critical hits deal +25% damage.', mod: { crit: .1, critDmg: .25 } },
+    wolftooth: { name: 'Pack Leader\'s Fang', desc: '+12% attack. Regain 2 HP on every kill.', mod: { atk: .12, killHeal: 2 } },
+    tideglass: { name: 'Tide Glass', desc: 'Dodge recovers 25% faster, energy regen +25%.', mod: { dodgeCd: .25, enReg: .25 } },
+    emberseed: { name: 'Ember Seed', desc: 'Ultimate charges 35% faster.', mod: { ultGain: .35 } },
+    moonveil: { name: 'Moon Veil', desc: 'Take 12% less damage.', mod: { dr: .12 } },
+    wingshard: { name: 'Wing Shard', desc: 'Jump 12% higher.', mod: {} },
+    lulbell: { name: 'Lullaby Bell', desc: 'Nyx\'s Night Spirit fills 40% faster.', mod: {} },
+    banner: { name: 'Banner of the Four', desc: 'Companions fighting beside you take 25% less damage.', mod: {} },
+    feather: { name: 'Feather of Return', desc: 'The Lullaby of Return brings a companion back at full health.', mod: {} }
+});
+const G2_SHOP = [['dunecharm', 150], ['tideglass', 180], ['stardust', 200], ['emberseed', 200], ['wolftooth', 220], ['moonveil', 240], ['wingshard', 160], ['lulbell', 220], ['banner', 260], ['feather', 300]];
+G2.hasRelic = id => !!(Save.data && Save.data.equipped && Save.data.equipped.includes(id));
+Object.assign(UI.screens, {
+    g2shop() {
+        const D = Save.data; this.back = () => UI.show('g2forge');
+        return `<div class="panel wide"><h2>${tr('THE PEDDLER OF THE SEVENTH ROAD')}</h2><p class="center">✿ ${D.cells} ${tr('Seeds of Genesis')} · ${tr('Relics are worn by the whole party.')}</p><div class="grid">${G2_SHOP.map(([id, cost]) => { const r = RELICS[id], has = D.relics.includes(id); return `<button class="card ${has ? 'owned' : ''}" data-do="g2buy" data-arg="${id}" ${has || D.cells < cost ? 'disabled' : ''}><b>${tr(r.name)}</b><span>${tr(r.desc)}</span><em>${has ? tr('OWNED') : cost + ' ✿'}</em></button>`; }).join('')}</div>
+        <nav class="row"><button data-do="relics">${tr('RELICS')}</button><button data-do="g2forgeback" autofocus>${tr('BACK')}</button></nav></div>`;
+    }
+});
+(function () {
+    // a way in from the forge
+    const fg = UI.screens.g2forge; UI.screens.g2forge = function () { return fg.call(this).replace('<nav class="row"><button data-do="relics">RELICS</button>', `<nav class="row"><button data-do="g2shop">${tr('THE PEDDLER')}</button><button data-do="relics">RELICS</button>`); };
+    const act = UI.act.bind(UI); UI.act = function (w, arg, el) {
+        if (w === 'g2shop') return this.show('g2shop'); if (w === 'g2forgeback') return this.show('g2forge');
+        if (w === 'g2buy') { const D = Save.data, it = G2_SHOP.find(x => x[0] === arg); if (it && !D.relics.includes(arg) && D.cells >= it[1]) { D.cells -= it[1]; D.relics.push(arg); const s = D.equipped.indexOf(null); if (s >= 0) D.equipped[s] = arg; Sound.sfx('levelup'); Save.write(); if (G.player) G.player.recalc(); (G.allies || []).forEach(a => a.recalc()); } else Sound.sfx('ui_deny'); return this.show('g2shop'); }
+        const r = act(w, arg, el); if (w === 'equip') { if (G.player) G.player.recalc(); (G.allies || []).forEach(a => a.recalc()); } return r;
+    };
+    // the relics that do more than a number
+    const dj = Player.prototype.doJump; Player.prototype.doJump = function (air) { dj.call(this, air); if (G2.hasRelic('wingshard')) this.vy *= 1.12; };
+    const add = G2.spirit.add; G2.spirit.add = function (n) { return add.call(this, n * (G2.hasRelic('lulbell') ? 1.4 : 1)); };
+    const hurt = Player.prototype.hurt; Player.prototype.hurt = function (dmg, src) { if (this.isTeam && this.isAlly && G2.hasRelic('banner')) dmg *= .75; return hurt.call(this, dmg, src); };
+    const tick = G.tick.bind(G); G.tick = function () { const before = G2.team.on ? G2.team.down().length : 0; tick(); if (G2.team.on && G2.hasRelic('feather') && G2.team.down().length < before) for (const a of G.allies) if (!a.down && a.inv > 100) a.hp = a.maxHp; };
+})();
+Object.assign(VI, {
+    'THE PEDDLER OF THE SEVENTH ROAD': 'NGƯỜI BÁN RONG TRÊN CON ĐƯỜNG THỨ BẢY', 'THE PEDDLER': 'NGƯỜI BÁN RONG', 'Relics are worn by the whole party.': 'Cả đội cùng hưởng sức mạnh của di vật.', 'OWNED': 'ĐÃ CÓ',
+    'Dune Charm': 'Bùa Cát', '+15% max HP.': '+15% máu tối đa.', 'Fallen Stardust': 'Bụi Sao Rơi', '+10% crit chance, critical hits deal +25% damage.': '+10% tỉ lệ chí mạng, đòn chí mạng gây thêm 25% sát thương.',
+    'Pack Leader\'s Fang': 'Nanh Sói Đầu Đàn', '+12% attack. Regain 2 HP on every kill.': '+12% tấn công. Hồi 2 máu mỗi lần hạ địch.', 'Tide Glass': 'Kính Thủy Triều', 'Dodge recovers 25% faster, energy regen +25%.': 'Né hồi nhanh hơn 25%, hồi năng lượng +25%.',
+    'Ember Seed': 'Hạt Than Hồng', 'Ultimate charges 35% faster.': 'Tuyệt chiêu nạp nhanh hơn 35%.', 'Moon Veil': 'Màn Trăng', 'Take 12% less damage.': 'Nhận ít hơn 12% sát thương.',
+    'Wing Shard': 'Mảnh Cánh', 'Jump 12% higher.': 'Nhảy cao hơn 12%.', 'Lullaby Bell': 'Chuông Hát Ru', 'Nyx\'s Night Spirit fills 40% faster.': 'Linh Lực Đêm của Nyx đầy nhanh hơn 40%.',
+    'Banner of the Four': 'Cờ Tứ Kỵ', 'Companions fighting beside you take 25% less damage.': 'Đồng đội sát cánh cùng bạn nhận ít hơn 25% sát thương.', 'Feather of Return': 'Lông Vũ Gọi Về', 'The Lullaby of Return brings a companion back at full health.': 'Bài Ru Gọi Về đưa đồng đội trở lại với đầy máu.'
+});
 
 </script>
 <script>

@@ -324,7 +324,7 @@ Object.assign(LEVELS, {
         const d = b.done(); d.g2sepia = true; return d;
     },
     architect2() {
-        // tall, so the god of the last card fits on screen with its wings and crown
+        // tall, so the god of the final form fits on screen with its wings and crown
         const b = new LB('architect2', 80, 50, { name: 'THE SKY TORN OPEN', sub: 'The Seventh Day: the Architect rises', region: 'city', theme: THEMES.arch7, bg: 'arch7', spawn: { x: 4, y: 42 }, weather: 'motes', indoors: true, noAlly: true });
         b.at(0, 42).flat(80); b.fill(0, 0, 1, 49); b.fill(78, 0, 79, 49); b.beacon(3, 42); b.gate(8, 32, 10, 'arena_l'); b.plat(18, 37, 5).plat(56, 37, 5).plat(37, 33, 5);
         b.bossArena('architect2', 9, 77, 42, 44, 42, { trigger: 11 }); return b.done();

@@ -93,7 +93,7 @@ Object.assign(UI.screens, {
     g2music(a) {
         const heard = (Save.data && Save.data.g2.heard) || {}, all = Save.data && Save.data.g2.ngplus; this.back = () => { Music.cut('g2title', 'calm'); this.show('title'); };
         return `<div class="panel wide"><h2>${tr('MUSIC ROOM')}</h2><div class="grid">${MUSIC_ROOM.map((id, i) => { const T = TRACKS[id], open = all || heard[id] || i < 2; return `<button class="card" data-do="g2play" data-arg="${id}" ${open ? '' : 'disabled'}><b>${open ? tr(T.meta.genre) : '???'}</b><span>${open ? T.meta.meter + ' · ' + T.meta.key + ' · ' + T.meta.tempo + ' BPM' : tr('Not heard yet')}</span><em>${open ? tr(T.meta.lead) : ''}</em></button>`; }).join('')}</div>
-        <button class="card" data-do="g2lastcard"><b>THE LAST CARD</b><span>Photon Arts &amp; Carameii · 172 BPM</span><em>${tr('Final boss theme')}</em></button>
+        <button class="card" data-do="g2lastcard"><b>GAMECHANGER</b><span>Photon Arts &amp; Carameii · 172 BPM</span><em>${tr('Final boss theme')}</em></button>
         <p class="hint">${tr('Every track is synthesised live in your browser. No one but you has listened to them yet: tell us which ones work.')}</p><nav class="row"><button data-do="title" autofocus>${tr('BACK')}</button></nav></div>`;
     }
 });

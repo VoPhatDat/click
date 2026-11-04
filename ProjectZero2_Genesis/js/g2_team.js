@@ -13,6 +13,8 @@ const TEAM_IDS = ['nyx', 'zero', 'vesper', 'rook', 'sable', 'mirae', 'ysolde'];
 G2.spirit = { v: 0, add(n) { if (!Save.data || !Save.data.g2.reviveLearned) return; this.v = Math.min(100, this.v + n); } };
 G2.team = {
     on: false,
+    // the companions join only when the god shows its final form; before that the party fights by switching
+    arrive() { if (this.on) return; this.spawn(this.want !== false); const A = G.arena, P = G.player; (G.allies || []).forEach((a, i) => { a.x = U.clamp(P.x + (i % 2 ? 1 : -1) * (70 + (i >> 1) * 70), A.x0 + 60, A.x1 - 60); a.y = A.y - 2; a.safe = { x: a.x, y: a.y }; a.vx = a.vy = 0; a.inv = 120; const col = CHARS[a.id].style.col.glow; VFX.ring(a.x, a.y - 34, 120, col, 22, 8); VFX.burst(a.x, a.y - 34, col, 20, 6, 30, 6, 1); }); },
     spawn(full) {
         const P = G.player, ids = full ? TEAM_IDS.filter(id => id !== P.id && CHARS[id] && (id !== 'zero' || Save.data.g2.zeroBack || true)) : ['zero'].filter(id => id !== P.id);
         G.allies = []; G.ally = null;
@@ -39,6 +41,8 @@ G2.teamBrain = function (z) {
     if (!b || b.dead || b.intro || b.untargetable || b.transition) { const want = G.player.x + (z.lane || -80) * .6; if (Math.abs(want - z.x) > 40) go(want - z.x); return S; }
     const a = b.aim(), box = b.box(), ranged = z.def.ranged, tx = U.clamp(a.x + (ranged ? z.lane * 2.2 : z.lane * .6), A.x0 + 40, A.x1 - 40), dx = tx - z.x;
     if (Math.abs(dx) > (ranged ? 50 : 30)) go(dx); else z.facing = U.sign(a.x - z.x) || 1;
+    // dash to close the distance, like anyone would
+    if (Math.abs(dx) > 380 && z.dodgeCd <= 0 && z.grounded && (G.time + z.slot * 7) % 45 === 0) { z.facing = U.sign(dx); S['!dodge'] = true; }
     const reach = !ranged && Math.abs(a.x - z.x) < box.w / 2 + 70 && z.y > box.y && z.y - 80 < box.y + box.h;
     if (ranged || reach) { z.facing = U.sign(a.x - z.x) || 1; if ((G.time + z.slot * 3) % (ranged ? 5 : 4) === 0) { S['!attack'] = true; S.attack = true; } else S.attack = ranged; }
     if (!ranged && box.y + box.h < z.y - 60 && z.grounded && (G.time + z.slot * 11) % 50 === 0) S['!jump'] = S.jump = true;
@@ -82,7 +86,7 @@ G2.teamHits = function () {
     const eh = Enemy.prototype.hurt; if (eh) Enemy.prototype.hurt = function (...a) { const r = eh.apply(this, a); if (r) G2.spirit.add(.5); return r; };
     const tick = G.tick.bind(G);
     G.tick = function () {
-        tick(); if (!G2.team.on || !G.level) return; const B = G.boss; if (B && G.g2team && !B._team) { B._team = 1; B.maxHp = Math.round(B.maxHp * 1.8); B.hp = Math.round(B.hp * 1.8); } G2.teamHits(); G2.spirit.add(.015);
+        tick(); if (!G2.team.on || !G.level) return; const B = G.boss; G2.teamHits(); G2.spirit.add(.015);
         // keep everyone inside the arena once its gate has closed (a companion left outside could never come back)
         const Ar = G.arena; if (B && Ar) for (const z of [G.player, ...(G.allies || [])]) { if (z.x < Ar.x0 + 24 || z.x > Ar.x1 - 24) { z.x = U.clamp(z.x, Ar.x0 + 40, Ar.x1 - 40); z.vx = 0; } if (z.safe.x < Ar.x0 + 24 || z.safe.x > Ar.x1 - 24) z.safe = { x: U.clamp(G.player.x, Ar.x0 + 60, Ar.x1 - 60), y: Ar.y - 2 }; }
         const fallen = G2.team.down(); if (G2.spirit.v >= 100 && fallen.length) { const z = fallen[0]; G2.spirit.v = 0; z.down = false; z.hp = Math.round(z.maxHp * .6); z.inv = 120; z.state = 'move'; z.x = G.player.x - 60; z.y = G.player.y; z.vy = 0; VFX.ring(z.x, z.y - 34, 240, '#b48cff', 32, 14); VFX.burst(z.x, z.y - 34, '#e0d0ff', 30, 6, 40, 6, 1); Sound.sfx('checkpoint'); G.say('NYX', tr(U.pick(['Come back. I am singing for you.', 'Not yet. Wake up!', 'Back to us. Please.'])), 110); G.toast(tr('Lullaby of Return') + ': ' + CHARS[z.id].name, '#e0d0ff'); }
@@ -101,10 +105,10 @@ G2.teamHits = function () {
     const ll = Game.loadLevel.bind(Game);
     Game.loadLevel = function (id, cp) {
         G2.team.on = false; G.allies = null; G.g2team = false; ll(id, cp);
-        if (id === 'architect2') { const ask = () => { if (HEADLESS) { G2.team.spawn(G.flags.noTeam ? false : true); return; } if (cp && G2.team.last !== undefined) { G2.team.spawn(G2.team.last); return; } Game.state = 'menu'; UI.show('g2teamup'); }; G.delay ? G.delay(20, ask) : ask(); }
+        if (id === 'architect2') { const ask = () => { if (HEADLESS) { G2.team.want = !G.flags.noTeam; return; } if (cp && G2.team.last !== undefined) { G2.team.want = G2.team.last; return; } Game.state = 'menu'; UI.show('g2teamup'); }; G.delay ? G.delay(20, ask) : ask(); }
     };
     Object.assign(UI.screens, { g2teamup() { const n = TEAM_IDS.filter(id => CHARS[id] && id !== 'nyx').length; return `<div class="panel small"><h2>${tr('TEAM UP?')}</h2><p>${tr('The last battle is close. Everyone who walked this road with Nyx is here.')}</p><p class="hint">${tr('Team Up: all your companions fight at once, each on their own. They can fall; Nyx\'s Lullaby of Return brings them back when her Night Spirit is full. Otherwise: Nyx and Zero, side by side, and the others by switching.')}</p><nav><button data-do="g2team" data-arg="1" autofocus>${tr('TEAM UP')} (${n + 1})</button><button data-do="g2team" data-arg="0">${tr('Nyx and Zero')}</button></nav></div>`; } });
-    const act = UI.act.bind(UI); UI.act = function (w, arg, el) { if (w === 'g2team') { UI.hide(); Game.state = 'play'; G2.team.last = arg === '1'; G2.team.spawn(arg === '1'); Input.held = {}; return; } return act(w, arg, el); };
+    const act = UI.act.bind(UI); UI.act = function (w, arg, el) { if (w === 'g2team') { UI.hide(); Game.state = 'play'; G2.team.last = G2.team.want = arg === '1'; Input.held = {}; return; } return act(w, arg, el); };
     // HUD: the Night Spirit, and the party's health.
     const hd = HUD.draw.bind(HUD); HUD.draw = function (c) {
         hd(c); if (!Save.data || !Save.data.g2.reviveLearned || !G.player || Game.state !== 'play' || G.letterbox) return;

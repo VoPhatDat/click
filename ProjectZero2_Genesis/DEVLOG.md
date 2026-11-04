@@ -64,7 +64,7 @@ Người chơi gửi một bài tham khảo ("I wrote EPIC Boss Fight music for 
 - `music_check` được nới cho phong cách chung: các bài epic phải khác nhau ít nhất 2 trong 4 yếu tố (nhịp, giọng, nhạc cụ chính, tempo), thay cho quy tắc cũ "khác thể loại".
 
 
-### Con Bài Cuối Cùng (boss mạnh nhất game)
+### Hình thái tối thượng của The Architect (boss mạnh nhất game)
 Khi The Architect ở hồi 3 còn 12% máu, nó nuốt cái Ngai và hóa thần. Từ lúc đó nhạc chuyển sang bài thu sẵn **"GameChanger" boss theme của Photon Arts và Carameii** (https://www.youtube.com/watch?v=K_9j1k3jH-Q). Điều khoản của tác giả cho phép dùng trong dự án phi lợi nhuận nếu ghi nhận họ là chủ sở hữu; credit có trong màn Credits, Phòng Nhạc và file này. Không được dùng cho mục đích thương mại.
 
 Cấu trúc bài được đo bằng FFT: 172.27 BPM, phách đầu ở 0.232 giây, mỗi ô nhịp 1.393 giây. Mọi thứ được cắt theo nhạc (`js/g2_ascend.js`):
@@ -83,12 +83,32 @@ Cấu trúc bài được đo bằng FFT: 172.27 BPM, phách đầu ở 0.232 gi
 | 114 | 2:39 | "Ngày và Đêm": Zero bật lên chém nhát vàng đúng phách 1, Nyx chém nhát tím đúng phách 3, cả hai quỳ hai bên quay lưng về phía boss |
 | 118–121 | 2:45 | Boss chết, mưa kính, BÙM, BÙM |
 
+- Mắt mở đúng tiếng "bùm" ở 10,7 giây. Tiếng bùm nằm giữa ô nhịp 7, không phải ở vạch nhịp như bản trước. Vị trí bài hát trừ đi độ trễ âm thanh của thiết bị.
+- Tên boss hiện dần ở cú drop 0:22, rồi chìm xuống dưới màn hình cho khỏi che.
+- Mắt boss nhìn theo một người: thường là người gần nhất, thỉnh thoảng chọn ngẫu nhiên. Đòn ngắm bắn vào đúng người đó.
+- Kỹ năng có tên, hiện dưới thanh máu boss:
+
+| Kỹ năng | Đòn |
+|---|---|
+| Thánh Quang Phán Xét | cột sáng từ con mắt giáng xuống người đang bị nhìn |
+| Lưỡi Hái Bình Minh | một đoạn sàn được đánh dấu, rồi chân tia sáng quét qua |
+| Tia Rạng Đông | một tia ngang sàn, thấp (nhảy qua) hoặc cao (đứng yên); mỗi lần chỉ một tia |
+| Hàng Cột Ánh Sáng | 8 cột, xen kẽ chẵn lẻ theo ô nhịp |
+| Tiếng Vọng Những Ngày Xưa | triệu hồi bản yếu của boss các ngày trước, có thanh máu và tên; một số đồng đội (ngẫu nhiên) đánh chúng trước |
+
+- Mỗi ô nhịp có tối đa một đòn phủ sàn; các đòn còn lại là đòn ngắm, nên luôn có đường né.
+- Phông nền đổi hẳn khi boss hóa thần: bầu trời tím thẫm, vầng hào quang khổng lồ, cực quang vàng, mảnh vỡ của Ngai bay lên.
+- Lõi khi vỡ ra: Zero quỳ như trên bàn tế (thay cho vạch xanh trước đây).
+- Ngày và Đêm: vết chém hình trăng khuyết, mọc dần theo đúng đường bay của Zero và Nyx; mỗi người lướt chậm hơn để thấy rõ cả hai nhát.
+- Nhân vật cận chiến nhảy cao hơn 22% trong trận này, vừa đủ chạm lõi boss. Nhảy đôi vẫn có như thường.
+- Trong game không dùng chữ "con bài cuối"; boss nói "Vậy thì hãy chiêm ngưỡng hình thái tối thượng của ta."
 - Cảnh báo đòn hiện trước 2 phách, đòn rơi đúng phách.
 - Màn cuối được làm cao hơn để boss lớn vẫn nằm trọn trong khung hình.
 - Bài nhạc được nhúng trong bản build một file (khoảng 5.4 MB). Nếu không tải được bài, game dùng nhạc epic tổng hợp với cùng mốc thời gian.
 
 ### Cùng Chiến Đấu (Team Up) và Bài Ru Gọi Về
 - Vào màn cuối, game hiện bảng hỏi trước khi đánh, nên trận đấu không bị dừng giữa chừng: **Cùng chiến đấu** (cả 7 người) hoặc **Chỉ Nyx và Zero**.
+- Trước khi boss biến hình chỉ có đổi người (phím C). Các đồng đội chỉ cùng xuất hiện lúc boss bắt đầu biến hình.
 - Mỗi đồng đội do AI điều khiển riêng:
   - đọc cảnh báo đòn để né hoặc nhảy;
   - đứng rải quanh boss, người đánh xa đứng xa, người cận chiến áp sát;
@@ -99,9 +119,33 @@ Cấu trúc bài được đo bằng FFT: 172.27 BPM, phách đầu ở 0.232 gi
 - Camera lùi xa để thấy cả đội.
 - Cân bằng:
   - mỗi đồng đội gây khoảng 28% sát thương;
-  - boss có thêm 80% máu khi chọn Cùng chiến đấu.
+  - ở hình thái tối thượng, boss có máu gấp 2,3 lần khi chọn Cùng chiến đấu.
 - Nyx học Bài Ru Gọi Về từ Sable (Tử Thần) cuối Ngày Thứ Năm, ngay sau khi gặp Tứ Kỵ Sĩ. Từ đó, ngoài màn cuối, thanh Linh Lực đầy cũng cứu người chơi khỏi một đòn chí mạng.
 - Bot giả lập (người chơi không né) đánh thắng trận cuối khi có cả đội, với 7 lần gục và 4 lần hồi sinh.
+
+### Cửa hàng: Người Bán Rong trên Con Đường Thứ Bảy
+Vào từ Lò Rèn Tro trong Vườn Sáng Thế. Bán 10 di vật mới bằng ✿. Di vật áp dụng cho cả đội, kể cả đồng đội AI.
+- Bùa Cát: +15% máu.
+- Bụi Sao Rơi: chí mạng.
+- Nanh Sói Đầu Đàn: tấn công, hồi máu khi hạ địch.
+- Kính Thủy Triều: né và năng lượng.
+- Hạt Than Hồng: tuyệt chiêu.
+- Màn Trăng: giảm sát thương.
+- Mảnh Cánh: nhảy cao.
+- Chuông Hát Ru: Linh Lực Đêm đầy nhanh.
+- Cờ Tứ Kỵ: đồng đội ít bị thương.
+- Lông Vũ Gọi Về: hồi sinh đầy máu.
+
+Đồng đội AI cũng biết lướt để áp sát.
+
+### Nhạc ending
+"Bảy Ngày, Rồi Nghỉ Ngơi" (`js/g2_ending.js`): piano và dàn nhạc, 66 BPM, Si giáng trưởng, 4 đoạn.
+1. Piano một mình chơi bài ru.
+2. Dàn dây vào, cello đáp bằng chủ đề của Zero.
+3. Cả dàn nhạc: violin chơi chủ đề Sáng Thế, có kèn, đàn hạc, hợp xướng và trống timpani.
+4. Trở về piano.
+
+Bài này dùng cho kết thúc 5A và màn Credits của mọi kết thúc.
 
 ### Lời thoại
 Toàn bộ khoảng 300 câu thoại tiếng Việt của Phần II được viết lại cho giống người nói chuyện (`js/g2_vi_dialogue.js`). Cách xưng hô:
