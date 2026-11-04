@@ -20,6 +20,8 @@ G2.team = {
         this.on = true; G.g2team = !!full;
     },
     alive() { return (G.allies || []).filter(a => !a.down); },
+    // the one you control has fallen: the first companion still standing takes over, the fallen one waits for the song
+    handOver(old) { const next = this.alive()[0]; if (!next) return false; G.allies.splice(G.allies.indexOf(next), 1); next.isAlly = false; old.isAlly = true; old.down = true; old.hp = 0; old.state = 'move'; old.script = null; old.brain = G2.teamBrain; old.lane = next.lane; old.slot = next.slot; G.allies.push(old); G.player = next; next.inv = 90; G.toast(CHARS[old.id].name + ' ' + tr('has fallen'), '#ff8a8a'); VFX.burst(old.x, old.y - 34, CHARS[old.id].style.col.glow, 30, 7, 30, 6, 1); return true; },
     down() { return (G.allies || []).filter(a => a.down); }
 };
 // A companion's mind: get out of what is about to land, then go to its place around the target and fight.
@@ -69,10 +71,12 @@ G2.teamHits = function () {
         if (this === G.player && Save.data && Save.data.g2.reviveLearned && this.inv <= 0 && this.hp - dmg * (Game.diff.dmgTaken || 1) <= 0 && this.state !== 'dead') {
             if (G2.spirit.v >= 100) { G2.spirit.v = 0; this.hp = Math.round(this.maxHp * .5); this.inv = 150; VFX.ring(this.x, this.y - 34, 220, '#b48cff', 30, 12); Sound.sfx('checkpoint'); G.toast(tr('Lullaby of Return'), '#e0d0ff'); return false; }
             // with the team, the fallen player hands over to a companion until the spirit can bring her back
-            if (G2.team.on && G2.team.alive().length) { const next = G2.team.alive()[0], old = this; G.allies.splice(G.allies.indexOf(next), 1); next.isAlly = false; old.isAlly = true; old.down = true; old.hp = 0; old.brain = G2.teamBrain; old.lane = next.lane; old.slot = next.slot; G.allies.push(old); G.player = next; next.inv = 90; G.toast(CHARS[old.id].name + ' ' + tr('has fallen'), '#ff8a8a'); return false; }
+            if (G2.team.on && G2.team.alive().length) { G2.team.handOver(this); return false; }
         }
         return hurt.call(this, dmg, src);
     };
+    // whatever the cause (a hazard, a modifier the check above did not see), a fall with the team never ends the run
+    const die = Player.prototype.die; Player.prototype.die = function (...a) { if (this === G.player && G2.team.on && G.boss && G2.team.alive().length && G2.team.handOver(this)) return; return die.apply(this, a); };
     // The spirit fills with every blow anyone lands, a little over time too; full, it sings someone back.
     const bh = Boss.prototype.hurt; Boss.prototype.hurt = function (dmg, o) { const s = o && (o.src || o.owner); if (s && s.isTeam && s.isAlly) dmg *= .28; const r = bh.call(this, dmg, o); if (r > 0) G2.spirit.add(r * (G2.team.on ? .012 : .02)); return r; };
     const eh = Enemy.prototype.hurt; if (eh) Enemy.prototype.hurt = function (...a) { const r = eh.apply(this, a); if (r) G2.spirit.add(.5); return r; };

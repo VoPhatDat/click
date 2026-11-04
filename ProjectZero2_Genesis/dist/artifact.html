@@ -8902,17 +8902,18 @@ G2.zeroBrain = function (z) {
     const upd = base.update, hurt = base.hurt, draw = base.draw, tc = base.tryCombat, fo = base.fallOut, rts = base.returnToSafe;
     base.update = function () {
         if (this.isAlly) {
-            const keep = Input.simulated, lock = G.lockInput; Input.simulated = G.lockInput ? {} : G2.zeroBrain(this);
+            const keep = Input.simulated, lock = G.lockInput; Input.simulated = G.lockInput ? {} : (this.brain || G2.zeroBrain)(this);
             try { upd.call(this); } finally { Input.simulated = keep; }
-            Light.add(this.x, this.y - 30, 200, '#00ffff', .5); return;
+            if (!this.isTeam) Light.add(this.x, this.y - 30, 200, '#00ffff', .5); return;
         }
         upd.call(this);
         // A child heals quickly once the danger passes; Zero keeps her safe in the meantime.
         if (this.id === 'nyx' && this.state !== 'dead' && this.lastHurt > 150 && this.hp < this.maxHp && G.time % 8 === 0) this.heal(1, true);
         if (this === G.player && G.ally) G.ally.update();
+        if (this === G.player && G.allies) for (const a of G.allies) if (!a.down) a.update();
     };
-    base.hurt = function (dmg, src) { if (this.isAlly) return false; if (this.id === 'nyx') dmg *= (NYX_AGES[Save.data.g2.chapter || 1] || 6) < 10 ? .45 : .75; const r = hurt.call(this, dmg, src); if (r && this.id === 'nyx') { this.inv = Math.max(this.inv, src && src.tick ? 16 : 75); if (G.ally) G.ally.aiCall = Math.max(G.ally.aiCall || 0, 1); } return r; };
-    base.fallOut = function () { if (this.isAlly) { const N = G.player; this.x = N.x - 50; this.y = N.y; this.vy = 0; return; } return fo.call(this); };
+    base.hurt = function (dmg, src) { if (this.isAlly && !this.isTeam) return false; if (this.id === 'nyx') dmg *= (NYX_AGES[Save.data.g2.chapter || 1] || 6) < 10 ? .45 : .75; const r = hurt.call(this, dmg, src); if (r && this.id === 'nyx') { this.inv = Math.max(this.inv, src && src.tick ? 16 : 75); if (G.ally) G.ally.aiCall = Math.max(G.ally.aiCall || 0, 1); } return r; };
+    base.fallOut = function () { if (this.isAlly && this.isTeam) { this.x = G.player.x - 60; this.y = G.player.y - 40; this.vy = 0; return; } if (this.isAlly) { const N = G.player; this.x = N.x - 50; this.y = N.y; this.vy = 0; return; } return fo.call(this); };
     base.returnToSafe = function () { if (this.isAlly) { const N = G.player; this.x = N.x - 50; this.y = N.y; this.vx = this.vy = 0; this.state = 'move'; this.script = null; this.noGrav = false; return; } return rts.call(this); };
     base.tryCombat = function (In) {
         if (this.def.noAttack) {
@@ -8924,6 +8925,8 @@ G2.zeroBrain = function (z) {
     };
     base.draw = function (ctx) {
         if (this === G.player && G.ally) { const z = G.ally; Scene.shadow(ctx, z.x, z.grounded ? z.y : -999, 22); z.draw(ctx); }
+        if (this === G.player && G.allies) for (const a of G.allies) if (!a.down) { Scene.shadow(ctx, a.x, a.grounded ? a.y : -999, 20); a.draw(ctx); }
+        if (this.g2hide) return;
         if (this.id === 'nyx') { // the only shadow in the city lies under her
             ctx.save(); ctx.globalAlpha = .55; ctx.fillStyle = '#1a1030'; ctx.beginPath(); ctx.ellipse(this.x, this.y, 26, 6, 0, 0, TAU); ctx.fill(); ctx.restore();
             if (G2Night.nyxHidden()) { ctx.globalAlpha = .5; }
@@ -10557,6 +10560,15 @@ Object.assign(CUTS, {
         yield* c.say('ROOK', 'He is gone, then...', 140);
         yield* c.say('ROOK', 'Then from now on, we follow you.', 200);
         yield* c.say('', 'War, Death, Plague and Famine knelt in the sand in front of a girl of fourteen.', 240);
+        // Death teaches her the one song that brings people back (the Lullaby of Return).
+        yield* c.say('SABLE', 'You were humming to the wolves back there. I heard it from the other side of the dune.', 230);
+        yield* c.say('NYX', 'Uncle Zero used to sing it when I could not sleep. It is the only song I know.', 220);
+        yield* c.say('SABLE', 'I have carried the dead for a long time, kid. I know every song that sends people away.', 230);
+        yield* c.say('SABLE', 'Yours goes the other way. Give me your hands. I will teach you the rest of it.', 220);
+        yield* c.say('', 'Under the first stars, Sable taught her the Lullaby of Return: a song that pulls a fallen friend back from the edge, if the one singing still has the strength to finish it.', 300);
+        yield* c.say('SABLE', 'It takes everything you have. Wait until your spirit is full. And do not waste it on me.', 230);
+        yield* c.say('NYX', 'I will waste it on all of you. Every time.', 180);
+        Save.data.g2.reviveLearned = 1; G.toast && G.toast(tr('Learned: Lullaby of Return'), '#e0d0ff');
         c.fade(1, 60); yield 66;
     }
 });
@@ -10566,9 +10578,16 @@ REGIONS[4].level = 'desert2';
 LEVEL_ORDER.push('desert2', 'lilith');
 Object.assign(OBJECTIVES, { desert2: 'Cross the Desert of the Pack, alone', lilith: 'Face the Queen of the Pack' });
 G2.DAYS[5].open = 'g2ch5open';
-G2.DAYS[5].after = () => { const D = Save.data; for (const id of ['rook', 'sable', 'mirae', 'ysolde']) if (!D.unlocked.includes(id)) D.unlocked.push(id); Save.write(); };
+G2.DAYS[5].after = () => { const D = Save.data; D.g2.reviveLearned = 1; for (const id of ['rook', 'sable', 'mirae', 'ysolde']) if (!D.unlocked.includes(id)) D.unlocked.push(id); Save.write(); };
 
 Object.assign(VI, {
+    'You were humming to the wolves back there. I heard it from the other side of the dune.': 'Lúc nãy nhóc ngân nga cho bầy sói nghe. Đứng bên kia đồi cát mà tôi vẫn nghe thấy.',
+    'Uncle Zero used to sing it when I could not sleep. It is the only song I know.': 'Hồi em mất ngủ, chú Zero hay hát bài đó. Em chỉ thuộc mỗi bài ấy thôi.',
+    'I have carried the dead for a long time, kid. I know every song that sends people away.': 'Tôi đưa người chết đi lâu lắm rồi, nhóc ạ. Bài hát tiễn người ta đi, bài nào tôi cũng thuộc.',
+    'Yours goes the other way. Give me your hands. I will teach you the rest of it.': 'Còn bài của nhóc thì ngược lại. Đưa tay đây. Tôi dạy nốt phần còn lại cho.',
+    'Under the first stars, Sable taught her the Lullaby of Return: a song that pulls a fallen friend back from the edge, if the one singing still has the strength to finish it.': 'Dưới những vì sao đầu tiên, Sable dạy cô bé Bài Ru Gọi Về: khúc hát kéo một người bạn đã gục quay lại từ bờ vực, miễn là người hát còn đủ sức hát trọn bài.',
+    'It takes everything you have. Wait until your spirit is full. And do not waste it on me.': 'Nó rút cạn sức nhóc đấy. Đợi Linh Lực Đêm đầy hẵng hát. Và đừng phí nó cho tôi.',
+    'I will waste it on all of you. Every time.': 'Em sẽ phí nó cho tất cả mọi người. Lần nào cũng vậy.', 'Learned: Lullaby of Return': 'Đã học: Bài Ru Gọi Về',
     'THE DESERT OF THE PACK': 'HOANG MẠC BẦY ĐÀN', 'The Fifth Day: the beasts of fear': 'Ngày Thứ Năm: muông thú của nỗi sợ', 'THE HOLLOW OF THE PACK': 'HỐC CỦA BẦY SÓI', 'The Fifth Day: Lilith-Varga': 'Ngày Thứ Năm: Lilith-Varga',
     'Wolf of Fear': 'Sói Sợ Hãi', 'Many-Eyed Eagle': 'Đại Bàng Nhiều Mắt', 'Red Sand Scorpion': 'Bọ Cạp Cát Đỏ', 'Alpha of the Pack': 'Sói Đầu Đàn', 'The alpha sleeps. You let it be.': 'Con sói đầu đàn đã ngủ. Em để nó yên.',
     'THE FIRE-HORNED ANTELOPE': 'LINH DƯƠNG SỪNG LỬA', 'IT RUNS FROM WHAT IT IS': 'NÓ CHẠY TRỐN CHÍNH MÌNH', 'It is not attacking. It is running away from its own fire...': 'Nó không tấn công. Nó đang chạy trốn ngọn lửa của chính nó...',
@@ -11181,9 +11200,10 @@ Object.assign(LEVELS, {
         const d = b.done(); d.g2sepia = true; return d;
     },
     architect2() {
-        const b = new LB('architect2', 80, 40, { name: 'THE SKY TORN OPEN', sub: 'The Seventh Day: the Architect rises', region: 'city', theme: THEMES.arch7, bg: 'arch7', spawn: { x: 4, y: 32 }, weather: 'motes', indoors: true, noAlly: true });
-        b.at(0, 32).flat(80); b.fill(0, 0, 1, 39); b.fill(78, 0, 79, 39); b.beacon(3, 32); b.gate(8, 22, 10, 'arena_l'); b.plat(18, 27, 5).plat(56, 27, 5).plat(37, 23, 5);
-        b.bossArena('architect2', 9, 77, 32, 44, 32, { trigger: 11 }); return b.done();
+        // tall, so the god of the last card fits on screen with its wings and crown
+        const b = new LB('architect2', 80, 50, { name: 'THE SKY TORN OPEN', sub: 'The Seventh Day: the Architect rises', region: 'city', theme: THEMES.arch7, bg: 'arch7', spawn: { x: 4, y: 42 }, weather: 'motes', indoors: true, noAlly: true });
+        b.at(0, 42).flat(80); b.fill(0, 0, 1, 49); b.fill(78, 0, 79, 49); b.beacon(3, 42); b.gate(8, 32, 10, 'arena_l'); b.plat(18, 37, 5).plat(56, 37, 5).plat(37, 33, 5);
+        b.bossArena('architect2', 9, 77, 42, 44, 42, { trigger: 11 }); return b.done();
     },
     weariness() {
         const b = new LB('weariness', 60, 30, { name: 'THE THRONE, BROKEN', sub: 'Good Night', region: 'city', theme: THEMES.throne7, bg: 'throne7', spawn: { x: 4, y: 24 }, weather: 'ash', indoors: true, noAlly: true, forceChar: 'nyx' });
@@ -11424,7 +11444,7 @@ G2.fx = {
         }
     },
     draw(c, F, front) {
-        const b = G.boss; if (!b) return; const cam = G.cam, cx = (b.x - cam.x) * cam.zoom, cy = (b.y - 380 - cam.y) * cam.zoom;
+        const b = G.boss; if (!b) return; const cam = G.cam, cx = (b.x - cam.x) * cam.zoom, cy = (G2.cy(b) - cam.y) * cam.zoom;
         if (!front) {
             const k = U.clamp(F.sky, 0, 1); if (k > 0) { const g = c.createLinearGradient(0, 0, 0, VH); g.addColorStop(0, `rgba(60,20,110,${.55 * k})`); g.addColorStop(.55, `rgba(160,90,40,${.35 * k})`); g.addColorStop(1, `rgba(255,210,140,${.25 * k})`); c.fillStyle = g; c.fillRect(0, 0, VW, VH);
                 c.save(); c.globalCompositeOperation = 'lighter'; c.strokeStyle = `rgba(255,230,170,${.12 * k})`; c.lineWidth = 3; for (let r = 0; r < 4; r++) { c.beginPath(); c.ellipse(cx, cy, 300 + r * 160, (300 + r * 160) * .32, Math.sin(G.time * .002 + r) * .3, 0, TAU); c.stroke(); }
@@ -11446,27 +11466,32 @@ G2.fx = {
 G2.drawEye = function (c, x, y, R, b) {
     const P = G.player, open = U.clamp(b.eye || 0, 0, 1) * (1 - (b.blink || 0)), t = b.anim;
     if (open <= .03) { c.strokeStyle = '#ffe8a0'; c.lineWidth = 4; c.beginPath(); c.moveTo(x - R, y); c.quadraticCurveTo(x, y + R * .2, x + R, y); c.stroke(); return; }
-    const look = P ? U.clamp((P.x - b.x) / 600, -1, 1) : 0, lookY = P ? U.clamp((P.y - 40 - (b.y - 380)) / 600, -1, 1) : 0, H = R * .62 * open;
+    const look = P ? U.clamp((P.x - b.x) / 600, -1, 1) : 0, lookY = P ? U.clamp((P.y - 40 - (G2.cy(b))) / 600, -1, 1) : 0, H = R * .62 * open;
     c.save(); c.beginPath(); c.moveTo(x - R, y); c.bezierCurveTo(x - R * .5, y - H * 1.25, x + R * .5, y - H * 1.25, x + R, y); c.bezierCurveTo(x + R * .5, y + H * 1.25, x - R * .5, y + H * 1.25, x - R, y); c.closePath();
     c.save(); c.clip();
-    const sg = c.createRadialGradient(x, y, R * .1, x, y, R); sg.addColorStop(0, '#fffaf0'); sg.addColorStop(.7, '#f0dccc'); sg.addColorStop(1, '#b08070'); c.fillStyle = sg; c.fillRect(x - R, y - R, R * 2, R * 2);
+    const sg = c.createRadialGradient(x, y, R * .1, x, y, R); sg.addColorStop(0, '#fffaf0'); sg.addColorStop(.6, '#f2dfca'); sg.addColorStop(1, '#9a6656'); c.fillStyle = sg; c.fillRect(x - R, y - R, R * 2, R * 2);
     c.strokeStyle = 'rgba(190,40,40,.55)'; c.lineWidth = 1.4; const Rr = U.mulberry(9); for (let i = 0; i < 14; i++) { const a = Rr() * TAU; let px = x + Math.cos(a) * R, py = y + Math.sin(a) * R * .6; c.beginPath(); c.moveTo(px, py); for (let k = 0; k < 4; k++) { px += (x - px) * .22 + (Rr() - .5) * 10; py += (y - py) * .22 + (Rr() - .5) * 8; c.lineTo(px, py); } c.stroke(); }
     const ix = x + look * R * .35, iy = y + lookY * H * .3, IR = R * .46;
     const ig = c.createRadialGradient(ix, iy, IR * .15, ix, iy, IR); ig.addColorStop(0, '#fff3a0'); ig.addColorStop(.35, '#ffb020'); ig.addColorStop(.75, '#c8401a'); ig.addColorStop(1, '#3a0a04'); c.fillStyle = ig; c.beginPath(); c.arc(ix, iy, IR, 0, TAU); c.fill();
     c.strokeStyle = 'rgba(90,20,0,.6)'; c.lineWidth = 1; for (let i = 0; i < 40; i++) { const a = i / 40 * TAU + Math.sin(t * .01) * .05; c.beginPath(); c.moveTo(ix + Math.cos(a) * IR * .32, iy + Math.sin(a) * IR * .32); c.lineTo(ix + Math.cos(a) * IR * .95, iy + Math.sin(a) * IR * .95); c.stroke(); }
     c.strokeStyle = '#1a0402'; c.lineWidth = 3; c.beginPath(); c.arc(ix, iy, IR, 0, TAU); c.stroke();
-    const dil = .2 + (b.dilate || 0) * .5; c.fillStyle = '#080102'; c.beginPath(); c.ellipse(ix, iy, IR * dil * .45, IR * .78, 0, 0, TAU); c.fill();
+    c.strokeStyle = 'rgba(255,220,120,.55)'; c.lineWidth = 2.5; c.beginPath(); for (let i = 0; i <= 48; i++) { const a = i / 48 * TAU, rr = IR * (.4 + Math.sin(a * 9 + t * .02) * .03); i ? c.lineTo(ix + Math.cos(a) * rr, iy + Math.sin(a) * rr) : c.moveTo(ix + Math.cos(a) * rr, iy + Math.sin(a) * rr); } c.stroke();
+    const lg = c.createRadialGradient(ix, iy, IR * .78, ix, iy, IR); lg.addColorStop(0, 'rgba(40,6,2,0)'); lg.addColorStop(1, 'rgba(40,6,2,.75)'); c.fillStyle = lg; c.beginPath(); c.arc(ix, iy, IR, 0, TAU); c.fill();
+    const dil = .2 + (b.dilate || 0) * .5, pw = IR * dil * .5, ph = IR * .8, slit = () => { c.beginPath(); c.moveTo(ix, iy - ph); c.bezierCurveTo(ix + pw * 1.35, iy - ph * .45, ix + pw * 1.35, iy + ph * .45, ix, iy + ph); c.bezierCurveTo(ix - pw * 1.35, iy + ph * .45, ix - pw * 1.35, iy - ph * .45, ix, iy - ph); };
+    c.save(); c.shadowColor = '#ff7a20'; c.shadowBlur = 14; slit(); const pg = c.createRadialGradient(ix, iy, 0, ix, iy, ph); pg.addColorStop(0, '#000000'); pg.addColorStop(.7, '#0a0102'); pg.addColorStop(1, '#3a0804'); c.fillStyle = pg; c.fill(); c.restore();
+    slit(); c.strokeStyle = 'rgba(255,150,60,.55)'; c.lineWidth = 1.2; c.stroke();
     c.fillStyle = 'rgba(255,255,255,.9)'; c.beginPath(); c.ellipse(ix - IR * .35, iy - IR * .38, IR * .16, IR * .1, -.5, 0, TAU); c.fill(); c.beginPath(); c.arc(ix + IR * .3, iy + IR * .25, IR * .06, 0, TAU); c.fill();
     c.restore();
-    c.strokeStyle = '#2a1408'; c.lineWidth = 5; c.stroke(); c.lineWidth = 2;
-    for (let i = 0; i < 13; i++) { const u = (i + .5) / 13, px = x - R + u * 2 * R, py = y - Math.sin(u * Math.PI) * H * .95, a = -Math.PI / 2 + (u - .5) * 1.6, L = 26 + Math.sin(u * Math.PI) * 30 + Math.sin(t * .05 + i) * 4; c.strokeStyle = `rgba(255,232,170,${.8 * open})`; c.beginPath(); c.moveTo(px, py); c.lineTo(px + Math.cos(a) * L, py + Math.sin(a) * L); c.stroke(); }
+    c.strokeStyle = '#2a1408'; c.lineWidth = 5; c.stroke();
+    c.save(); c.globalCompositeOperation = 'lighter'; c.shadowColor = '#ffcf80'; c.shadowBlur = 22; c.strokeStyle = `rgba(255,214,150,${.32 * open})`; c.lineWidth = 7; c.stroke(); c.restore(); c.lineWidth = 2;
+    c.lineWidth = 2; for (let i = 0; i < 13; i++) { const u = (i + .5) / 13, px = x - R + u * 2 * R, py = y - Math.sin(u * Math.PI) * H * .95, a = -Math.PI / 2 + (u - .5) * 1.6, L = 26 + Math.sin(u * Math.PI) * 30 + Math.sin(t * .05 + i) * 4; c.strokeStyle = `rgba(255,232,170,${.8 * open})`; c.beginPath(); c.moveTo(px, py); c.lineTo(px + Math.cos(a) * L, py + Math.sin(a) * L); c.stroke(); }
     c.restore();
     Paint.glow(c, x + look * R * .35, y, R * .9, '#ff7a20');
 };
 // Wings with a body: each is a chain of points that trails behind the god as it moves and sways in a slow
 // wind, flapping on the bar; feathers are tapered blades along it, drawn softer near the player.
 G2.wings = {
-    make(b) { b.wingS = []; for (const [side, tier] of [[-1, 0], [1, 0], [-1, 1], [1, 1], [-1, 2], [1, 2]]) { const pts = []; for (let i = 0; i < 7; i++) pts.push({ x: 0, y: 0, ox: 0, oy: 0 }); b.wingS.push({ side, tier, L: [380, 310, 240][tier], n: 7, ang: -(.22 + tier * .42), pts, init: false, k: 0 }); } },
+    make(b) { b.wingS = []; for (const [side, tier] of [[-1, 0], [1, 0], [-1, 1], [1, 1], [-1, 2], [1, 2]]) { const pts = []; for (let i = 0; i < 9; i++) pts.push({ x: 0, y: 0, ox: 0, oy: 0 }); b.wingS.push({ side, tier, L: [400, 330, 260][tier], n: 9, ang: -(.22 + tier * .42), pts, init: false, k: 0 }); } },
     step(b, cx, cy, grow) {
         if (!b.wingS) this.make(b); const flapT = G2.song.active ? (G2.song.pos() / SONG.bar) * TAU : G.time * .03, vx = b.x - (b.lastX === undefined ? b.x : b.lastX); b.lastX = b.x;
         for (const W of b.wingS) {
@@ -11482,18 +11507,25 @@ G2.wings = {
     draw(c, b, near) {
         if (!b.wingS) return; c.save(); c.lineJoin = 'round';
         for (const W of b.wingS.slice().reverse()) { if (!W.k) continue; const P = W.pts, alpha = (near ? .4 : .8) * W.k;
-            for (let row = 2; row >= 0; row--) for (let i = 1; i < W.n; i++) { const A = P[i - 1], B = P[i], dx = B.x - A.x, dy = B.y - A.y, d = Math.hypot(dx, dy) || 1, nx = -dy / d * W.side, ny = dx / d * W.side, u = i / (W.n - 1);
-                for (let f = 0; f < 3; f++) { const m = f / 3, px = A.x + dx * m, py = A.y + dy * m, len = (40 + u * 130 + row * 30) * (1 - row * .22) * W.k, tilt = .35 + u * .45 + row * .1, ex = px + (nx * Math.cos(tilt) + dx / d * Math.sin(tilt)) * len, ey = py + (ny * Math.cos(tilt) + dy / d * Math.sin(tilt)) * len + len * .35, w2 = 7 - row * 1.5;
-                    c.globalAlpha = alpha * (row === 0 ? 1 : .8); c.fillStyle = row === 0 ? '#fff8e4' : row === 1 ? '#ecdeff' : '#ffe0aa';
+            // four rows of feathers: long primaries at the back, then secondaries, then two rows of small coverts
+            const ROWS = 4, PER = 4, sway = G.time * .06;
+            for (let row = ROWS - 1; row >= 0; row--) for (let i = 1; i < W.n; i++) { const A = P[i - 1], B = P[i], dx = B.x - A.x, dy = B.y - A.y, d = Math.hypot(dx, dy) || 1, nx = -dy / d * W.side, ny = dx / d * W.side, u = i / (W.n - 1);
+                for (let f = 0; f < PER; f++) { const m = f / PER, px = A.x + dx * m, py = A.y + dy * m, j = Math.sin(i * 3.1 + f * 1.7 + row) * .5 + .5, len = (36 + u * 150 + (ROWS - 1 - row) * 26) * (1 - row * .2) * (.86 + j * .22) * W.k, tilt = .3 + u * .5 + row * .08 + Math.sin(sway + i + f) * .025, ex = px + (nx * Math.cos(tilt) + dx / d * Math.sin(tilt)) * len, ey = py + (ny * Math.cos(tilt) + dy / d * Math.sin(tilt)) * len + len * .32, w2 = 6.5 - row * 1.2;
+                    c.globalAlpha = alpha * (row === 0 ? 1 : .86); c.fillStyle = row === 0 ? (j > .5 ? '#fff8e4' : '#f6ecd4') : row === 1 ? '#ecdeff' : row === 2 ? '#ffe6b8' : '#fff4dc';
                     c.beginPath(); c.moveTo(px - nx * w2, py - ny * w2); c.quadraticCurveTo((px + ex) / 2 + dx / d * w2 * 2, (py + ey) / 2 + dy / d * w2 * 2, ex, ey); c.quadraticCurveTo((px + ex) / 2 - dx / d * w2, (py + ey) / 2 - dy / d * w2, px + nx * w2, py + ny * w2); c.fill();
-                    c.globalAlpha = alpha * .6; c.strokeStyle = row === 0 ? '#c8a050' : '#8a6ad8'; c.lineWidth = 1; c.stroke(); } }
+                    if (row < 2) { c.globalAlpha = alpha * .5; c.strokeStyle = row === 0 ? '#c8a050' : '#8a6ad8'; c.lineWidth = 1; c.stroke(); c.globalAlpha = alpha * .35; c.beginPath(); c.moveTo(px, py); c.lineTo(ex, ey); c.stroke(); } } }
             c.globalAlpha = alpha; c.strokeStyle = '#fff4d0'; c.lineWidth = 6; c.beginPath(); c.moveTo(P[0].x, P[0].y); for (const p of P) c.lineTo(p.x, p.y); c.stroke();
             c.globalCompositeOperation = 'lighter'; c.globalAlpha = alpha * .4; c.lineWidth = 18; c.strokeStyle = '#ffd890'; c.stroke(); c.globalCompositeOperation = 'source-over'; }
         c.restore();
     }
 };
 G2.drawAscended = function (c, b) {
-    if (b.gone) return; const x = b.x, y = b.y - 380, t = b.anim, ab = b.absorb || 0, P = G.player, near = P && Math.abs(P.x - x) < 560 && P.y > y - 200;
+    if (b.gone) return; const sc = b.scale || 1; c.save(); c.translate(b.x, b.y); c.scale(sc, sc); c.translate(-b.x, -b.y); G2.drawAscendedBody(c, b); c.restore();
+    G2.dn.draw(c);
+    const P = G.player; if (!G2.dn.actors && P && Math.abs(P.x - b.x) < 560 * sc) { c.strokeStyle = 'rgba(180,140,255,.9)'; c.lineWidth = 2; c.beginPath(); c.ellipse(P.x, P.y, 26, 7, 0, 0, TAU); c.stroke(); }
+};
+G2.drawAscendedBody = function (c, b) {
+    const x = b.x, y = b.y - 380, t = b.anim, ab = b.absorb || 0, P = G.player, near = P && Math.abs(P.x - x) < 560 && P.y > y - 200;
     G2.wings.step(b, x, y, b.wings || 0);
     c.save(); c.globalCompositeOperation = 'lighter'; c.globalAlpha = .9; c.drawImage(Glow.get('#ffe8a0'), x - 380, y - 380, 760, 760); c.restore();
     // the robe of light reaching down to the floor, where it can be struck; faint, so the player shows through
@@ -11504,51 +11536,65 @@ G2.drawAscended = function (c, b) {
         for (let i = 0; i < 12; i++) { const a = i / 12 * TAU, ex = Math.cos(a) * R, ey = Math.sin(a) * R; Paint.disc(c, ex, ey, 7, '#f0e8d0'); Paint.disc(c, ex + Math.cos(a) * 1.5, ey, 3.5, b.eye ? '#ff4a1a' : '#3a2a10'); } c.restore(); }
     c.save(); c.translate(x, y); c.rotate(t * .005); for (let i = 0; i < 28; i++) { c.rotate(TAU / 28); c.fillStyle = i % 2 ? 'rgba(255,232,160,.75)' : 'rgba(200,176,255,.55)'; c.beginPath(); c.moveTo(-6, -170); c.lineTo(0, -260 - (i % 3) * 26); c.lineTo(6, -170); c.fill(); } c.restore();
     Paint.glow(c, x, y, 190, '#ffffff'); const cg = c.createRadialGradient(x, y, 20, x, y, 120); cg.addColorStop(0, '#fffdf4'); cg.addColorStop(1, 'rgba(255,230,170,0)'); c.fillStyle = cg; c.beginPath(); c.arc(x, y, 120, 0, TAU); c.fill();
+    const f2 = b.form2 || 0;
+    if (f2 > 0) { // what it became after the drop: a second, wider halo of eyes, a crown of spires, a ring of swords of light
+        c.save(); c.globalAlpha = f2; c.translate(x, y); c.rotate(-t * .003); c.scale(1, .22); c.strokeStyle = 'rgba(255,216,107,.55)'; c.lineWidth = 4; c.beginPath(); c.arc(0, 0, 330, 0, TAU); c.stroke(); for (let i = 0; i < 18; i++) { const a = i / 18 * TAU; Paint.disc(c, Math.cos(a) * 330, Math.sin(a) * 330, 9, '#f0e8d0'); Paint.disc(c, Math.cos(a) * 332, Math.sin(a) * 330, 4.5, '#ff4a1a'); } c.restore();
+        c.save(); c.globalAlpha = f2; for (let i = 0; i < 7; i++) { const k = i - 3, hgt = (120 - Math.abs(k) * 24) * f2, bx = x + k * 34, by = y - 250 - Math.abs(k) * -12; const g = c.createLinearGradient(0, by - hgt, 0, by); g.addColorStop(0, 'rgba(255,255,240,0)'); g.addColorStop(.3, '#fff6d8'); g.addColorStop(1, '#ffd86b'); c.fillStyle = g; c.beginPath(); c.moveTo(bx - 9, by); c.lineTo(bx, by - hgt); c.lineTo(bx + 9, by); c.fill(); } c.restore();
+        for (let i = 0; i < 8; i++) { const a = i / 8 * TAU + t * .012, r = 300 * f2, sx = x + Math.cos(a) * r, sy = y + Math.sin(a) * r * .45; c.save(); c.translate(sx, sy); c.rotate(a + Math.PI / 2); c.globalAlpha = .85 * f2; const g = c.createLinearGradient(0, -70, 0, 50); g.addColorStop(0, '#ffffff'); g.addColorStop(1, 'rgba(200,176,255,.2)'); c.fillStyle = g; c.beginPath(); c.moveTo(0, -80); c.lineTo(9, 30); c.lineTo(0, 44); c.lineTo(-9, 30); c.fill(); c.fillStyle = '#ffd86b'; c.fillRect(-16, 30, 32, 5); c.restore(); }
+    }
     if (!b.open) G2.drawEye(c, x, y, 92, b);
     else { c.fillStyle = '#1a1a24'; c.beginPath(); c.arc(x, y, 64, 0, TAU); c.fill(); c.fillStyle = '#00ffff'; c.fillRect(x - 4, y - 32, 8, 50); Paint.disc(c, x, y - 40, 10, '#1a1a24'); c.fillStyle = 'rgba(200,240,255,.9)'; c.fillRect(x + 5, y - 38 + (t % 20) * .7, 2, 5); }
     if (b.crack) { c.strokeStyle = `rgba(255,255,255,${b.crack})`; c.lineWidth = 2.4; const R = U.mulberry(3); for (let i = 0; i < 22 * b.crack; i++) { c.beginPath(); let px = x, py = y; c.moveTo(px, py); for (let k = 0; k < 5; k++) { px += (R() - .5) * 220; py += (R() - .5) * 200; c.lineTo(px, py); } c.stroke(); } }
     if (b.slashGold) { c.strokeStyle = '#ffd86b'; c.lineWidth = 12; c.beginPath(); c.moveTo(x - 420, y - 340); c.lineTo(x + 420, y + 340); c.stroke(); }
     if (b.slashNight) { c.strokeStyle = '#8a5aff'; c.lineWidth = 12; c.beginPath(); c.moveTo(x + 420, y - 340); c.lineTo(x - 420, y + 340); c.stroke(); }
-    if (P && near) { c.strokeStyle = 'rgba(180,140,255,.9)'; c.lineWidth = 2; c.beginPath(); c.ellipse(P.x, P.y, 26, 7, 0, 0, TAU); c.stroke(); }
 };
 
+G2.cy = b => b.y - 380 * (b.scale || 1);
 /* ------------------------------ THE TRANSFORMATION, 0:00-0:49 ------------------------------ */
 const waitBar = function* (bar) { while (G2.song.pos() < SONG.t(bar) - .008) yield 1; };
 G2.ascendIntro = function* (b) {
     const S = G2.song, P = G.player; G.warns = []; G.projs = G.projs.filter(p => p.friendly); G.g2night = 0; G.g2xf = null; G.g2grav = 1; G.level.forceNyx = false; b.spin = 0; b.rot = 0;
     for (const e of G.enemies) if (!e.boss && !e.dead) { e.hp = 0; e.die({ dir: 0 }); }
-    G.lockInput = true; G.letterbox = 1; const cx = (b.A.x0 + b.A.x1) / 2; G.cineCam = { x: cx, y: b.A.y - 300, zoom: .9 };
+    // the camera stays far back for most of it: the point is how big this is, and how small everyone else is
+    const WIDE = .52, cx = (b.A.x0 + b.A.x1) / 2, floorCam = s => b.A.y - 350 * s;
+    G.lockInput = true; G.letterbox = 1; G.cineCam = { x: cx, y: b.A.y - 300, zoom: .9 };
     G.say('THE ARCHITECT', 'THEN I WILL PLAY MY LAST CARD.', 150);
-    S.start(0); b.ascended = 1; b.wings = 0; b.eye = 0; b.absorb = 0; b.open = 0; b.wingS = null; b.lb = -1; G.g2fx = { sky: 0, motes: 0, cracks: 0, mode: 'pull' };
+    S.start(0); b.ascended = 1; b.wings = 0; b.eye = 0; b.absorb = 0; b.open = 0; b.wingS = null; b.lb = -1; b.scale = .8; b.form2 = 0; G.g2fx = { sky: 0, motes: 0, cracks: 0, mode: 'pull' };
     yield* b.moveTo(cx, b.A.y + 40, 60);
-    // 0:00-0:10 it swallows the Throne: the rings fall in, the light is drawn towards it
-    while (S.pos() < SONG.t(CUE.eye)) { const k = S.pos() / SONG.t(CUE.eye); b.absorb = k; G.g2fx.motes = .2 + k * .5; G.g2fx.sky = k * .3; G.cineCam.zoom = .9 + k * .35; G.cineCam.y = b.A.y - 300 - k * 80; if (S.bar() !== b.lb) { b.lb = S.bar(); G.flash = .1; G.addShake(2 + k * 5); } yield 1; }
-    // 0:10 the eye opens
-    G.flash = 1; G.addShake(24); b.eye = 1; b.dilate = 1; G.g2fx.cracks = .2; VFX.ring(b.x, b.y - 380, 600, '#ffffff', 30, 14); G.say('NYX', 'It is opening its eye...', 100); G.cineCam.zoom = 1.6; G.cineCam.y = b.y - 380;
+    // 0:00-0:10 it swallows the Throne: the light, the rings, the walls are drawn into it
+    while (S.pos() < SONG.t(CUE.eye)) { const k = S.pos() / SONG.t(CUE.eye); b.absorb = k; b.scale = .8 + k * .2; G.g2fx.motes = .2 + k * .5; G.g2fx.sky = k * .3; G.cineCam.zoom = U.lerp(.9, WIDE + .08, k); G.cineCam.x = cx; G.cineCam.y = floorCam(b.scale);
+        if (S.bar() !== b.lb) { b.lb = S.bar(); G.flash = .1; G.addShake(2 + k * 5); if (b.lb === 3) G.say('VESPER', 'It is eating the Throne... the light, the walls, all of it.', 150); } yield 1; }
+    // 0:10 the eye opens: one close look, then straight back out
+    G.flash = 1; G.addShake(24); b.eye = 1; b.dilate = 1; G.g2fx.cracks = .2; VFX.ring(b.x, G2.cy(b), 600, '#ffffff', 30, 14); G.say('NYX', 'It opened its eye. It is looking right at me.', 110); G.cineCam.zoom = 1.25; G.cineCam.y = G2.cy(b);
     yield* waitBar(CUE.build);
-    // 0:11-0:22 the build: wings unfold, the sky gives way
-    while (S.pos() < SONG.t(CUE.drop) - .02) { const k = (S.pos() - SONG.t(CUE.build)) / (SONG.t(CUE.drop) - SONG.t(CUE.build)); b.wings = k * 6; b.dilate = .5; G.g2fx.sky = .3 + k * .4; G.g2fx.motes = .7 + k * .3; G.cineCam.zoom = U.lerp(1.6, .85, k); G.cineCam.y = b.y - 380;
-        if (S.bar() !== b.lb) { b.lb = S.bar(); G.addShake(3 + k * 8); G.flash = .15; if (b.lb === 10) G.say('ZERO', 'This is its last card.', 100); if (b.lb === 13) G.say('NYX', 'Then this is ours. Together, Uncle!', 110); } yield 1; }
-    // 0:22 the drop: the god in full, the sky breaking
-    b.wings = 6; G.flash = 1; G.addShake(34); G.g2fx.mode = 'swirl'; G.g2fx.sky = 1; G.g2fx.cracks = .6; G.g2fx.motes = 1; for (let i = 0; i < 4; i++) VFX.ring(b.x, b.y - 380, 400 + i * 260, i % 2 ? '#c8b0ff' : '#ffe8a0', 30 + i * 8, 16); G.cineCam.zoom = .75;
-    // 0:22-0:46 the reveal: the camera circles the god, the party draws, it looks at Nyx
+    // 0:11-0:22 the build: the wings unfold, it grows, the sky gives way; the camera pulls all the way back
+    while (S.pos() < SONG.t(CUE.drop) - .02) { const k = (S.pos() - SONG.t(CUE.build)) / (SONG.t(CUE.drop) - SONG.t(CUE.build)); b.wings = k * 6; b.dilate = .5; b.scale = 1 + k * .3; G.g2fx.sky = .3 + k * .4; G.g2fx.motes = .7 + k * .3; G.cineCam.zoom = U.lerp(1.25, WIDE, Math.min(1, k * 1.6)); G.cineCam.x = cx; G.cineCam.y = U.lerp(G2.cy(b), floorCam(b.scale), Math.min(1, k * 1.6));
+        if (S.bar() !== b.lb) { b.lb = S.bar(); G.addShake(3 + k * 8); G.flash = .15; if (b.lb === 10) G.say('ZERO', 'Wings. Meridian always wanted a god with wings.', 120); if (b.lb === 13) G.say('ROOK', 'It is still growing. Everyone, fall back to Nyx!', 120); } yield 1; }
+    // 0:22 the drop: the god in full, a crown, a second halo, swords of light; the sky breaks
+    b.wings = 6; G.flash = 1; G.addShake(34); G.g2fx.mode = 'swirl'; G.g2fx.sky = 1; G.g2fx.cracks = .6; G.g2fx.motes = 1; for (let i = 0; i < 4; i++) VFX.ring(b.x, G2.cy(b), 500 + i * 300, i % 2 ? '#c8b0ff' : '#ffe8a0', 30 + i * 8, 16); G.cineCam.zoom = WIDE;
+    // 0:22-0:46 the reveal: a slow wide drift round the god while it speaks
     while (S.pos() < SONG.t(CUE.name) - .02) { const bar = S.bar(), k = (S.pos() - SONG.t(CUE.drop)) / (SONG.t(CUE.name) - SONG.t(CUE.drop));
-        G.cineCam.x = cx + Math.sin(k * Math.PI * 2) * 220; G.cineCam.y = b.y - 380 + Math.cos(k * Math.PI * 2) * 60; G.cineCam.zoom = .75 + Math.sin(k * Math.PI) * .45; G.g2fx.cracks = .6 + k * .4;
-        if (bar !== b.lb) { b.lb = bar; G.addShake(bar % 4 === 0 ? 10 : 4); if (bar % 4 === 0) { G.flash = .35; VFX.ring(b.x, b.y - 380, 700, '#ffe8a0', 26, 10); } b.dilate = bar % 2;
-            if (bar === 18) G.say('VESPER', 'It is not a god. It is every hurt he never let heal.', 150); if (bar === 22) G.say('ROOK', 'Then we hurt it back. Shields up!', 110); if (bar === 26) G.say('ZERO', 'Nyx. Lead.', 100); if (bar === 29) G.say('NYX', 'Everyone. Together!', 120); }
+        b.scale = Math.min(1.45, 1.3 + k * .6); b.form2 = Math.min(1, k * 3); G.cineCam.x = cx + Math.sin(k * Math.PI * 2) * 160; G.cineCam.y = floorCam(b.scale) + Math.cos(k * Math.PI * 2) * 30; G.cineCam.zoom = WIDE + Math.sin(k * Math.PI) * .12; G.g2fx.cracks = .6 + k * .4;
+        if (bar !== b.lb) { b.lb = bar; G.addShake(bar % 4 === 0 ? 10 : 4); if (bar % 4 === 0) { G.flash = .35; VFX.ring(b.x, G2.cy(b), 900, '#ffe8a0', 26, 10); } b.dilate = bar % 2;
+            if (bar === 17) G.say('THE ARCHITECT', 'LOOK AT ME. I AM THE SEVENTH DAY YOU REFUSED.', 170);
+            if (bar === 21) G.say('NYX', 'Nobody asked for you. Not him, not me, not anyone.', 150);
+            if (bar === 24) G.say('THE ARCHITECT', 'THEN I WILL BE THE GOD NOBODY ASKED FOR.', 160);
+            if (bar === 28) G.say('ZERO', 'Nyx. Stay by my side this time.', 110);
+            if (bar === 30) G.say('NYX', 'Always.', 80);
+            if (bar === 31) G.g2title = { name: tr('THE ARCHITECT, ASCENDED'), sub: tr('THE GOD THAT WAS NEVER ASKED FOR'), t: 0 }; }
         yield 1; }
-    // 0:46 the name, held on the quiet bars
-    G.lines = []; G.sayQ = []; G.sayCur = null; G.g2title = { name: tr('THE ARCHITECT, ASCENDED'), sub: tr('THE GOD THAT WAS NEVER ASKED FOR'), t: 0 }; G.cineCam = { x: b.x, y: b.y - 380, zoom: 1.25 };
+    // 0:46 the name is whole; it holds on the quiet bars
+    G.lines = []; G.sayQ = []; G.sayCur = null; if (!G.g2title) G.g2title = { name: tr('THE ARCHITECT, ASCENDED'), sub: tr('THE GOD THAT WAS NEVER ASKED FOR'), t: 0 }; G.cineCam = { x: b.x, y: floorCam(b.scale), zoom: WIDE + .1 };
     yield* waitBar(CUE.fight);
     // 0:49 hard cut to the fight, with a fresh health bar
-    G.g2title = null; G.flash = .9; G.addShake(26); G.letterbox = 0; G.cineCam = null; G.lockInput = false; P.inv = Math.max(P.inv, 60);
-    b.maxHp = b.hp = Math.round(4800 * Game.diff.bossHp); b.hbar = 1; b.dilate = 0;
+    G.g2title = null; G.flash = .9; G.addShake(26); G.letterbox = 0; G.cineCam = null; G.lockInput = false; P.inv = Math.max(P.inv, 60); b.scale = 1.45; b.form2 = 1;
+    b.maxHp = b.hp = Math.round(4800 * Game.diff.bossHp * (G2.team && G.g2team ? 1.8 : 1)); b.hbar = 1; b.dilate = 0;
 };
 
 /* ------------------------------ THE FIGHT, CUT TO THE SONG ------------------------------ */
 G2.ascendSeg = b => { const f = b.hp / b.maxHp; let k = 0; while (k < CUE.seg.length - 1 && f <= CUE.seg[k].thr) k++; return k; };
 G2.ascendBeat = function (b, bar, bi) {
-    const A = b.A, P = G.player, tele = Math.round(SONG.beat * 60 * 2), seg = CUE.seg.findIndex(s => bar >= s.a && bar < s.b), cy = b.y - 380;
+    const A = b.A, P = G.player, tele = Math.round(SONG.beat * 60 * 2), seg = CUE.seg.findIndex(s => bar >= s.a && bar < s.b), cy = G2.cy(b);
     if (bi === 0) { G.addShake(2); if (bar % 4 === 0) VFX.ring(b.x, cy, 300, '#ffe8a0', 18, 6); }
     // every attack leaves a way out: a gap, a jump, or a dodge through
     const pillar = (x, w = 110) => { x = U.clamp(x, A.x0 + w / 2, A.x1 - w / 2); Combat.warn({ shape: 'rect', x: x - w / 2, y: A.y - 620, w, h: 620, t: tele, dmg: b.D(16), src: b, col: '#ffe8a0', onFire: () => { VFX.burst(x, A.y - 10, '#fff4d0', 24, 9, 30, 8, 1); VFX.ring(x, A.y - 20, 120, '#ffe8a0', 14, 6); G.addShake(5); } }); };
@@ -11572,23 +11618,66 @@ G2.ascendMusic = function (b) {
 };
 
 /* ------------------------------ DYING, 2:31-2:45, AND DEATH ------------------------------ */
+// Day and Night: two stand-ins for Zero and Nyx (the real ones step aside for a moment), moved on the beat.
+G2.dn = {
+    actors: null,
+    start(b) {
+        const all = [G.player, ...(G.allies || []), G.ally].filter(Boolean), find = id => all.find(a => a.id === id);
+        this.actors = ['zero', 'nyx'].map((id, i) => { const src = find(id), r = new Rig(src ? src.rig.S : CHARS[id].style); r.owner = src || { element: 0, charge: 0 }; r.play('crouch', 0); if (src) src.g2hide = true; const side = i ? 1 : -1; return { id, rig: r, side, x: b.x + side * 380, y: b.A.y, facing: -side, col: i ? '#8a5aff' : '#ffd86b', clip: 'crouch', px: 0, py: 0 }; });
+    },
+    play(a, clip) { if (a.clip !== clip) { a.clip = clip; a.rig.play(clip, 4); } },
+    step(b, p, T0) {
+        if (!this.actors) return; const sc = b.scale || 1, bt = SONG.beat;
+        for (const a of this.actors) { const t0 = T0 + (a.side > 0 ? 2 : 0) * bt, s = a.side, // Zero cuts from the upper left, Nyx from the upper right
+                sx = b.x + s * 420 * sc, sy = b.y - 720 * sc, ex = b.x - s * 420 * sc, ey = Math.min(b.A.y, b.y - 40 * sc), home = b.x + s * 380, land = b.x - s * 330;
+            a.px = a.x; a.py = a.y;
+            if (p < t0 - 2 * bt) { a.x = home; a.y = b.A.y; a.facing = -s; this.play(a, 'crouch'); }
+            else if (p < t0) { const k = (p - (t0 - 2 * bt)) / (2 * bt), e = 1 - (1 - k) * (1 - k); a.x = U.lerp(home, sx, e); a.y = U.lerp(b.A.y, sy, e) - Math.sin(k * Math.PI) * 60; a.facing = -s; this.play(a, 'djump'); }
+            else if (p < t0 + .4 * bt) { const k = (p - t0) / (.4 * bt); a.x = U.lerp(sx, ex, k); a.y = U.lerp(sy, ey, k); a.facing = -s; this.play(a, 'dodge'); for (let i = 0; i < 4; i++) VFX.add(U.lerp(a.px, a.x, i / 4), U.lerp(a.py, a.y, i / 4) - 30, 0, 0, a.col, 26, 6, 1, 0); }
+            else if (p < t0 + 1.2 * bt) { const k = (p - t0 - .4 * bt) / (.8 * bt); a.x = U.lerp(ex, land, k); a.y = U.lerp(ey, b.A.y, k * k); a.facing = s; this.play(a, 'fall'); }
+            else { a.x = land; a.y = b.A.y; a.facing = s; this.play(a, 'kneel'); }
+            a.rig.ground = true; a.rig.gaitAmt = .2; a.rig.tick(); a.rig.updateChain(a.x, a.y, a.facing, 0); Light.add(a.x, a.y - 30, 160, a.col, .7); }
+    },
+    draw(c) { if (!this.actors) return; for (const a of this.actors) { c.save(); Paint.glow(c, a.x, a.y - 50, 110, a.col); c.translate(a.x, a.y); c.scale(1.7, 1.7); c.translate(-a.x, -a.y); a.rig.draw(c, a.x, a.y, a.facing, 1); c.restore(); } },
+    end() { for (const p of [G.player, ...(G.allies || []), G.ally].filter(Boolean)) p.g2hide = false; this.actors = null; }
+};
 G2.ascendDeath = function* (b) {
-    const S = G2.song; b.dying = 1; G.lockInput = true; G.warns = []; G.projs = G.projs.filter(p => p.friendly); G.letterbox = 1; G.cineCam = { x: b.x, y: b.y - 380, zoom: 1.15 };
+    const S = G2.song; b.dying = 1; G.lockInput = true; G.warns = []; G.projs = G.projs.filter(p => p.friendly); G.letterbox = 1; G.cineCam = { x: b.x, y: G2.cy(b), zoom: 1.15 };
     S.setLoop(null); if (S.pos() < SONG.t(CUE.dying) - .05 || S.jump) S.jumpTo(CUE.dying, true); yield 2; yield* waitBar(CUE.dying);
     b.blink = 1; b.open = 1; G.flash = .6; G.addShake(12); if (G.g2fx) G.g2fx.mode = 'pull';
     G.say('ZERO, AS HE WAS ON THE ALTAR', 'I am what he forgave... and never healed.', Math.round(SONG.bar * 60 * 3));
     yield* waitBar(CUE.dying + 4);
     G.say('NYX', 'Then let us heal you. Uncle, now!', Math.round(SONG.bar * 60 * 1.5));
-    yield* waitBar(CUE.dying + 6);
-    Sound.sfx('swing_h'); G.flash = .7; G.addShake(16); b.slashGold = 1; VFX.slash(b.x, b.y - 380, 400, 1, '#ffd86b');
-    while (S.pos() < SONG.t(CUE.dying + 6) + SONG.beat * 2) yield 1;
-    Sound.sfx('swing_h'); G.flash = .7; G.addShake(16); b.slashNight = 1; VFX.slash(b.x, b.y - 380, 400, -1, '#8a5aff'); G.g2title = { name: tr('DAY AND NIGHT'), sub: '', t: 0 };
-    let lb = -1; while (S.pos() < SONG.t(CUE.die) - .01) { const n = S.beatN(); if (n !== lb) { lb = n; b.crack = Math.min(1, (b.crack || 0) + .04); for (let i = 0; i < 14; i++) VFX.add(b.x + U.rand(-600, 600), b.y - 760 + U.rand(-100, 60), U.rand(-1, 1), U.rand(3, 7), i % 2 ? '#ffe8a0' : '#cfe8ff', 90, 3, 1, 0); if (n % 4 === 0) G.addShake(5); } G.cineCam.zoom = Math.max(.8, G.cineCam.zoom - .0007); if (S.bar() >= CUE.dying + 8) G.g2title = null; yield 1; }
+    // DAY AND NIGHT: Zero and Nyx crouch on either side, leap, and cut through the god on the beat, gold then violet
+    G2.dn.start(b); G.cineCam = { x: b.x, y: b.A.y - 500, zoom: .56 };
+    const T0 = SONG.t(CUE.dying + 6); let cutG = false, cutN = false;
+    while (S.pos() < T0 + SONG.beat * 4) { const p = S.pos(); G2.dn.step(b, p, T0);
+        if (!cutG && p >= T0) { cutG = true; Sound.sfx('swing_h'); G.flash = .7; G.addShake(16); b.slashGold = 1; VFX.slash(b.x, G2.cy(b), 520, 1, '#ffd86b'); G.say('ZERO', 'Day.', 50); }
+        if (!cutN && p >= T0 + SONG.beat * 2) { cutN = true; Sound.sfx('swing_h'); G.flash = .7; G.addShake(16); b.slashNight = 1; VFX.slash(b.x, G2.cy(b), 520, -1, '#8a5aff'); G.say('NYX', 'Night.', 50); G.g2title = { name: tr('DAY AND NIGHT'), sub: '', t: 0, dur: 60 }; }
+        yield 1; }
+    let lb = -1; while (S.pos() < SONG.t(CUE.die) - .01) { G2.dn.step(b, S.pos(), T0); const n = S.beatN(); if (n !== lb) { lb = n; b.crack = Math.min(1, (b.crack || 0) + .04); for (let i = 0; i < 14; i++) VFX.add(b.x + U.rand(-600, 600), b.y - 760 + U.rand(-100, 60), U.rand(-1, 1), U.rand(3, 7), i % 2 ? '#ffe8a0' : '#cfe8ff', 90, 3, 1, 0); if (n % 4 === 0) G.addShake(5); } G.cineCam.zoom = Math.max(.56, G.cineCam.zoom - .0003); if (S.bar() >= CUE.dying + 8) G.g2title = null; yield 1; }
     // 2:45 death, then the two last hits
     G.flash = 1; G.addShake(20); b.wings = 0; G.say('', tr('The false god shattered into a million pieces of glass, falling like shooting stars.'), Math.round(SONG.bar * 60 * 2));
-    for (const hit of [CUE.boom1, CUE.boom2]) { yield* waitBar(hit); G.flash = 1; G.addShake(36); Sound.sfx('bigboom'); for (let i = 0; i < 5; i++) VFX.ring(b.x, b.y - 380, 300 + i * 240, i % 2 ? '#8a5aff' : '#ffe8a0', 30 + i * 6, 16); VFX.burst(b.x, b.y - 380, '#ffffff', 90, 15, 60, 12, 1); if (hit === CUE.boom2) { b.gone = true; if (G.g2fx) { G.g2fx.sky = 0; G.g2fx.cracks = 0; } } }
+    for (const hit of [CUE.boom1, CUE.boom2]) { yield* waitBar(hit); G.flash = 1; G.addShake(36); Sound.sfx('bigboom'); for (let i = 0; i < 5; i++) VFX.ring(b.x, G2.cy(b), 300 + i * 240, i % 2 ? '#8a5aff' : '#ffe8a0', 30 + i * 6, 16); VFX.burst(b.x, G2.cy(b), '#ffffff', 90, 15, 60, 12, 1); if (hit === CUE.boom2) { b.gone = true; if (G.g2fx) { G.g2fx.sky = 0; G.g2fx.cracks = 0; } } }
     yield* waitBar(CUE.end); G.flash = 1; S.stop(3); yield 90;
-    G.g2fx = null; G.cineCam = null; G.letterbox = 0; G.lockInput = false; G2.F.setAct(4); G2.cut('g2choiceScene', () => G2.throneChoice());
+    G2.dn.end(); G.g2fx = null; G.cineCam = null; G.letterbox = 0; G.lockInput = false; G2.F.setAct(4); G2.cut('g2choiceScene', () => G2.throneChoice());
+};
+
+// The name card: the band fades in, then the name comes in letter by letter out of the light, the way a
+// name is remembered rather than announced; the subtitle follows once the name is whole.
+G2.drawTitle = function (c, T) {
+    const Y0 = VH * .7, dur = T.dur || 200, name = T.name, n = name.length, band = Math.min(1, T.t / 40), sp = 5;
+    c.save(); c.globalAlpha = band; const bg = c.createLinearGradient(0, 0, VW, 0); bg.addColorStop(0, 'rgba(6,4,12,0)'); bg.addColorStop(.2, 'rgba(6,4,12,.7)'); bg.addColorStop(.8, 'rgba(6,4,12,.7)'); bg.addColorStop(1, 'rgba(6,4,12,0)'); c.fillStyle = bg; c.fillRect(0, Y0 - 78, VW, 130);
+    const lw = Math.min(1, T.t / 60) * VW * .36; c.fillStyle = 'rgba(255,216,107,.85)'; c.fillRect(VW / 2 - lw, Y0 - 78, lw * 2, 1.5); c.fillRect(VW / 2 - lw, Y0 + 50, lw * 2, 1.5);
+    c.font = 'bold 60px "Palatino Linotype", "Times New Roman", serif'; c.textAlign = 'left'; c.textBaseline = 'alphabetic';
+    const ws = [...name].map(ch => c.measureText(ch).width + sp), W = ws.reduce((a, b) => a + b, 0) - sp; let x = VW / 2 - W / 2;
+    for (let i = 0; i < n; i++) { const st = 20 + (i / Math.max(1, n - 1)) * dur * .62, k = U.clamp((T.t - st) / 34, 0, 1), e = k * k * (3 - 2 * k), ch = name[i];
+        if (k > 0) { c.globalAlpha = e; const y = Y0 + (1 - e) * 14; c.lineWidth = 5; c.strokeStyle = 'rgba(40,10,0,.85)'; c.strokeText(ch, x, y); c.fillStyle = '#fff6d8'; c.shadowColor = '#ffb040'; c.shadowBlur = 10 + (1 - e) * 30; c.fillText(ch, x, y); c.shadowBlur = 0; }
+        x += ws[i]; }
+    // a thin sweep of light passes over the name as it completes
+    const sw = (T.t - dur * .55) / 60; if (sw > 0 && sw < 1) { c.globalAlpha = Math.sin(sw * Math.PI) * .5; c.globalCompositeOperation = 'lighter'; const gx = VW / 2 - W / 2 + sw * W; const g = c.createLinearGradient(gx - 60, 0, gx + 60, 0); g.addColorStop(0, 'rgba(255,230,170,0)'); g.addColorStop(.5, 'rgba(255,240,200,.9)'); g.addColorStop(1, 'rgba(255,230,170,0)'); c.fillStyle = g; c.fillRect(gx - 60, Y0 - 60, 120, 76); c.globalCompositeOperation = 'source-over'; }
+    if (T.sub) { const k = U.clamp((T.t - dur * .8) / 40, 0, 1); c.globalAlpha = k; c.textAlign = 'center'; c.fillStyle = '#d8c8ff'; c.font = 'italic 22px "Palatino Linotype", serif'; c.fillText(T.sub, VW / 2, Y0 + 36 + (1 - k) * 6); }
+    c.restore();
 };
 
 /* ------------------------------ WIRING ------------------------------ */
@@ -11602,17 +11691,14 @@ G2.ascendDeath = function* (b) {
         if (!b.dying) b.open = 0; b.dmgTakenMult = b.transition ? 0 : 1; G.g2xf = null; G.g2night = 0;
         if (!b.transition && !b.dying) { b.y = b.A.y + 40 + Math.sin(b.anim * .02) * 14; b.x = (b.A.x0 + b.A.x1) / 2 + Math.sin(b.anim * .006) * 160; }
         if (b.blink > 0 && !b.dying) b.blink = Math.max(0, b.blink - .1); else if (!b.dying && Math.random() < .004) b.blink = 1;
-        Light.add(b.x, b.y - 380, 600, '#ffe8a0', 1); G2.ascendMusic(b);
+        Light.add(b.x, G2.cy(b), 600, '#ffe8a0', 1); G2.ascendMusic(b);
     };
-    B.aim = b => (b.ascended ? { x: b.x, y: b.y - 260 } : { x: b.x, y: b.y - 200 });
-    B.box = b => (b.ascended ? { x: b.x - 120, y: b.y - 470, w: 240, h: 470 } : { x: b.x - 110, y: b.y - 320, w: 220, h: 240 });
+    B.aim = b => (b.ascended ? { x: b.x, y: b.y - 260 * (b.scale || 1) } : { x: b.x, y: b.y - 200 });
+    B.box = b => (b.ascended ? { x: b.x - 120 * (b.scale || 1), y: b.y - 470 * (b.scale || 1), w: 240 * (b.scale || 1), h: 470 * (b.scale || 1) } : { x: b.x - 110, y: b.y - 320, w: 220, h: 240 });
     B.death = b => (b.ascended ? G2.ascendDeath(b) : death(b));
     const hd = HUD.draw.bind(HUD); HUD.draw = function (c) {
         if (G.g2fx && G.boss) G2.fx.draw(c, G.g2fx, true);
-        hd(c); const T = G.g2title; if (!T) return; T.t++; const a = Math.min(1, T.t / 8);
-        c.save(); c.globalAlpha = a; c.fillStyle = 'rgba(6,4,12,.72)'; c.fillRect(0, VH / 2 - 78, VW, 130); c.fillStyle = 'rgba(255,216,107,.9)'; c.fillRect(0, VH / 2 - 78, VW, 2); c.fillRect(0, VH / 2 + 50, VW, 2);
-        c.textAlign = 'center'; c.font = 'bold 64px "Palatino Linotype", "Times New Roman", serif'; c.lineWidth = 6; c.strokeStyle = 'rgba(40,10,0,.9)'; c.strokeText(T.name, VW / 2, VH / 2); c.fillStyle = '#fff6d8'; c.shadowColor = '#ffb040'; c.shadowBlur = 24; c.fillText(T.name, VW / 2, VH / 2); c.shadowBlur = 0;
-        if (T.sub) { c.fillStyle = '#d8c8ff'; c.font = 'italic 22px "Palatino Linotype", serif'; c.fillText(T.sub, VW / 2, VH / 2 + 36); } c.restore();
+        hd(c); const T = G.g2title; if (!T) return; if (G2.song.active) { if (T.at === undefined) T.at = G2.song.pos(); T.t = (G2.song.pos() - T.at) * 60; } else T.t++; G2.drawTitle(c, T);
     };
 })();
 // The last card is a checkpoint: whoever falls hands over to the next of the party; if everyone falls,
@@ -11620,7 +11706,8 @@ G2.ascendDeath = function* (b) {
 (function () {
     const hurt = Player.prototype.hurt;
     Player.prototype.hurt = function (dmg, src) {
-        const b = G.boss; if (this === G.player && b && b.ascended && !b.dying && !b.dead && !b.transition && this.hp - dmg * (Game.diff.dmgTaken || 1) <= 0 && this.inv <= 0) {
+        const b = G.boss; if (G2.team && G2.team.on && this === G.player && b && b.ascended && !b.dying && !b.dead && !b.transition && this.hp - dmg * (Game.diff.dmgTaken || 1) <= 0 && this.inv <= 0) { G.flash = 1; G.toast(tr('Everyone fell. Again, from the start of this section.'), '#ffe8a0'); const k = G2.ascendSeg(b); b.hp = Math.round(b.maxHp * (k ? CUE.seg[k - 1].thr : 1)); G.warns = []; G.projs = G.projs.filter(p => p.friendly); this.hp = this.maxHp; this.inv = 180; (G.allies || []).forEach(a => { a.down = false; a.hp = a.maxHp; a.x = this.x - 60; a.y = this.y; }); G2.song.start(SONG.t(CUE.seg[k].a)); return false; }
+        if (this === G.player && b && b.ascended && !b.dying && !b.dead && !b.transition && this.hp - dmg * (Game.diff.dmgTaken || 1) <= 0 && this.inv <= 0) {
             G.partyDown = G.partyDown || {}; G.partyDown[this.id] = 1; const next = G2.party().find(id => !G.partyDown[id]);
             if (next) { G.flash = .5; G.say(CHARS[this.id].name, tr('I am down... keep going!'), 100); G2.swapParty(next); G.player.hp = G.player.maxHp; G.player.inv = 90; return false; }
             G.partyDown = {}; G.flash = 1; G.toast('Everyone fell. Again, from the start of this section.', '#ffe8a0'); const k = G2.ascendSeg(b); b.hp = Math.round(b.maxHp * (k ? CUE.seg[k - 1].thr : 1)); G.warns = []; G.projs = G.projs.filter(p => p.friendly); this.hp = this.maxHp; this.inv = 180; G2.song.start(SONG.t(CUE.seg[k].a)); return false;
@@ -11629,11 +11716,19 @@ G2.ascendDeath = function* (b) {
     };
 })();
 Object.assign(VI, {
+    'It is eating the Throne... the light, the walls, all of it.': 'Nó đang nuốt cả Ngai Vàng... ánh sáng, tường thành, nuốt hết.',
+    'It opened its eye. It is looking right at me.': 'Nó mở mắt rồi. Nó đang nhìn thẳng vào em.',
+    'Wings. Meridian always wanted a god with wings.': 'Cánh. Meridian lúc nào cũng mong có một vị thần mang cánh.',
+    'It is still growing. Everyone, fall back to Nyx!': 'Nó vẫn đang lớn lên. Tất cả lùi về chỗ Nyx!',
+    'LOOK AT ME. I AM THE SEVENTH DAY YOU REFUSED.': 'NHÌN TA ĐÂY. TA LÀ NGÀY THỨ BẢY MÀ CÁC NGƯƠI ĐÃ CHỐI BỎ.',
+    'Nobody asked for you. Not him, not me, not anyone.': 'Không ai cần đến ngươi cả. Không phải chú ấy, không phải em, không một ai.',
+    'THEN I WILL BE THE GOD NOBODY ASKED FOR.': 'VẬY TA SẼ LÀ VỊ THẦN KHÔNG AI CẦU XIN.',
+    'Nyx. Stay by my side this time.': 'Nyx. Lần này, ở cạnh chú nhé.', 'Always.': 'Luôn luôn.',
     'THEN I WILL PLAY MY LAST CARD.': 'VẬY TA SẼ TUNG CON BÀI CUỐI CÙNG.', 'It is opening its eye...': 'Nó đang mở mắt...', 'This is its last card.': 'Đây là con bài cuối cùng của nó.', 'Then this is ours. Together, Uncle!': 'Vậy đây cũng là của mình. Cùng nhau, chú ơi!',
     'It is not a god. It is every hurt he never let heal.': 'Nó không phải thần. Nó là mọi vết thương hắn chưa từng để lành.', 'Then we hurt it back. Shields up!': 'Vậy thì đánh trả. Giơ khiên lên!', 'Nyx. Lead.': 'Nyx. Dẫn đường.', 'Everyone. Together!': 'Mọi người. Cùng nhau!',
     'THE ARCHITECT, ASCENDED': 'THE ARCHITECT HÓA THẦN', 'THE GOD THAT WAS NEVER ASKED FOR': 'Vị thần không ai cầu xin', 'Then let us heal you. Uncle, now!': 'Vậy để bọn em chữa lành cho. Chú ơi, ngay bây giờ!',
     'The false god shattered into a million pieces of glass, falling like shooting stars.': 'Vị thần giả vỡ thành hàng triệu mảnh kính, rơi như mưa sao băng.',
-    'Final boss theme': 'Nhạc boss cuối', 'I am down... keep going!': 'Tôi gục rồi... đánh tiếp đi!', 'Everyone fell. Again, from the start of this section.': 'Cả đội đã gục. Làm lại từ đầu đoạn này.'
+    'Final boss theme': 'Nhạc boss cuối', 'Day.': 'Ngày.', 'Night.': 'Đêm.', 'I am down... keep going!': 'Tôi gục rồi... đánh tiếp đi!', 'Everyone fell. Again, from the start of this section.': 'Cả đội đã gục. Làm lại từ đầu đoạn này.'
 });
 
 </script>
@@ -11698,6 +11793,130 @@ G2.look = {
     }
 };
 (function () { const hd = HUD.draw.bind(HUD); HUD.draw = function (c) { G2.look.draw(c); hd(c); }; })();
+
+</script>
+<script>
+'use strict';
+/**
+ * G2 TEAM: Team Up for the last map, and Nyx's revival.
+ *   - At the start of the last map a notice asks: fight with everyone, or as Nyx and Zero?
+ *   - Team Up: every companion of the journey fights at once, each driven by its own AI. They have
+ *     health, read telegraphs and get out of them, spread out around the god, use their skills, and
+ *     fall when their health runs out. The camera pulls back so the whole party is in view.
+ *   - The Lullaby of Return: Sable (Death) teaches it to Nyx at the end of Day Five. Every blow the
+ *     party lands fills Nyx's Night Spirit; when it is full, a fallen companion is sung back to the fight.
+ *     Outside the last map it catches the player once, when the gauge is full.
+ */
+const TEAM_IDS = ['nyx', 'zero', 'vesper', 'rook', 'sable', 'mirae', 'ysolde'];
+G2.spirit = { v: 0, add(n) { if (!Save.data || !Save.data.g2.reviveLearned) return; this.v = Math.min(100, this.v + n); } };
+G2.team = {
+    on: false,
+    spawn(full) {
+        const P = G.player, ids = full ? TEAM_IDS.filter(id => id !== P.id && CHARS[id] && (id !== 'zero' || Save.data.g2.zeroBack || true)) : ['zero'].filter(id => id !== P.id);
+        G.allies = []; G.ally = null;
+        ids.forEach((id, i) => { const a = new Player(id); a.isAlly = true; a.isTeam = true; a.brain = G2.teamBrain; a.lane = (i % 2 ? 1 : -1) * (120 + (i >> 1) * 110); a.slot = i; a.x = P.x - 80 - i * 40; a.y = P.y; a.safe = { x: a.x, y: a.y }; a.grounded = true; a.facing = 1; if (id === 'nyx') a.rig.S = nyxStyle(17); a.wIdx = 0; a.applyWeapon && a.applyWeapon(); G.allies.push(a); });
+        this.on = true; G.g2team = !!full;
+    },
+    alive() { return (G.allies || []).filter(a => !a.down); },
+    // the one you control has fallen: the first companion still standing takes over, the fallen one waits for the song
+    handOver(old) { const next = this.alive()[0]; if (!next) return false; G.allies.splice(G.allies.indexOf(next), 1); next.isAlly = false; old.isAlly = true; old.down = true; old.hp = 0; old.state = 'move'; old.script = null; old.brain = G2.teamBrain; old.lane = next.lane; old.slot = next.slot; G.allies.push(old); G.player = next; next.inv = 90; G.toast(CHARS[old.id].name + ' ' + tr('has fallen'), '#ff8a8a'); VFX.burst(old.x, old.y - 34, CHARS[old.id].style.col.glow, 30, 7, 30, 6, 1); return true; },
+    down() { return (G.allies || []).filter(a => a.down); }
+};
+// A companion's mind: get out of what is about to land, then go to its place around the target and fight.
+G2.teamBrain = function (z) {
+    const S = {}, A = G.arena, b = G.boss, go = d => { if (d < 0) S.left = true; else if (d > 0) S.right = true; }, hb = z.hurtBox;
+    if (z.state === 'dead' || z.down) return S;
+    let danger = false;
+    for (const w of G.warns) {
+        if (!w.dmg || w.t > 34) continue;
+        if (w.shape === 'rect') { const x0 = Math.min(w.x, w.x + w.w), x1 = Math.max(w.x, w.x + w.w); if (hb.x + hb.w > x0 - 14 && hb.x < x1 + 14 && hb.y + hb.h > w.y && hb.y < w.y + w.h) { danger = true; if (x1 - x0 > 600 && w.h < 160) { if (w.y > z.y - 100) { if (z.grounded && w.t < 18) { S['!jump'] = S.jump = true; } } } else go(z.x < (x0 + x1) / 2 ? -1 : 1); if (w.t < 9 && z.dodgeCd <= 0) S['!dodge'] = true; } }
+        else if (w.shape === 'circle' && Math.hypot(z.x - w.x, z.y - 30 - w.y) < w.r + 30) { danger = true; go(z.x < w.x ? -1 : 1); if (w.t < 10 && z.dodgeCd <= 0) S['!dodge'] = true; }
+    }
+    for (const p of G.projs) if (!p.friendly && Math.abs(p.x - z.x) < 90 && Math.abs(p.y - (z.y - 34)) < 70 && z.dodgeCd <= 0 && Math.random() < .25) { S['!dodge'] = true; danger = true; }
+    if (danger) return S;
+    if (!b || b.dead || b.intro || b.untargetable || b.transition) { const want = G.player.x + (z.lane || -80) * .6; if (Math.abs(want - z.x) > 40) go(want - z.x); return S; }
+    const a = b.aim(), box = b.box(), ranged = z.def.ranged, tx = U.clamp(a.x + (ranged ? z.lane * 2.2 : z.lane * .6), A.x0 + 40, A.x1 - 40), dx = tx - z.x;
+    if (Math.abs(dx) > (ranged ? 50 : 30)) go(dx); else z.facing = U.sign(a.x - z.x) || 1;
+    const reach = !ranged && Math.abs(a.x - z.x) < box.w / 2 + 70 && z.y > box.y && z.y - 80 < box.y + box.h;
+    if (ranged || reach) { z.facing = U.sign(a.x - z.x) || 1; if ((G.time + z.slot * 3) % (ranged ? 5 : 4) === 0) { S['!attack'] = true; S.attack = true; } else S.attack = ranged; }
+    if (!ranged && box.y + box.h < z.y - 60 && z.grounded && (G.time + z.slot * 11) % 50 === 0) S['!jump'] = S.jump = true;
+    const k = (G.time + z.slot * 37) % 600; if (k === 100) S['!skill1'] = true; if (k === 260 && z.id !== 'nyx') S['!skill2'] = true; if (k === 420 && z.id !== 'ysolde') S['!skill3'] = true; if (z.ult >= 100 && (G.time + z.slot * 50) % 400 === 0) S['!ult'] = true;
+    if (z.form && z.balance < 20 && G.time % 40 === 0) S['!form'] = true; if (z.form === 'wrath' && z.balance > 78) S['!form'] = true;
+    return S;
+};
+// Companions are hit by the same telegraphs and shots as the player, and fall instead of dying.
+G2.teamHits = function () {
+    const L = G2.team.alive(); if (!L.length) return;
+    for (const w of G.warns) { if (!w.dmg || w.t > 1 || w._team) continue; w._team = true;
+        for (const z of L) { if (z.inv > 0) continue; const hb = z.hurtBox; let hit = false;
+            if (w.shape === 'rect') { const x0 = Math.min(w.x, w.x + w.w), x1 = Math.max(w.x, w.x + w.w); hit = hb.x + hb.w > x0 && hb.x < x1 && hb.y + hb.h > w.y && hb.y < w.y + w.h; }
+            else if (w.shape === 'circle') hit = Math.hypot(z.x - w.x, z.y - 30 - w.y) < w.r + 14;
+            else if (w.shape === 'safe') hit = Math.hypot(z.x - w.x, z.y - 30 - w.y) > w.r;
+            else if (w.shape === 'cone') { const a = Math.atan2(z.y - 30 - w.y, z.x - w.x); hit = Math.abs(U.normAngle(a - w.ang)) < w.spread / 2 && Math.hypot(z.x - w.x, z.y - 30 - w.y) < w.r; }
+            else if (w.shape === 'light') hit = !Shadow.covered(w.lx, w.ly, z.x, z.y - 34);
+            if (hit) z.hurt(w.dmg, { owner: w.src }); } }
+    for (const p of G.projs) { if (p.friendly || p.dead) continue; for (const z of L) if (z.inv <= 0 && Math.abs(p.x - z.x) < 16 + (p.r || 6) && Math.abs(p.y - (z.y - 34)) < 30 + (p.r || 6)) { z.hurt(p.dmg || 10, { owner: p.owner }); p.life = 0; p.dead = true; break; } }
+};
+(function () {
+    const hurt = Player.prototype.hurt;
+    Player.prototype.hurt = function (dmg, src) {
+        if (this.isTeam && this.isAlly) {
+            if (this.down || this.inv > 0) return false; dmg *= .85;
+            if (this.hp - dmg <= 0) { this.down = true; this.hp = 0; this.inv = 0; VFX.burst(this.x, this.y - 34, CHARS[this.id].style.col.glow, 30, 7, 30, 6, 1); Sound.sfx('hurt', { p: .7 }); G.toast(CHARS[this.id].name + ' ' + tr('has fallen'), '#ff8a8a'); G.say(CHARS[this.id].name, tr(U.pick(['...Nyx. Sorry.', 'I am down!', 'Keep going without me...'])), 90); return true; }
+            this.hp -= dmg; this.inv = 30; this.rig.flash = 6; return true;
+        }
+        // The player: the Lullaby of Return catches a lethal blow when the spirit is full.
+        if (this === G.player && Save.data && Save.data.g2.reviveLearned && this.inv <= 0 && this.hp - dmg * (Game.diff.dmgTaken || 1) <= 0 && this.state !== 'dead') {
+            if (G2.spirit.v >= 100) { G2.spirit.v = 0; this.hp = Math.round(this.maxHp * .5); this.inv = 150; VFX.ring(this.x, this.y - 34, 220, '#b48cff', 30, 12); Sound.sfx('checkpoint'); G.toast(tr('Lullaby of Return'), '#e0d0ff'); return false; }
+            // with the team, the fallen player hands over to a companion until the spirit can bring her back
+            if (G2.team.on && G2.team.alive().length) { G2.team.handOver(this); return false; }
+        }
+        return hurt.call(this, dmg, src);
+    };
+    // whatever the cause (a hazard, a modifier the check above did not see), a fall with the team never ends the run
+    const die = Player.prototype.die; Player.prototype.die = function (...a) { if (this === G.player && G2.team.on && G.boss && G2.team.alive().length && G2.team.handOver(this)) return; return die.apply(this, a); };
+    // The spirit fills with every blow anyone lands, a little over time too; full, it sings someone back.
+    const bh = Boss.prototype.hurt; Boss.prototype.hurt = function (dmg, o) { const s = o && (o.src || o.owner); if (s && s.isTeam && s.isAlly) dmg *= .28; const r = bh.call(this, dmg, o); if (r > 0) G2.spirit.add(r * (G2.team.on ? .012 : .02)); return r; };
+    const eh = Enemy.prototype.hurt; if (eh) Enemy.prototype.hurt = function (...a) { const r = eh.apply(this, a); if (r) G2.spirit.add(.5); return r; };
+    const tick = G.tick.bind(G);
+    G.tick = function () {
+        tick(); if (!G2.team.on || !G.level) return; const B = G.boss; if (B && G.g2team && !B._team) { B._team = 1; B.maxHp = Math.round(B.maxHp * 1.8); B.hp = Math.round(B.hp * 1.8); } G2.teamHits(); G2.spirit.add(.015);
+        // keep everyone inside the arena once its gate has closed (a companion left outside could never come back)
+        const Ar = G.arena; if (B && Ar) for (const z of [G.player, ...(G.allies || [])]) { if (z.x < Ar.x0 + 24 || z.x > Ar.x1 - 24) { z.x = U.clamp(z.x, Ar.x0 + 40, Ar.x1 - 40); z.vx = 0; } if (z.safe.x < Ar.x0 + 24 || z.safe.x > Ar.x1 - 24) z.safe = { x: U.clamp(G.player.x, Ar.x0 + 60, Ar.x1 - 60), y: Ar.y - 2 }; }
+        const fallen = G2.team.down(); if (G2.spirit.v >= 100 && fallen.length) { const z = fallen[0]; G2.spirit.v = 0; z.down = false; z.hp = Math.round(z.maxHp * .6); z.inv = 120; z.state = 'move'; z.x = G.player.x - 60; z.y = G.player.y; z.vy = 0; VFX.ring(z.x, z.y - 34, 240, '#b48cff', 32, 14); VFX.burst(z.x, z.y - 34, '#e0d0ff', 30, 6, 40, 6, 1); Sound.sfx('checkpoint'); G.say('NYX', tr(U.pick(['Come back. I am singing for you.', 'Not yet. Wake up!', 'Back to us. Please.'])), 110); G.toast(tr('Lullaby of Return') + ': ' + CHARS[z.id].name, '#e0d0ff'); }
+        if (!G2.team.alive().length && G.player.state === 'dead') G.allies.forEach(a => { a.down = false; a.hp = Math.round(a.maxHp * .6); });
+    };
+    // Wide camera: the whole arena and the whole party.
+    const camTick = G.camTick.bind(G);
+    G.camTick = function () { camTick(); if ((G2.team.on || G.boss && G.boss.ascended) && G.boss && G.arena && !G.cineCam) { const c = G.cam, A = G.arena; c.tz = Math.min(c.tz, (VW / (A.x1 - A.x0 + 200))); c.zoom = U.lerp(c.zoom, c.tz, .05); const vw = VW / c.zoom, vh = VH / c.zoom; const tx = (A.x0 + A.x1) / 2 - vw / 2, ty = A.y - vh * (G.boss.ascended ? .9 : .86); c.x = U.lerp(c.x, tx, .08); c.y = U.lerp(c.y, Math.max(0, Math.min(ty, G.level.ph - vh)), .08); } };
+    // Switching with the team swaps who you control; the one you leave becomes AI.
+    const sw = G2.swapParty; G2.swapParty = function (to) {
+        if (!G2.team.on || !G.allies) return sw(to); const list = G2.team.alive(), P = G.player; if (!list.length) return;
+        const next = to ? list.find(a => a.id === to) : list[0]; if (!next) return sw(to);
+        G.allies.splice(G.allies.indexOf(next), 1); next.isAlly = false; P.isAlly = true; P.brain = G2.teamBrain; P.lane = next.lane; P.slot = next.slot; G.allies.push(P); G.player = next; VFX.burst(next.x, next.y - 34, CHARS[next.id].style.col.glow, 16, 5, 22, 5, 1); G.toast(CHARS[next.id].name, CHARS[next.id].style.col.glow);
+    };
+    // The notice at the start of the last map: decide before the fight, so the fight never stops.
+    const ll = Game.loadLevel.bind(Game);
+    Game.loadLevel = function (id, cp) {
+        G2.team.on = false; G.allies = null; G.g2team = false; ll(id, cp);
+        if (id === 'architect2') { const ask = () => { if (HEADLESS) { G2.team.spawn(G.flags.noTeam ? false : true); return; } if (cp && G2.team.last !== undefined) { G2.team.spawn(G2.team.last); return; } Game.state = 'menu'; UI.show('g2teamup'); }; G.delay ? G.delay(20, ask) : ask(); }
+    };
+    Object.assign(UI.screens, { g2teamup() { const n = TEAM_IDS.filter(id => CHARS[id] && id !== 'nyx').length; return `<div class="panel small"><h2>${tr('TEAM UP?')}</h2><p>${tr('The last battle is close. Everyone who walked this road with Nyx is here.')}</p><p class="hint">${tr('Team Up: all your companions fight at once, each on their own. They can fall; Nyx\'s Lullaby of Return brings them back when her Night Spirit is full. Otherwise: Nyx and Zero, side by side, and the others by switching.')}</p><nav><button data-do="g2team" data-arg="1" autofocus>${tr('TEAM UP')} (${n + 1})</button><button data-do="g2team" data-arg="0">${tr('Nyx and Zero')}</button></nav></div>`; } });
+    const act = UI.act.bind(UI); UI.act = function (w, arg, el) { if (w === 'g2team') { UI.hide(); Game.state = 'play'; G2.team.last = arg === '1'; G2.team.spawn(arg === '1'); Input.held = {}; return; } return act(w, arg, el); };
+    // HUD: the Night Spirit, and the party's health.
+    const hd = HUD.draw.bind(HUD); HUD.draw = function (c) {
+        hd(c); if (!Save.data || !Save.data.g2.reviveLearned || !G.player || Game.state !== 'play' || G.letterbox) return;
+        const x = 18, y = 112, v = G2.spirit.v / 100; c.fillStyle = 'rgba(0,0,0,.55)'; c.fillRect(x, y, 180, 7); const g = c.createLinearGradient(x, 0, x + 180, 0); g.addColorStop(0, '#5a3ac0'); g.addColorStop(1, '#e0d0ff'); c.fillStyle = g; c.fillRect(x, y, 180 * v, 7); if (v >= 1) { c.strokeStyle = '#fff'; c.lineWidth = 1.5; c.strokeRect(x - 1, y - 1, 182, 9); }
+        c.font = '10px "Palatino Linotype", serif'; c.textAlign = 'left'; c.fillStyle = '#e0d0ff'; c.fillText(tr('Night Spirit') + (v >= 1 ? ' ✦' : ''), x, y - 3);
+        if (G2.team.on && G.allies) G.allies.forEach((a, i) => { const yy = 126 + i * 15; c.fillStyle = a.down ? '#6a5a6a' : '#e8d8ff'; c.fillText(CHARS[a.id].name, x, yy + 7); c.fillStyle = 'rgba(0,0,0,.5)'; c.fillRect(x + 64, yy, 90, 6); c.fillStyle = a.down ? '#4a3a4a' : CHARS[a.id].style.col.glow; c.fillRect(x + 64, yy, 90 * Math.max(0, a.hp / a.maxHp), 6); if (a.down) { c.fillStyle = '#ff8a8a'; c.fillText('✝', x + 158, yy + 7); } });
+    };
+})();
+Object.assign(VI, {
+    'TEAM UP?': 'CÙNG CHIẾN ĐẤU?', 'The last battle is close. Everyone who walked this road with Nyx is here.': 'Trận chiến cuối cùng đã tới gần. Tất cả những người đã đi cùng Nyx trên con đường này đều ở đây.',
+    'Team Up: all your companions fight at once, each on their own. They can fall; Nyx\'s Lullaby of Return brings them back when her Night Spirit is full. Otherwise: Nyx and Zero, side by side, and the others by switching.': 'Cùng chiến đấu: tất cả đồng đội cùng lúc lao vào trận, mỗi người tự đánh theo cách của mình. Họ có thể gục; khi thanh Linh Lực Đêm đầy, Bài Ru Gọi Về của Nyx sẽ đưa họ trở lại. Nếu không: Nyx và Zero sánh vai, những người khác đổi vào bằng phím đổi người.',
+    'TEAM UP': 'CÙNG CHIẾN ĐẤU', 'Nyx and Zero': 'Chỉ Nyx và Zero', 'has fallen': 'đã gục', '...Nyx. Sorry.': '...Nyx. Xin lỗi.', 'I am down!': 'Tôi gục rồi!', 'Keep going without me...': 'Đánh tiếp đi, đừng lo cho tôi...',
+    'Lullaby of Return': 'Bài Ru Gọi Về', 'Come back. I am singing for you.': 'Quay về đi. Em đang hát gọi đây.', 'Not yet. Wake up!': 'Chưa được đâu. Dậy đi!', 'Back to us. Please.': 'Quay lại với bọn em đi. Làm ơn.', 'Night Spirit': 'Linh Lực Đêm'
+});
 
 </script>
 <script>
@@ -12637,6 +12856,325 @@ Object.assign(UI.screens, {
     const sk = HUD.skills; HUD.skills = function (c, P, d) { sk.call(this, c, P, d); if ((Save.data.g2.chapter || 1) >= 6 && G2.party().length > 1) { c.font = '11px "Palatino Linotype", serif'; c.textAlign = 'left'; c.fillStyle = '#e8d8ff'; c.fillText(tr('Switch') + ' [' + this.keyName(Settings.binds.party) + ']: ' + G2.party().map(id => CHARS[id].name).join(' · '), VW / 2 - 214, VH - 126); } };
 })();
 Object.assign(VI, { 'MUSIC ROOM': 'PHÒNG NHẠC', 'Not heard yet': 'Chưa nghe thấy', 'Every track is synthesised live in your browser. No one but you has listened to them yet: tell us which ones work.': 'Mọi bài nhạc được tổng hợp trực tiếp trong trình duyệt của bạn. Ngoài bạn ra chưa ai nghe chúng: hãy cho chúng tôi biết bài nào ổn.', 'BACK': 'QUAY LẠI', 'Switch': 'Đổi người', 'A WOLF OF THE PACK': 'MỘT CON SÓI TRONG BẦY', 'You came to guard the Garden? Good wolf.': 'Em đến canh Vườn à? Sói ngoan.', 'NEW GAME+': 'CHƠI LẠI+' });
+
+</script>
+<script>
+'use strict';
+/**
+ * G2 DIALOGUE (Vietnamese): every spoken line of Part II rewritten to sound like people talking.
+ * Loaded last, so it overrides the first-pass translations in the chapter files.
+ *   Zero and Nyx: "chú" and "con". The Riders to Nyx: "tôi" and "nhóc"; Nyx to them: "em".
+ *   Gods and bosses: "ta" and "ngươi" (or "con" when they mean it kindly).
+ */
+Object.assign(VI, {
+    'You. Little one. They say you slept. Is it true? What is it like?': 'Này, bé con. Người ta đồn con ngủ được. Thật hả? Ngủ là cảm giác thế nào?',
+    'It is like... the light goes soft. And then it is morning.': 'Giống như... ánh sáng dịu dần đi. Rồi mở mắt ra là trời sáng.',
+    'My daughter has not slept in four hundred days. She laughs all the time. I am afraid of that laughter.': 'Con gái tôi bốn trăm ngày rồi chưa chợp mắt. Nó cứ cười suốt. Tôi sợ tiếng cười đó lắm.',
+    'I will bring the night back to you. I promise.': 'Tôi sẽ đem bóng đêm về cho bác. Tôi hứa.',
+    'Seven gates, little one. Seven days. Only the first one is open to you yet.': 'Bảy cánh cổng, cháu à. Bảy ngày. Giờ cháu mới mở được cổng đầu tiên thôi.',
+    'Your guardian made this garden with his hands. He never sat down in it once.': 'Khu vườn này chú cháu tự tay trồng đấy. Vậy mà chưa bao giờ chịu ngồi xuống nghỉ lấy một lần.',
+    'There was no one left to judge. So it took apart the cannon that had judged the world, and from its light forged a blade to build with.': 'Chẳng còn ai để phán xét nữa. Thế là Người tháo khẩu pháo từng phán xét cả thế giới, rồi lấy ánh sáng của nó rèn thành một thanh kiếm để xây dựng.',
+    'The new world had no night. No one truly rested. Where the light was brightest, no one could sleep at all.': 'Thế giới mới không có đêm. Chẳng ai được nghỉ ngơi thật sự. Ở nơi sáng nhất, người ta không ngủ nổi nữa.',
+    'This is Vesper. The real one. Line 3 is running. All units, please respond.': 'Vesper đây. Vesper thật. Tuyến 3 vẫn đang chạy. Tất cả các đơn vị, nghe rõ thì trả lời.',
+    'You forgave everything. You made everything. But who gave you leave to leave it unfinished?': 'Ngươi tha thứ cho tất cả. Ngươi tạo ra tất cả. Nhưng ai cho ngươi cái quyền bỏ dở nó?',
+    'She... she is sleeping.': 'Con bé... nó đang ngủ kìa.',
+    'She sleeps. How does she sleep? What is she?': 'Nó ngủ được. Sao nó ngủ được chứ? Nó là cái gì vậy?',
+    'Take her to Seraphina. The goddess will know what to do with her.': 'Đem nó tới chỗ Seraphina. Nữ thần sẽ biết phải xử lý nó ra sao.',
+    'Step back.': 'Lùi ra.',
+    'Hold on to me. Do not let go.': 'Ôm chặt chú. Đừng buông tay.',
+    'What is your name?': 'Con tên gì?',
+    'You do not remember either.': 'Con cũng không nhớ à.',
+    'Then I will call you Nyx. It means Night. The only thing missing here.': 'Vậy chú gọi con là Nyx nhé. Nghĩa là Đêm. Thứ duy nhất nơi này còn thiếu.',
+    'And for the first time, the City of Dawn had one moment of night. Thousands lay down in the streets and slept.': 'Lần đầu tiên, Thành Phố Bình Minh có được một khoảnh khắc đêm. Hàng nghìn người nằm xuống ngay giữa phố mà ngủ thiếp đi.',
+    'You did not kill me. Why?': 'Ngươi không giết ta. Vì sao?',
+    'Because you were only tired.': 'Vì cô chỉ đang mệt thôi mà.',
+    'Little one... the night inside you is not hers to give away. Whatever the burned one tells you.': 'Bé con... bóng đêm trong con không phải thứ để cô ta đem cho ai. Kẻ bị thiêu kia có nói gì thì cũng vậy.',
+    'Come, Nyx. There is a garden. You can sleep there.': 'Đi thôi, Nyx. Có một khu vườn. Con ngủ ở đó được.',
+    'The sun fell like a dying coal. The city slept, but it slept afraid.': 'Mặt trời rơi xuống như hòn than sắp tắt. Thành phố đã ngủ, nhưng là một giấc ngủ đầy sợ hãi.',
+    'Uncle... is she gone?': 'Chú ơi... cô ấy đi rồi ạ?',
+    'Yes. Do not look.': 'Ừ. Đừng nhìn.',
+    'You see? Even his mercy has a price. And always, someone else pays it.': 'Thấy chưa? Đến lòng thương của hắn cũng phải trả giá. Mà người trả lúc nào cũng là kẻ khác.',
+    'Is this your garden?': 'Đây là vườn của chú ạ?',
+    'I made it. Between the days. I have never sat down in it.': 'Chú làm nó, giữa những ngày bận rộn. Chưa bao giờ chú ngồi xuống đây cả.',
+    'Seven gates. Seven days. Every one of them is broken, and I broke them.': 'Bảy cánh cổng. Bảy ngày. Ngày nào cũng hỏng, và người làm hỏng là chú.',
+    'Uncle?': 'Chú ơi?',
+    'It is nothing. Sleep, Nyx. I will keep watch.': 'Không có gì đâu. Ngủ đi, Nyx. Chú canh cho.',
+    'The first day has its night. Do you think that is enough, child? Six days remain. And the seventh has never been made.': 'Ngày thứ nhất đã có đêm. Con nghĩ thế là đủ sao, nhóc? Còn sáu ngày nữa. Và ngày thứ bảy thì chưa từng được tạo ra.',
+    'Who was that?': 'Ai vậy chú?',
+    'Someone I have not thanked. Go to sleep.': 'Một người chú còn nợ một lời cảm ơn. Ngủ đi con.',
+    'This was in my pocket. A ticket from Line 3. Keep it, Nyx.': 'Cái này nằm trong túi chú. Một tấm vé Tuyến 3. Con giữ lấy nhé, Nyx.',
+    'The one who did not rest': 'Người chưa từng nghỉ ngơi',
+    'Six years old. She cannot fight; Zero fights for her.': 'Sáu tuổi. Cô bé chưa biết đánh nhau; Zero đánh thay cô.',
+    'The light on its head. That is what hurts it.': 'Cái đèn trên đầu nó. Chính thứ đó làm nó đau.',
+    'Sink with me, tired man. You have so many tears left.': 'Chìm xuống cùng ta đi, gã mỏi mệt. Ngươi còn bao nhiêu là nước mắt kia mà.',
+    'Nyx... the song. Sing it.': 'Nyx... bài hát. Hát đi con.',
+    'Then dance to my song, little one. Every beat, the sea comes back.': 'Vậy thì nhảy theo bài ca của ta đi, nhóc. Cứ mỗi nhịp, biển lại tràn về.',
+    'The song is over... is it?': 'Bài hát... hết rồi sao?',
+    'That song... who taught you that song?': 'Bài hát đó... ai dạy nhóc vậy?',
+    'Uncle! I sang it! I sang it like you do!': 'Chú ơi! Con hát được rồi! Con hát giống y chú luôn!',
+    'There is a light on its head. It cannot put it out, so it cannot sleep.': 'Trên đầu nó có một ngọn đèn. Nó không tắt được, nên chẳng ngủ được.',
+    'Poor whale... Uncle, do not hurt it too much.': 'Tội cá voi quá... Chú ơi, đừng đánh nó đau quá nha.',
+    'A child who sleeps. And the man who never cried all his tears.': 'Một đứa trẻ biết ngủ. Và một gã chưa bao giờ khóc cho hết nước mắt.',
+    'This sea is his. Every wave. I only sing what it remembers.': 'Biển này là của hắn. Từng con sóng một. Ta chỉ hát lại những gì nó còn nhớ.',
+    'Stay on the planks, Nyx. Whatever she sings.': 'Đứng yên trên ván, Nyx. Cô ta hát gì cũng mặc kệ.',
+    'Uncle... why is this sea so sad?': 'Chú ơi... sao biển này buồn thế?',
+    'The water is salt. Every drop of it. Stay close to the surface, Nyx: jump to swim up, and come up for air.': 'Nước mặn lắm, giọt nào cũng mặn. Bơi gần mặt nước thôi, Nyx: nhảy để bơi lên, nhớ ngoi lên thở.',
+    'Uncle, why is this sea so sad?': 'Chú ơi, sao biển này buồn thế?',
+    'Onto the boat. I will clear the deck.': 'Lên thuyền đi. Chú dọn boong cho.',
+    'There is something shining down there. I can hold my breath! I can!': 'Dưới kia có gì lấp lánh kìa. Con nín thở được mà! Thật đó!',
+    'Uncle... when you bow your head, the sea comes up.': 'Chú ơi... mỗi lần chú cúi đầu, nước biển lại dâng lên.',
+    '...Let us keep moving.': '...Mình đi tiếp thôi.',
+    'It is carrying us! Thank you, whale!': 'Nó chở mình đi nè! Cảm ơn cá voi nha!',
+    'Keep low. Something is singing ahead.': 'Cúi thấp xuống. Đằng trước có ai đang hát.',
+    'Careful in the water, girl. It remembers things.': 'Xuống nước thì cẩn thận, cháu ạ. Nước ở đây nhớ dai lắm.',
+    'What does it remember?': 'Nó nhớ gì ạ?',
+    'Whatever the tall one is sorry for.': 'Nhớ mọi điều mà cái anh cao kều kia còn day dứt.',
+    'Two years passed on the first day. The girl grew. The city slept a little, once a night.': 'Hai năm trôi qua trong ngày thứ nhất. Cô bé lớn dần. Thành phố đã ngủ được chút ít, mỗi đêm một lần.',
+    'Uncle! The sea! It tastes like crying.': 'Chú ơi! Biển kìa! Nước biển mặn như nước mắt vậy.',
+    'Why is it so sad?': 'Sao nó buồn thế hả chú?',
+    'That night Nyx woke and found Zero alone at the edge of the water.': 'Đêm đó Nyx tỉnh giấc, thấy Zero ngồi một mình sát mép nước.',
+    'Each time he bowed his head, the sea rose a little higher.': 'Mỗi lần chú cúi đầu, mặt biển lại dâng thêm một chút.',
+    'It was the first time she saw that he could be weak.': 'Đó là lần đầu tiên cô bé thấy chú cũng có lúc yếu lòng.',
+    'Uncle? I can sing it too. The one you sing.': 'Chú ơi? Con cũng hát được đó. Bài chú hay hát ấy.',
+    'Go back to sleep, Nyx.': 'Ngủ tiếp đi con.',
+    'Little one. Where did you learn that song?': 'Nhóc con. Bài đó nhóc học ở đâu thế?',
+    'He sings it every night.': 'Đêm nào chú ấy cũng hát.',
+    'So he knows how to sing a lullaby... for someone else.': 'Ra là hắn cũng biết hát ru... cho người khác.',
+    'Mareva sank back into the sea, singing. The tide went out, and stayed out.': 'Mareva vừa hát vừa chìm dần xuống biển. Thủy triều rút đi, và không dâng lại nữa.',
+    'The song stopped. The sea lay flat and silent, and very cold.': 'Tiếng hát tắt hẳn. Mặt biển phẳng lặng, im ắng, và lạnh buốt.',
+    'Thank you.': 'Cảm ơn con.',
+    'It was the first time he had said it to her.': 'Đó là lần đầu tiên chú nói câu ấy với cô bé.',
+    'I keep everything the crows take. Your guardian\'s fire is in my straw.': 'Lũ quạ tha về thứ gì, ta giữ thứ nấy. Ngọn lửa của chú mày đang nằm trong đống rơm của ta đây.',
+    'Stay. Stay with me, little one. Here you will never have to grow, and growing never has to hurt.': 'Ở lại đi. Ở lại với ta, bé con. Ở đây con sẽ chẳng bao giờ phải lớn, mà không lớn thì chẳng bao giờ phải đau.',
+    'Every child I hold stays a child forever. Why would you want anything else?': 'Đứa trẻ nào ta ôm vào lòng cũng mãi mãi là trẻ con. Con còn muốn gì hơn thế?',
+    'You would rather grow... even if it hurts?': 'Con thà lớn lên... dù có đau đi nữa sao?',
+    'Caw. Caw. I know you, girl. You were never planted.': 'Quạ. Quạ. Ta biết mày, con nhóc. Mày đâu phải hạt giống ai gieo.',
+    'Behind me.': 'Ra sau chú.',
+    'Oh. Oh, look at you. So small, and already crying.': 'Ôi. Ôi, nhìn con kìa. Bé xíu thế này mà đã biết khóc rồi.',
+    'I keep the children here. None of them ever grow, and none of them ever hurt.': 'Ta giữ bọn trẻ ở đây. Không đứa nào phải lớn, và cũng không đứa nào phải đau.',
+    'Uncle, she wants to keep me.': 'Chú ơi, bà ấy muốn giữ con lại.',
+    'I know. Cut the roots first. I will hold her arms.': 'Chú biết. Con chặt rễ trước đi. Chú giữ tay bà ta lại.',
+    'Every tree here is something someone tried to forget. Do not touch them, Nyx.': 'Mỗi cái cây ở đây là một điều ai đó từng cố quên. Đừng chạm vào, Nyx.',
+    'This one is warm. It is humming, Uncle. Like you.': 'Cây này ấm lắm. Nó đang ngân nga, chú ơi. Giống chú ghê.',
+    'Uncle? ...Uncle!': 'Chú ơi? ...Chú ơi!',
+    'It is light. I can swing it! Uncle, watch!': 'Nhẹ ghê. Con vung được nè! Chú ơi, nhìn con nè!',
+    'Together, Nyx. You on the left.': 'Cùng nhau nhé, Nyx. Con lo bên trái.',
+    'Uncle... you are coughing. It is ash.': 'Chú ơi... chú ho kìa. Ra cả tro nữa.',
+    'It is nothing.': 'Không sao đâu.',
+    'I put my own eyes in a tree, child. Now I cannot see the bad things. I cannot see the good ones either.': 'Ta gửi đôi mắt mình vào một gốc cây rồi, cháu ạ. Giờ ta chẳng phải thấy điều xấu nữa. Mà điều tốt cũng chẳng thấy luôn.',
+    'Do you want them back?': 'Ông có muốn lấy lại không?',
+    'Every day.': 'Ngày nào cũng muốn.',
+    'Nyx was ten when they came to the forest where the buried things grow.': 'Năm Nyx mười tuổi, hai chú cháu đến khu rừng nơi những điều bị chôn vùi mọc thành cây.',
+    'Uncle, the trees are breathing.': 'Chú ơi, cây đang thở kìa.',
+    'They are remembering. Stay on the path.': 'Chúng đang nhớ lại đấy. Đi đúng đường nhé con.',
+    'The bark opened like an eye. Nyx saw an altar, and fire, and a nameless child.': 'Lớp vỏ cây hé ra như một con mắt. Nyx thấy một bàn tế, ngọn lửa, và một đứa trẻ không tên.',
+    'She saw him torn in two.': 'Cô bé thấy người ấy bị xé làm đôi.',
+    'No... no, no, no...': 'Không... không, không, không...',
+    'Nyx ran. She did not look where she was going.': 'Nyx cắm đầu chạy, chẳng còn biết mình đang chạy đi đâu.',
+    'There you are.': 'Con đây rồi.',
+    'I saw it. The fire. They hurt you.': 'Con thấy hết rồi. Ngọn lửa. Họ làm chú đau.',
+    'A long time ago, before this world, I did not have a name either.': 'Lâu lắm rồi, từ trước khi có thế giới này, chú cũng chẳng có tên.',
+    'They put me on an altar. They tore me in half. I was angry for thirty years. Then I forgave it, and closed the Throne.': 'Người ta đặt chú lên bàn tế. Xé chú làm đôi. Chú đã giận suốt ba mươi năm. Rồi chú tha thứ, và khép cái Ngai lại.',
+    'Does it still hurt?': 'Giờ chú còn đau không?',
+    'Only when I stop.': 'Chỉ khi nào chú dừng lại thôi.',
+    'Zero picked up a branch and began to carve.': 'Zero nhặt một cành cây lên và bắt đầu gọt.',
+    'Here. It is not for fighting.': 'Đây. Không phải để đánh nhau đâu.',
+    'It is so you know that you can.': 'Là để con biết rằng con làm được.',
+    'Stay, and you will never be hurt again.': 'Ở lại đây, con sẽ không bao giờ phải đau nữa.',
+    'I want to grow up.': 'Con muốn lớn lên.',
+    'Even if it hurts.': 'Dù có đau cũng được.',
+    'It was the first grown-up thing she ever chose.': 'Đó là lựa chọn người lớn đầu tiên trong đời cô bé.',
+    'Zero coughed, and ash came out.': 'Zero ho, và tro bụi rơi ra.',
+    'Uncle...?': 'Chú...?',
+    'It is nothing. Come on.': 'Không sao. Đi thôi con.',
+    'TICK. TOCK. It is always the hour of your loss.': 'TÍCH. TẮC. Lúc nào cũng là giờ ngươi mất đi thứ gì đó.',
+    'I have read this fight already. I know how it ends. Do you?': 'Trận này ta đọc trước rồi. Ta biết nó kết thúc ra sao. Còn con thì sao?',
+    'Then let the sky fall upward.': 'Vậy thì để bầu trời rơi ngược lên trên.',
+    'You beat me. You did not beat the stars.': 'Con thắng được ta. Nhưng không thắng được các vì sao đâu.',
+    'It is a clock... made of falling stars.': 'Một cái đồng hồ... làm bằng sao băng.',
+    'Break the face. Keep moving.': 'Đập vỡ mặt đồng hồ. Đừng đứng một chỗ.',
+    'Child of the night. I have been waiting. The stars told me your name before he gave it to you.': 'Đứa con của bóng đêm. Ta đợi con lâu rồi. Các vì sao đã nói tên con cho ta, từ trước khi hắn đặt nó cho con.',
+    'Your guardian will vanish before you are grown. I have seen it. You cannot change it.': 'Người bảo hộ của con sẽ biến mất trước khi con kịp lớn. Ta thấy rồi. Con không đổi được đâu.',
+    'That is not true!': 'Không đúng!',
+    'You do not know anything! Uncle, stay back. This one is mine.': 'Bà chẳng biết gì hết! Chú lùi lại đi. Trận này để con.',
+    'Each fallen star is a future someone wrote down. Do not read them.': 'Mỗi ngôi sao rơi là một tương lai ai đó đã viết sẵn. Đừng đọc chúng.',
+    'This one says I will be alone. Uncle, it says I will be alone.': 'Ngôi sao này bảo con sẽ phải một mình. Chú ơi, nó bảo con sẽ phải một mình.',
+    'Then do not read it.': 'Vậy thì đừng đọc nữa.',
+    'Together, Nyx. Your lantern, my sword.': 'Cùng nhau nhé, Nyx. Đèn của con, kiếm của chú.',
+    'You coughed again.': 'Chú lại ho nữa rồi.',
+    'Stars are dusty.': 'Sao nhiều bụi lắm.',
+    'I read my own star once. Now I already know every day of my life.': 'Ta từng đọc ngôi sao của chính mình. Giờ ngày nào trong đời ta cũng biết trước cả rồi.',
+    'Is that good?': 'Vậy có vui không ạ?',
+    'It is very boring, child.': 'Chán lắm, cháu ạ.',
+    'At thirteen Nyx carried the Night Lantern, and walked beside him rather than behind.': 'Năm mười ba tuổi, Nyx cầm Đèn Lồng Bóng Đêm, và đã đi bên cạnh chú chứ không còn lẽo đẽo phía sau.',
+    'The stars are falling, Uncle. They look like they are crying too.': 'Sao rơi kìa chú. Trông như chúng cũng đang khóc vậy.',
+    'Everything in this world cries a little. That is my fault.': 'Mọi thứ trên thế giới này đều khóc một chút. Đó là lỗi của chú.',
+    'It is not your fault!': 'Đâu phải lỗi của chú!',
+    'Astraea smiled, and for the first time in years, she opened her eyes.': 'Astraea mỉm cười, và lần đầu tiên sau bao nhiêu năm, bà mở mắt.',
+    'That night, by the fire.': 'Đêm ấy, bên đống lửa.',
+    'Uncle. You will not go anywhere, will you?': 'Chú ơi. Chú sẽ không đi đâu hết, đúng không?',
+    'Zero was silent for a very long time.': 'Zero im lặng rất lâu.',
+    'Then he put his hand on her head.': 'Rồi chú đặt tay lên đầu cô bé.',
+    'Go to sleep, Nyx.': 'Ngủ đi con.',
+    'Nyx had always been the only one who slept soundly. That night, for the first time, she could not sleep.': 'Xưa nay Nyx là người duy nhất ngủ ngon. Vậy mà đêm ấy, lần đầu tiên, cô bé thao thức mãi.',
+    'It is not attacking. It is running away from its own fire...': 'Nó đâu có tấn công. Nó đang chạy trốn chính ngọn lửa của nó...',
+    'Shh... shh...': 'Suỵt... suỵt... ngoan nào...',
+    'You run like prey. Then I will hunt like a wolf.': 'Mày chạy như con mồi. Vậy thì tao săn như loài sói.',
+    'ALL OF YOU. NOW.': 'CẢ BẦY. LÊN.',
+    'A cub left behind... can still become the head of the pack.': 'Một con sói con bị bỏ lại... vẫn có thể trở thành sói đầu đàn.',
+    'What... is that... song...': 'Bài hát... này... là gì...',
+    'Its horns are burning... it is afraid of itself.': 'Sừng nó đang cháy... nó đang sợ chính nó.',
+    'I am alone. All right. All right. I can do this.': 'Chỉ còn mình mình. Được rồi. Không sao. Mình làm được.',
+    'It is only a baby. It is scared of me.': 'Nó chỉ là một con non thôi. Nó đang sợ mình.',
+    'If I sing... maybe it will sleep.': 'Nếu mình hát... biết đâu nó sẽ ngủ.',
+    'A cub. Alone in my sand. Where is your pack, little one?': 'Một con sói con. Lạc một mình trên cát của tao. Bầy của mày đâu, nhóc?',
+    'I do not have one.': 'Tôi không có bầy.',
+    'Then you are prey.': 'Vậy mày là con mồi.',
+    'I am not prey. I am the night.': 'Tôi không phải con mồi. Tôi là bóng đêm.',
+    'His sword is too heavy. I will drag it. I will drag it all the way to him.': 'Kiếm của chú nặng quá. Mình sẽ kéo nó đi. Kéo tới tận chỗ chú.',
+    'Hide. Sing. Do not fight what you cannot beat. Like he taught me.': 'Trốn. Hát. Đừng đánh thứ mình không thắng nổi. Chú đã dạy vậy mà.',
+    'The leader. If I hurt it, the whole pack will hate me. Maybe it can just sleep.': 'Con đầu đàn. Mình mà làm nó đau, cả bầy sẽ ghét mình. Hay là để nó ngủ thôi.',
+    'Uncle, you said grow up. I am trying. I am really trying.': 'Chú bảo con phải lớn lên. Con đang cố đây. Con cố lắm rồi.',
+    'That morning Nyx woke up, and Zero was not there.': 'Sáng hôm ấy Nyx thức dậy, và Zero không còn ở đó nữa.',
+    'Only his sword, standing in the sand. And a piece of paper.': 'Chỉ còn thanh kiếm của chú cắm trên cát. Và một mảnh giấy.',
+    'This world is dying because I have not finished it. I have to go. Do not look for me. Grow up.': 'Thế giới này đang chết dần vì chú chưa làm xong nó. Chú phải đi. Đừng tìm chú. Hãy lớn lên nhé.',
+    'The lullaby was gone, with him. Only the wind was left.': 'Bài hát ru đã đi theo chú. Chỉ còn lại tiếng gió.',
+    'Lilith-Varga lowered her head. Her wolves lay down around Nyx, facing out, the way wolves guard their own.': 'Lilith-Varga cúi đầu. Bầy sói nằm xuống vây quanh Nyx, quay mặt ra ngoài, như cách loài sói bảo vệ người của mình.',
+    'Four riders came over the dunes at dusk.': 'Lúc hoàng hôn, bốn kỵ sĩ vượt qua đồi cát.',
+    'We are looking for Zero. You... you are the girl he carried out of the City of Dawn.': 'Bọn tôi đang tìm Zero. Nhóc... nhóc là con bé mà cậu ta bế ra khỏi Thành Phố Bình Minh.',
+    'He left. He told me not to look for him.': 'Chú ấy đi rồi. Chú dặn em đừng tìm.',
+    'He is gone, then...': 'Vậy là cậu ta đi thật rồi...',
+    'Then from now on, we follow you.': 'Vậy từ giờ, bọn tôi đi theo nhóc.',
+    'War, Death, Plague and Famine knelt in the sand in front of a girl of fourteen.': 'Chiến Tranh, Tử Thần, Dịch Bệnh và Nạn Đói quỳ xuống cát trước một cô bé mười bốn tuổi.',
+    'KNEEL. THE ARCHITECT LOVES YOU. KNEEL.': 'QUỲ XUỐNG. THE ARCHITECT YÊU THƯƠNG NGƯƠI. QUỲ XUỐNG.',
+    'Then there is nothing more to say.': 'Vậy thì chẳng còn gì để nói nữa.',
+    'Machines. Take her alive.': 'Máy móc đâu. Bắt sống con bé.',
+    'He really did leave so you would not have to... didn\'t he.': 'Hắn bỏ đi thật... là để con khỏi phải gánh, đúng không.',
+    'GRAVITY IS A SUGGESTION. I WITHDRAW IT.': 'TRỌNG LỰC CHỈ LÀ MỘT LỜI GỢI Ý. TA RÚT NÓ LẠI.',
+    'THE WORLD TURNS ON MY WORD.': 'THẾ GIỚI XOAY THEO LỜI TA NÓI.',
+    'LOOK, CHILD. HE GAVE HIMSELF TO ME, SO THAT YOU WOULD NOT HAVE TO.': 'NHÌN ĐI, NHÓC. HẮN TỰ DÂNG MÌNH CHO TA, ĐỂ NGƯƠI KHỎI PHẢI LÀM THẾ.',
+    'Uncle! UNCLE!': 'Chú ơi! CHÚ ƠI!',
+    'ALL WHO SLEEP ARE SINNERS. ALL WHO SLEEP WILL KNEEL.': 'KẺ NÀO NGỦ LÀ KẺ CÓ TỘI. KẺ NÀO NGỦ PHẢI QUỲ.',
+    'Loud thing. Let me at it.': 'Cái thứ ồn ào đó. Để tôi xử.',
+    'Together. Rook, front. Sable, behind it.': 'Cùng lên. Rook, chặn phía trước. Sable, vòng ra sau nó.',
+    'So you are the day he never finished.': 'Ra con chính là cái ngày hắn bỏ dở.',
+    'Zero left you. He never really cared. Come with me: I will give you a father who does not leave.': 'Zero bỏ con rồi. Hắn chưa bao giờ thật lòng quan tâm. Đi với ta: ta sẽ cho con một người cha không bao giờ bỏ đi.',
+    'Where is he?': 'Chú ấy đâu?',
+    'I AM WHAT MERIDIAN BUILT FROM THE THRONE YOU CLOSED.': 'TA LÀ THỨ MERIDIAN DỰNG NÊN TỪ CÁI NGAI NGƯƠI ĐÃ KHÉP LẠI.',
+    'I WILL FINISH THE WORLD. NO ONE WILL EVER HAVE TO BE TIRED AGAIN. NO ONE WILL EVER HAVE TO BE ANYTHING AGAIN.': 'TA SẼ HOÀN THÀNH THẾ GIỚI. SẼ KHÔNG AI PHẢI MỆT MỎI NỮA. CŨNG SẼ KHÔNG AI PHẢI LÀ BẤT CỨ THỨ GÌ NỮA.',
+    'Give him back.': 'Trả chú ấy lại đây.',
+    'Switch with us when you need to, Nyx. We follow, you lead.': 'Cần thì cứ đổi sang bọn tôi, Nyx. Nhóc dẫn đường, bọn tôi theo.',
+    'The monks are shielded in front. Go behind them. That is what I do.': 'Bọn tu sĩ có khiên chắn đằng trước. Vòng ra sau mà đánh. Tôi toàn làm vậy.',
+    'The same poison can heal, you know. Switch to me when you are hurt.': 'Cùng một thứ độc mà cũng chữa được bệnh đấy. Bị thương thì đổi sang tôi.',
+    'I am hungry, little leader. Point me at something.': 'Đói rồi, thủ lĩnh nhỏ. Chỉ cho tôi cái gì đó để cắn đi.',
+    'They say the Architect has a heart now. A real one. They say it is still beating, and it is not happy about it.': 'Nghe đồn The Architect giờ có tim rồi. Tim thật hẳn hoi. Người ta bảo nó vẫn còn đập, mà đập chẳng vui vẻ gì.',
+    'Whose heart?': 'Tim của ai cơ?',
+    'Nobody will say the name.': 'Chẳng ai dám nói ra tên.',
+    'At fifteen Nyx walked in front, and four of the dead walked behind her.': 'Năm mười lăm tuổi, Nyx đi đầu, và bốn người đã khuất bước theo sau cô.',
+    'He is in there. I know he is.': 'Chú ấy ở trong đó. Em biết mà.',
+    'Then we go in.': 'Vậy thì vào thôi.',
+    'In the middle of the fight, she stopped dragging it.': 'Giữa trận đánh, cô thôi không kéo lê thanh kiếm nữa.',
+    'She lifted Zero’s sword. It lit up, as it always had for him.': 'Cô nhấc bổng thanh kiếm của Zero. Nó sáng lên, như vẫn luôn sáng trong tay chú.',
+    'But not with his gold. With the blue-violet of night.': 'Nhưng không phải sắc vàng của chú. Mà là sắc xanh tím của màn đêm.',
+    'I can carry it now, Uncle. I am coming.': 'Giờ con cầm nổi rồi, chú ơi. Con tới đây.',
+    'The core is beneath this hall. I will open it, and shut down every machine I can.': 'Lõi nằm ngay dưới đại sảnh này. Ta sẽ mở nó ra, và tắt hết những cỗ máy ta tắt được.',
+    'Go and get him. Someone in this city should get their father back.': 'Đi đón hắn về đi. Thành phố này ít ra cũng nên có một người được đón cha mình về.',
+    'The Hierarch fell, and the machines kept praying without her.': 'Giáo Chủ ngã xuống, còn lũ máy vẫn cứ cầu nguyện dù chẳng còn ai dẫn lối.',
+    'The core broke open. Zero fell out of the light, and Nyx caught him.': 'Lõi vỡ tung. Zero rơi ra khỏi vùng sáng, và Nyx đỡ lấy chú.',
+    'Now she was the one carrying him. The first day, turned around.': 'Giờ đến lượt cô bế chú. Ngày đầu tiên, nhưng đảo ngược.',
+    'You grew up...': 'Con lớn rồi...',
+    'You told me to.': 'Chú bảo con lớn mà.',
+    'That is mine. Let me—': 'Cái đó là của chú. Để chú—',
+    'No. We do this together.': 'Không. Lần này mình cùng làm.',
+    'There. Sit. It is not so hard.': 'Đấy. Ngồi xuống đi. Có khó gì đâu.',
+    'I asked to lie on the altar instead of him. They burned me for asking.': 'Ta từng xin được nằm lên bàn tế thay hắn. Chỉ vì dám xin mà ta bị thiêu.',
+    'This world needs a day of rest. And you are that day.': 'Thế giới này cần một ngày để nghỉ. Và con chính là ngày đó.',
+    'I am not a tool for finishing anyone!': 'Tôi không phải công cụ để hoàn thành ai hết!',
+    'Burn them both.': 'Thiêu cả hai đứa.',
+    'I protected a child once, too... the way he protects you.': 'Ta cũng từng che chở cho một đứa trẻ... như cách hắn che chở cho con.',
+    'Rest in my light a moment.': 'Nghỉ một chút trong ánh sáng của ta đi.',
+    'Let the sea take its little eyes.': 'Để biển cuốn trôi lũ mắt nhỏ của nó.',
+    'Stand on my roots, children.': 'Đứng lên rễ của ta này, các con.',
+    'I see its next move. Left, then the grid. Go!': 'Ta thấy đòn kế tiếp của nó rồi. Bên trái, sau đó là lưới. Chạy!',
+    'Pack. Bite.': 'Cả bầy. Cắn.',
+    'Every machine in Meridian: stand down.': 'Toàn bộ máy móc của Meridian: ngừng lại.',
+    'FIRST LAW: UP IS DOWN.': 'ĐỊNH LUẬT MỘT: TRÊN LÀ DƯỚI.',
+    'SECOND LAW: TIME RUNS HOME.': 'ĐỊNH LUẬT HAI: THỜI GIAN QUAY VỀ.',
+    'THIRD LAW: THE WORLD TURNS.': 'ĐỊNH LUẬT BA: THẾ GIỚI XOAY VÒNG.',
+    'FOURTH LAW: NO LIGHT AT ALL.': 'ĐỊNH LUẬT BỐN: KHÔNG CÒN MỘT CHÚT ÁNH SÁNG.',
+    'I am what he forgave... and never healed.': 'Ta là những gì hắn đã tha thứ... mà chưa từng chữa lành.',
+    'Child. You know what you are now.': 'Con à. Giờ thì con biết mình là gì rồi.',
+    'I will not kill you. I only have to put you on that Throne.': 'Ta sẽ không giết con. Ta chỉ cần đưa con lên cái Ngai kia thôi.',
+    'Then you will have to push me the whole way.': 'Vậy thì bà phải lôi tôi lên từng bậc một.',
+    'YOU BROKE ME, CHILD. I GATHERED MYSELF. I AM GOING TO SIT ON THE THRONE.': 'NGƯƠI ĐẬP VỠ TA, NHÓC. TA ĐÃ NHẶT LẠI TỪNG MẢNH. GIỜ TA SẼ NGỒI LÊN NGAI.',
+    'Over my dead body. Again.': 'Bước qua xác tôi trước đã. Thêm lần nữa.',
+    'Nyx. Together this time.': 'Nyx. Lần này mình cùng nhau.',
+    'It... is only tired.': 'Nó... chỉ đang mệt thôi.',
+    'Stop fighting it. Hold it.': 'Đừng đánh nữa. Ôm lấy nó.',
+    'The Throne broke. Out of it stepped a copy of Zero: armour split open, sword dragging, eyes hollow.': 'Ngai vỡ ra. Từ bên trong bước ra một Zero khác: giáp nứt toác, kiếm kéo lê, đôi mắt trống rỗng.',
+    'That is... every year I did not rest.': 'Đó là... tất cả những năm chú chưa từng được nghỉ.',
+    'I can walk. Slowly. Lead, Nyx. I will follow you this time.': 'Chú đi được. Chậm thôi. Con dẫn đường đi, Nyx. Lần này chú theo con.',
+    'It looks like me. It fights like me.': 'Nó giống con. Đánh cũng giống con.',
+    'Then do something you have never done.': 'Vậy thì làm điều con chưa làm bao giờ.',
+    'The child. They have the child. I am coming.': 'Đứa trẻ. Chúng bắt đứa trẻ rồi. Ta tới đây.',
+    'Nyx was seventeen when the burned angel came down to meet her.': 'Năm Nyx mười bảy tuổi, thiên thần bị thiêu cháy hạ xuống tìm cô.',
+    'You are the Seventh Day.': 'Con chính là Ngày Thứ Bảy.',
+    'Zero began to make you, but he never allowed himself to rest. So you were born unfinished.': 'Zero đã bắt đầu tạo ra con, nhưng hắn chưa bao giờ cho phép mình nghỉ ngơi. Thế nên con sinh ra còn dang dở.',
+    'For the world to be whole, you must sit on the Throne and become its day of rest. You will not be a person any more.': 'Muốn thế giới được trọn vẹn, con phải ngồi lên Ngai và trở thành ngày nghỉ của nó. Con sẽ không còn là một con người nữa.',
+    'No. I will sit. Not her.': 'Không. Để tôi ngồi. Không phải con bé.',
+    'Stop. Both of you. It is my day. I will decide.': 'Thôi đi. Cả hai người. Đây là ngày của con. Để con tự quyết.',
+    'Last time, I came up here alone.': 'Lần trước, chú lên đây một mình.',
+    'Not this time.': 'Lần này thì không.',
+    'Nyx lowered the sword, and held out her hand. Vesper took it, and stood.': 'Nyx hạ kiếm xuống, chìa tay ra. Vesper nắm lấy, rồi đứng dậy.',
+    'They were not enemies any more.': 'Họ không còn là kẻ thù nữa.',
+    'Then the sky split open.': 'Rồi bầu trời nứt toác.',
+    'The Architect fell like a rain of shooting stars. Then it was quiet.': 'The Architect rơi xuống như một trận mưa sao băng. Rồi mọi thứ lặng im.',
+    'Nyx understood something Zero never had: a day of rest does not need anyone to give themselves up. It only needs to be allowed.': 'Nyx hiểu ra một điều Zero chưa từng hiểu: ngày nghỉ không cần ai phải hy sinh. Nó chỉ cần được cho phép.',
+    'You do not have to finish anything any more, Uncle. You are allowed to rest.': 'Chú không cần hoàn thành gì nữa đâu. Chú được nghỉ rồi.',
+    'This time it is my turn to sing you to sleep.': 'Lần này, đến lượt con hát ru chú ngủ.',
+    'Nyx sat on the Throne, and became the world’s first sunset.': 'Nyx ngồi lên Ngai, và hóa thành buổi hoàng hôn đầu tiên của thế giới.',
+    'For the first time the whole world had a night, and everyone slept in peace. Zero sat alone on a hill and watched the sunset, every evening.': 'Lần đầu tiên cả thế giới có đêm, và ai cũng được ngủ yên. Còn Zero, chiều nào cũng ngồi một mình trên đồi ngắm hoàng hôn.',
+    'Every evening, the world remembers the girl.': 'Mỗi chiều tà, thế giới lại nhớ về cô bé ấy.',
+    'I have protected you since the first day. Let me do it until the last.': 'Chú đã bảo vệ con từ ngày đầu tiên. Để chú làm vậy đến ngày cuối cùng.',
+    'Zero faded away. Nyx kept his sword, and became the new world’s guardian.': 'Zero tan biến. Nyx giữ lại thanh kiếm của chú, và trở thành người bảo hộ của thế giới mới.',
+    'Many years later, in a plaza, a grown Nyx found a nameless child asleep, exactly as she had been.': 'Nhiều năm sau, giữa một quảng trường, Nyx đã trưởng thành bắt gặp một đứa trẻ không tên đang ngủ, y hệt cô ngày trước.',
+    'Nyx picked the child up. And it began again.': 'Nyx bế đứa trẻ lên. Và mọi chuyện lại bắt đầu.',
+    'Mareva sings lullabies to children.': 'Mareva hát ru cho lũ trẻ.',
+    'Astraea watches the stars with her own eyes.': 'Astraea ngắm sao bằng chính đôi mắt mình.',
+    'Lilith-Varga leads her pack home to the forest.': 'Lilith-Varga dẫn bầy sói về lại rừng.',
+    'The Four Riders take off their armour. Rook sets his shield down for a table, and they eat supper, with Vesper.': 'Bốn Kỵ Sĩ cởi giáp. Rook đặt khiên xuống làm bàn, và họ cùng Vesper ăn bữa tối.',
+    'On a grassy hill, Zero lies with his head in Nyx’s lap. The first day, turned all the way around.': 'Trên ngọn đồi cỏ, Zero gối đầu lên đùi Nyx. Ngày đầu tiên năm nào, giờ đã đảo ngược hoàn toàn.',
+    'Nyx sings him the lullaby he used to sing to her. Zero closes his eyes, and sleeps. For the first time in both stories.': 'Nyx hát cho chú nghe bài ru chú từng hát cho cô. Zero nhắm mắt lại, và ngủ. Lần đầu tiên, trong cả hai câu chuyện.',
+    'Good night, Zero.': 'Ngủ ngon nhé, Zero.',
+    'Nyx said nothing. And under her feet, for the first time, a shadow appeared.': 'Nyx không nói gì. Và dưới chân cô, lần đầu tiên, một cái bóng hiện ra.',
+    'The shadow pointed down: a stair beneath the Throne, to a second, older Throne. It was still warm, as if someone had just stood up.': 'Cái bóng chỉ xuống dưới: một cầu thang bên dưới Ngai, dẫn tới một cái Ngai thứ hai, cổ xưa hơn. Nó vẫn còn ấm, như thể ai đó vừa đứng dậy.',
+    'A name was carved into it.': 'Trên đó có khắc một cái tên.',
+    '"You did well."': '"Con làm tốt lắm."',
+    'Then let us heal you. Uncle, now!': 'Vậy để bọn con chữa lành cho. Chú ơi, ngay bây giờ!',
+    'It opened its eye. It is looking right at me.': 'Nó mở mắt rồi. Nó đang nhìn thẳng vào con.',
+    'Nobody asked for you. Not him, not me, not anyone.': 'Chẳng ai cần ngươi cả. Không phải chú ấy, không phải tôi, không một ai hết.',
+    'The sun took my shadow. I will take yours.': 'Mặt trời đã cướp mất bóng của ta. Ta sẽ cướp bóng của ngươi.',
+    'I sewed my eyes shut so I would never see what you hide in the shadows.': 'Ta khâu mắt mình lại để không bao giờ phải thấy những gì các ngươi giấu trong bóng tối.',
+    'Then be blind with me. Listen, Zero. Listen to the light fall.': 'Vậy thì mù cùng ta đi. Nghe này, Zero. Nghe tiếng ánh sáng rơi xuống.',
+    'She has gone dark, Nyx. You can see in the night. Listen for the bells: left, right, or above you.': 'Cô ta tắt sáng rồi, Nyx. Con nhìn được trong đêm mà. Nghe tiếng chuông: bên trái, bên phải, hay trên đầu.',
+    'I only wanted them never to be afraid of the dark...': 'Ta chỉ muốn họ không bao giờ phải sợ bóng tối thôi mà...',
+    'Halt. Behind me is Her cathedral. Nothing that casts a shadow may pass.': 'Đứng lại. Sau lưng ta là thánh đường của Người. Kẻ nào có bóng, không được đi qua.',
+    'Where is your shadow, knight?': 'Bóng của ngươi đâu rồi, hiệp sĩ?',
+    'It left me long ago. I stood in the sun too long.': 'Nó bỏ ta đi lâu rồi. Ta đứng dưới nắng lâu quá.',
+    'He has no shadow... I can give him one!': 'Ông ấy không có bóng... Con cho ông ấy một cái được mà!',
+    'A child that sleeps. A child with darkness under her feet. Give her to me.': 'Một đứa trẻ biết ngủ. Một đứa trẻ có bóng tối dưới chân. Giao nó cho ta.',
+    'No.': 'Không.',
+    'I am the first day. I sewed my eyes with golden thread so I would never see night.': 'Ta là ngày thứ nhất. Ta khâu mắt mình bằng chỉ vàng để không bao giờ phải nhìn thấy đêm.',
+    'Nyx. The four towers. Cover her eyes. I will hold her here.': 'Nyx. Bốn ngọn tháp. Che mắt cô ta lại. Chú sẽ giữ chân cô ta ở đây.',
+    'At last... some shade.': 'Cuối cùng... cũng có bóng râm.',
+    'Stay in the shadows, little one. Let me do the fighting. Press E to talk, and 1 to make a little night of your own.': 'Nấp trong bóng tối nhé, bé con. Để chú đánh. Bấm E để nói chuyện, bấm 1 để tạo một màn đêm nhỏ của riêng con.',
+    'Uncle, your arm has a hole in it, like a gun. Why do you carry a sword?': 'Chú ơi, tay chú có cái lỗ như nòng súng. Sao chú lại cầm kiếm?',
+    'A gun judges from far away. I do not judge anyone any more. A sword means standing close. Right in front of you.': 'Súng thì phán xét người ta từ xa. Chú không phán xét ai nữa. Cầm kiếm nghĩa là phải đứng gần. Ngay trước mặt con.',
+    'The angels went mad without sleep. Anything that moves, they charge. Hide in your night when they come.': 'Các thiên thần phát điên vì mất ngủ. Thấy gì động đậy là lao vào. Chúng tới thì con trốn vào màn đêm của con nhé.',
+    'Uncle, your armour is cracked. Does it hurt?': 'Chú ơi, giáp chú nứt rồi. Có đau không chú?',
+    'Those shadows look like mine. Why does everyone hate them?': 'Mấy cái bóng kia giống bóng của con. Sao ai cũng ghét chúng vậy?',
+    'Because this city forgot what night is for. Only light truly hurts them. Stay behind me.': 'Vì thành phố này quên mất đêm sinh ra để làm gì rồi. Chỉ có ánh sáng mới thật sự làm chúng đau. Đứng sau chú.'
+});
 
 </script>
 <script>

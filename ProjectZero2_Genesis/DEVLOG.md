@@ -71,23 +71,43 @@ Cấu trúc bài được đo bằng FFT: 172.27 BPM, phách đầu ở 0.232 gi
 
 | Ô nhịp | Thời gian | Trong game |
 |---|---|---|
-| 0–6 | 0–8.6s | Nó nuốt cái Ngai, các vòng sụp vào trong, mỗi ô nhịp một nhịp đập |
-| 7 | 10s | Cú đánh đầu tiên: con mắt đỏ mở ra |
-| 8–15 | 11–22s | Mỗi ô nhịp xòe thêm một cánh ánh sáng; tên "THE ARCHITECT HÓA THẦN" hiện ở ô nhịp 12 |
-| 16 | 22.5s | DROP: trả quyền điều khiển, bắt đầu đánh |
-| 16–31 | | Thương rơi ở phách 1, mắt bắn ở phách 3, vòng đạn mỗi 4 ô nhịp |
-| 32–33 | | Tụ lực: tia chữ thập dài 2 ô nhịp |
-| 34–59 | | Cánh quét ở phách 1 và 3, tam giác ở phách 2 và 4 |
-| 60–101 | | Đoạn chính, **lặp lại** chừng nào boss còn sống |
-| 102 | | Boss gục, nhạc nhảy tới ô nhịp 102 đúng vạch nhịp: lộ mặt Zero lúc bị hiến tế |
-| 104 | | "Ngày và Đêm": nhát vàng ở phách 1, nhát tím ở phách 3 |
-| 105–119 | | Mưa kính mỗi phách, camera lùi dần |
-| 120, 121 | | BÙM, BÙM |
-| 122 | | Trắng màn, rồi tới lựa chọn trước Ngai |
+| 0–6 | 0:00–0:09 | Nó nuốt cái Ngai, lớn dần; camera lùi xa (Vesper: "Nó đang nuốt cả Ngai Vàng...") |
+| 7 | 0:10 | Con mắt mở: một cú cận mặt, rồi lùi ra ngay |
+| 8–15 | 0:11–0:22 | Sáu cánh xòe ra, boss cao gấp 1.3 lần, camera kéo ra toàn cảnh |
+| 16 | 0:22 | Drop: vương miện, vòng mắt thứ hai, tám thanh kiếm ánh sáng xoay quanh; boss cao gấp 1.45 lần |
+| 17–30 | 0:24–0:42 | Boss nói với Nyx; Nyx và Zero đáp lại (lời thoại viết lại cho khớp cảnh) |
+| 31–34 | 0:43–0:48 | Tên "THE ARCHITECT HÓA THẦN" hiện dần từng chữ, rõ hẳn ở 0:47 |
+| 35 | 0:49 | Cắt cảnh, vào đánh, thanh máu mới |
+| 35–107 | 0:49–2:30 | Bốn đoạn theo mốc máu (0:47, 1:23, 1:45, 2:09); nếu chưa đủ máu thì đoạn đó lặp lại, đánh nhanh thì nhảy đoạn |
+| 108 | 2:30 | Hấp hối: lộ mặt Zero lúc bị hiến tế |
+| 114 | 2:39 | "Ngày và Đêm": Zero bật lên chém nhát vàng đúng phách 1, Nyx chém nhát tím đúng phách 3, cả hai quỳ hai bên quay lưng về phía boss |
+| 118–121 | 2:45 | Boss chết, mưa kính, BÙM, BÙM |
 
 - Cảnh báo đòn hiện trước 2 phách, đòn rơi đúng phách.
-- Ai gục thì đổi sang người tiếp theo trong đội; nếu cả đội gục, trận quay lại ngay trước đoạn drop (checkpoint).
+- Màn cuối được làm cao hơn để boss lớn vẫn nằm trọn trong khung hình.
 - Bài nhạc được nhúng trong bản build một file (khoảng 5.4 MB). Nếu không tải được bài, game dùng nhạc epic tổng hợp với cùng mốc thời gian.
+
+### Cùng Chiến Đấu (Team Up) và Bài Ru Gọi Về
+- Vào màn cuối, game hiện bảng hỏi trước khi đánh, nên trận đấu không bị dừng giữa chừng: **Cùng chiến đấu** (cả 7 người) hoặc **Chỉ Nyx và Zero**.
+- Mỗi đồng đội do AI điều khiển riêng:
+  - đọc cảnh báo đòn để né hoặc nhảy;
+  - đứng rải quanh boss, người đánh xa đứng xa, người cận chiến áp sát;
+  - dùng kỹ năng và tuyệt chiêu so le nhau.
+- Đồng đội có máu riêng; hết máu thì gục và biến mất khỏi trận. Danh sách máu cả đội hiện ở góc trái.
+- Mọi đòn đánh trúng đều làm đầy **Linh Lực Đêm** của Nyx. Khi thanh đầy, Bài Ru Gọi Về tự hồi sinh người gục đầu tiên.
+- Người chơi gục thì đồng đội còn sống tiếp quản và chờ được hát gọi về. Cả đội gục thì đánh lại từ đầu đoạn hiện tại.
+- Camera lùi xa để thấy cả đội.
+- Cân bằng:
+  - mỗi đồng đội gây khoảng 28% sát thương;
+  - boss có thêm 80% máu khi chọn Cùng chiến đấu.
+- Nyx học Bài Ru Gọi Về từ Sable (Tử Thần) cuối Ngày Thứ Năm, ngay sau khi gặp Tứ Kỵ Sĩ. Từ đó, ngoài màn cuối, thanh Linh Lực đầy cũng cứu người chơi khỏi một đòn chí mạng.
+- Bot giả lập (người chơi không né) đánh thắng trận cuối khi có cả đội, với 7 lần gục và 4 lần hồi sinh.
+
+### Lời thoại
+Toàn bộ khoảng 300 câu thoại tiếng Việt của Phần II được viết lại cho giống người nói chuyện (`js/g2_vi_dialogue.js`). Cách xưng hô:
+- Zero và Nyx: "chú/con".
+- Tứ Kỵ Sĩ với Nyx: "tôi/nhóc", Nyx đáp lại "em".
+- Thần và boss: "ta/ngươi".
 
 ### Kiểm thử (đều do bot)
 - `node tools/e2e2.js`: chương 1 bằng Nyx (cả tha và giết), 7 nhân vật đánh thật Hiệp Sĩ và Seraphina: PASS.
