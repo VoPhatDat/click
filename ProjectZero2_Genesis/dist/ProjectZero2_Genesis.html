@@ -11392,10 +11392,11 @@ G2.song = {
         if (this.useAudio && this.src) { if (seg) { this.src.loopStart = this.loop.a; this.src.loopEnd = this.loop.b; } this.src.loop = !!seg; }
     },
     /** Continue from a bar, starting on the next bar line. */
-    jumpTo(bar) {
-        if (this.jump) return; const pos = this.p, nb = Math.ceil((pos - SONG.first) / SONG.bar + .001), wait = Math.max(.02, SONG.t(nb) - pos), to = SONG.t(bar), T = this.now() + wait;
+    jumpTo(bar, force) {
+        if (this.jump && !force) return; if (this.jump && force && this.useAudio && this.src) { try { this.src.stop(); } catch (e) { } this.src = null; } if (this.jump && force) { this.p = this.jump.to; this.last = this.now(); this.jump = null; }
+        const pos = this.p, nb = Math.ceil((pos - SONG.first) / SONG.bar + .001), wait = Math.max(.02, SONG.t(nb) - pos), to = SONG.t(bar), T = this.now() + wait;
         this.setLoop(null); this.jump = { T, to };
-        if (this.useAudio && this.src) { const old = this.src; old.stop(T); this.src = this.mk(); this.src.start(T, to); }
+        if (this.useAudio) { const old = this.src; if (old) old.stop(T); this.src = this.mk(); this.src.start(T, to); }
     },
     update() {
         if (!this.active) return; const n = this.now(), dt = Math.max(0, n - this.last); this.last = n;
@@ -11568,7 +11569,7 @@ G2.ascendBeat = function (b, bar, bi) {
 const ASCEND_MOVES = { *conduct(b) { let last = -1; for (; ;) { const n = G2.song.beatN(); if (n !== last && !b.dead && !b.dying) { last = n; G2.ascendBeat(b, Math.floor(n / 4), ((n % 4) + 4) % 4); } if (b.dilate > 0) b.dilate = Math.max(0, b.dilate - .02); yield 1; } } };
 // The song follows the health bar: loop the section until the mark is reached, skip ahead if it falls faster.
 G2.ascendMusic = function (b) {
-    const S = G2.song; if (!S.active || b.dying || b.transition || !b.ascended || S.jump) return;
+    const S = G2.song; if (!S.active || b.dying || b.dead || b.hp <= 0 || b.transition || !b.ascended || S.jump) return;
     const pos = S.pos(), cur = CUE.seg.findIndex(s => pos >= SONG.t(s.a) && pos < SONG.t(s.b)); if (cur < 0) return;
     const want = G2.ascendSeg(b), f = b.hp / b.maxHp;
     if (want > cur && pos > SONG.t(CUE.seg[cur].a) + SONG.bar * 4 && pos < SONG.t(CUE.seg[cur].b) - SONG.bar) { S.jumpTo(CUE.seg[want].a); return; }
@@ -11578,7 +11579,7 @@ G2.ascendMusic = function (b) {
 /* ------------------------------ DYING, 2:31-2:45, AND DEATH ------------------------------ */
 G2.ascendDeath = function* (b) {
     const S = G2.song; b.dying = 1; G.lockInput = true; G.warns = []; G.projs = G.projs.filter(p => p.friendly); G.letterbox = 1; G.cineCam = { x: b.x, y: b.y - 380, zoom: 1.15 };
-    S.setLoop(null); if (S.pos() < SONG.t(CUE.dying) - .05) S.jumpTo(CUE.dying); yield 2; yield* waitBar(CUE.dying);
+    S.setLoop(null); if (S.pos() < SONG.t(CUE.dying) - .05 || S.jump) S.jumpTo(CUE.dying, true); yield 2; yield* waitBar(CUE.dying);
     b.blink = 1; b.open = 1; G.flash = .6; G.addShake(12); if (G.g2fx) G.g2fx.mode = 'pull';
     G.say('ZERO, AS HE WAS ON THE ALTAR', 'I am what he forgave... and never healed.', Math.round(SONG.bar * 60 * 3));
     yield* waitBar(CUE.dying + 4);
