@@ -28,8 +28,12 @@ const OUT = require('path').join(__dirname, '..', 'art') + '/';
     for (let i = 0; i < 40; i++) { for (const p of all) { p.x = cx + spots[order.indexOf(p.id)]; p.vx = 0; } window.__T(1); }
     for (const p of all) { p.rig.play(p.id === 'nyx' ? 'victory' : 'idle', 0); }
     for (let i = 0; i < 26; i++) { for (const p of all) { p.x = cx + spots[order.indexOf(p.id)]; p.vx = 0; p.facing = p.id === 'nyx' || p.id === 'zero' ? 1 : (p.x < cx ? 1 : -1); } G2.fx.ok || 0; window.__T(1); }
-    const z = layout === 'poster' ? .62 : .6, vw = 1280 / z, vh = 720 / z; G.cineCam = null; G.cam.zoom = z; G.cam.x = cx - vw / 2; G.cam.y = A.y - vh * .97; G.cam.tz = z;
-    for (const p of all) p.g2hide = true; Game.render(); for (const p of all) p.g2hide = false;
+    const z = layout === 'poster' ? .62 : .6, vw = 1280 / z, vh = 720 / z; G.cineCam = null; G.cam.zoom = z; G.cam.x = cx - vw / 2; G.cam.y = A.y - vh * 1.0; G.cam.tz = z;
+    for (const p of all) p.g2hide = true;
+    const tick0 = BOSSES.architect2.tick; BOSSES.architect2.tick = bb => { tick0(bb); bb.x = cx; bb.y = A.y + 40; };
+    B.x = cx; B.lastX = cx; B.wingS = null; Settings.renderScale = 1; Game.applyVideo();
+    for (let i = 0; i < 50; i++) { window.__T(1); B.x = cx; Game.render(); }
+    Settings.renderScale = W / 1280; Game.applyVideo(); B.x = cx; Game.render(); for (const p of all) p.g2hide = false;
   }, [W, H, layout]);
   // the party, large, on a ledge in front of the light
   const heroes = async (layout) => pg.evaluate((layout) => {
