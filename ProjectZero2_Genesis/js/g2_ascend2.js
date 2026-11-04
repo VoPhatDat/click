@@ -35,7 +35,7 @@ G2.drawBeams = function (c, b) {
     const ex = b.x, ey = G2.cy(b), fy = b.A.y;
     c.save(); c.globalCompositeOperation = 'lighter';
     for (const m of G2.beams) {
-        let fx, k;
+        let fx, k; m.age = m.age || 0;
         if (m.kind === 'ray') { fx = m.x; k = 1 - m.age / m.life; }
         else { if (m.age < m.delay) continue; const u = U.clamp((m.age - m.delay) / m.dur, 0, 1); fx = U.lerp(m.x0, m.x1, u); k = m.age - m.delay > m.dur ? 1 - (m.age - m.delay - m.dur) / 12 : 1; if (k <= 0) continue; }
         const w = (m.w || 46) * (.6 + .4 * k), g = c.createLinearGradient(ex, ey, fx, fy); g.addColorStop(0, `rgba(255,255,255,${.9 * k})`); g.addColorStop(1, U.rgba(m.col || '#ffe8a0', .85 * k));
@@ -170,11 +170,12 @@ G2.heaven = function (c, k) {
 /* ------------------------------ WIRING ------------------------------ */
 (function () {
     // the torn heaven goes behind everything else of the final form
-    const fd = G2.fx.draw.bind(G2.fx); G2.fx.draw = function (c, F, front) { if (!front) G2.heaven(c, U.clamp(F.sky, 0, 1)); return fd(c, F, front); };
+    const fd = G2.fx.draw.bind(G2.fx); G2.fx.draw = function (c, F, front) { c.save(); try { if (!front) G2.heaven(c, U.clamp(F.sky, 0, 1)); fd(c, F, front); } catch (e) { console.warn(e); } finally { c.restore(); } };
     // the god: eye target and beams each tick
     const B = BOSSES.architect2, tick = B.tick, draw = B.draw;
     B.tick = b => { tick(b); if (b.ascended && !b.dying) G2.eyeTick(b); if (b.dying) { b.lookX = U.lerp(b.lookX || b.x, b.x, .05); for (const e of G.enemies) if (e.g2echo && !e.dead) { e.hp = 0; e.die({ dir: 0 }); } } G2.beamsTick(); };
-    B.draw = (c, b) => { draw(c, b); if (b.ascended && !b.gone) G2.drawBeams(c, b); };
+    // drawing never leaves the canvas in a strange state, even if something inside fails
+    B.draw = (c, b) => { c.save(); try { draw(c, b); if (b.ascended && !b.gone) G2.drawBeams(c, b); } catch (e) { console.warn(e); } finally { c.restore(); } };
     const ll = Game.loadLevel.bind(Game); Game.loadLevel = function (id, cp) { G2.beams = []; G2.skillCap = null; return ll(id, cp); };
     // the skill being cast, under the god's health bar
     const hd = HUD.draw.bind(HUD); HUD.draw = function (c) {

@@ -319,8 +319,8 @@ G2.ascendDeath = function* (b) {
 // The name card: the band fades in, then the name comes in letter by letter out of the light, the way a
 // name is remembered rather than announced; the subtitle follows once the name is whole.
 G2.drawTitle = function (c, T) {
-    const sk = T.sinkAt !== undefined && G2.song.active ? U.clamp((G2.song.pos() - T.sinkAt) / 1.4, 0, 1) : 0, ek = sk * sk * (3 - 2 * sk), Y0 = U.lerp(VH * .62, VH * .86, ek), dur = T.dur || 200, name = T.name, n = name.length, band = Math.min(1, T.t / 40) * (1 - ek * .45), sp = 5;
-    c.save(); if (ek > 0) { const z = 1 - ek * .42; c.translate(VW / 2, Y0); c.scale(z, z); c.translate(-VW / 2, -Y0); } c.globalAlpha = band; const bg = c.createLinearGradient(0, 0, VW, 0); bg.addColorStop(0, 'rgba(6,4,12,0)'); bg.addColorStop(.2, 'rgba(6,4,12,.7)'); bg.addColorStop(.8, 'rgba(6,4,12,.7)'); bg.addColorStop(1, 'rgba(6,4,12,0)'); c.fillStyle = bg; c.fillRect(0, Y0 - 78, VW, 130);
+    const sk = T.sinkAt !== undefined && G2.song.active ? U.clamp((G2.song.pos() - T.sinkAt) / 1.4, 0, 1) : 0, ek = sk * sk * (3 - 2 * sk), Y0 = U.lerp(VH * .62, VH * .965, ek), dur = T.dur || 200, name = T.name, n = name.length, band = Math.min(1, T.t / 40) * (1 - ek * .45), sp = 5;
+    c.save(); if (ek > 0) { const z = 1 - ek * .5; c.translate(VW / 2, Y0); c.scale(z, z); c.translate(-VW / 2, -Y0); } c.globalAlpha = band; const bg = c.createLinearGradient(0, 0, VW, 0); bg.addColorStop(0, 'rgba(6,4,12,0)'); bg.addColorStop(.2, 'rgba(6,4,12,.7)'); bg.addColorStop(.8, 'rgba(6,4,12,.7)'); bg.addColorStop(1, 'rgba(6,4,12,0)'); c.fillStyle = bg; c.fillRect(0, Y0 - 78, VW, 130);
     const lw = Math.min(1, T.t / 60) * VW * .36; c.fillStyle = 'rgba(255,216,107,.85)'; c.fillRect(VW / 2 - lw, Y0 - 78, lw * 2, 1.5); c.fillRect(VW / 2 - lw, Y0 + 50, lw * 2, 1.5);
     c.font = 'bold 60px "Palatino Linotype", "Times New Roman", serif'; c.textAlign = 'left'; c.textBaseline = 'alphabetic';
     const ws = [...name].map(ch => c.measureText(ch).width + sp), W = ws.reduce((a, b) => a + b, 0) - sp; let x = VW / 2 - W / 2;
