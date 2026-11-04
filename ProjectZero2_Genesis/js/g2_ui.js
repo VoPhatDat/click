@@ -45,7 +45,7 @@ G2.closeStation = function () { UI.hide(); if (G.level && G.level.id === 'garden
     // HUD: three skills, the weapon in hand, and each operator's own gauge.
     HUD.skills = function (c, P, d) {
         const sk = k => ({ k: 'skill' + k[1], name: d.skills[k].name, cd: P.cds[k] / d.skills[k].cd, col: d.skills[k].col, cost: d.skills[k].cost, t: P.cds[k] });
-        const items = [{ k: 'attack', name: tr(d.noAttack ? 'POINT' : d.ranged ? 'FIRE' : 'ATTACK') }, { k: 'heavy', name: tr(d.canGuard ? 'GUARD' : 'HEAVY') }, sk('s1'), sk('s2'), sk('s3'), { k: 'ult', name: d.ult.name, ult: true, col: d.ult.col }];
+        const items = [{ k: 'attack', name: tr(d.noAttack ? (d.id === 'vesperYoung' ? 'UNARMED' : 'POINT') : d.ranged ? 'FIRE' : 'ATTACK') }, { k: 'heavy', name: tr(d.canGuard ? 'GUARD' : 'HEAVY') }, sk('s1'), sk('s2'), sk('s3'), { k: 'ult', name: d.ult.name, ult: true, col: d.ult.col }];
         const w = 60, gap = 8, x0 = VW / 2 - (items.length * (w + gap) - gap) / 2, y = VH - 80;
         items.forEach((it, i) => {
             const x = x0 + i * (w + gap), big = i >= 2;
@@ -111,6 +111,6 @@ Object.assign(UI.screens, {
     LEVELS.garden = function () { const d = gl(); ['seraphina', 'mareva', 'gardener', 'astraea', 'lilith', 'archon'].forEach((k, i) => d.objs.push({ kind: 'exit', g2: 'witness', boss: k, x: (36 + i * 13) * TILE, y: floorY(d, 36 + i * 13), label: '' })); if (Save.data && Save.data.g2.spared.lilith) d.objs.push({ kind: 'npc', id: 'wolfpup', x: 104 * TILE, y: floorY(d, 104) }); return d; };
     Object.assign(NPCS, { wolfpup: { name: 'A WOLF OF THE PACK', look: '#6a5a50', lines: [['A WOLF OF THE PACK', '...'], ['NYX', 'You came to guard the Garden? Good wolf.']] } });
     // The party key, once there is a party.
-    const sk = HUD.skills; HUD.skills = function (c, P, d) { sk.call(this, c, P, d); if ((Save.data.g2.chapter || 1) >= 6 && G2.party().length > 1) { c.font = '11px "Palatino Linotype", serif'; c.textAlign = 'left'; c.fillStyle = '#e8d8ff'; c.fillText(tr('Switch') + ' [' + this.keyName(Settings.binds.party) + ']: ' + G2.party().map(id => CHARS[id].name).join(' · '), VW / 2 - 214, VH - 126); } };
+    const sk = HUD.skills; HUD.skills = function (c, P, d) { sk.call(this, c, P, d); if ((Save.data.g2.chapter || 1) >= 6 && G2.party().length > 1 && !(G.level && G.level.noSwap)) { c.font = '11px "Palatino Linotype", serif'; c.textAlign = 'left'; c.fillStyle = '#e8d8ff'; c.fillText(tr('Switch') + ' [' + this.keyName(Settings.binds.party) + ']: ' + G2.party().map(id => CHARS[id].name).join(' · '), VW / 2 - 214, VH - 126); } };
 })();
 Object.assign(VI, { 'MUSIC ROOM': 'PHÒNG NHẠC', 'Not heard yet': 'Chưa nghe thấy', 'Every track is synthesised live in your browser. No one but you has listened to them yet: tell us which ones work.': 'Mọi bài nhạc được tổng hợp trực tiếp trong trình duyệt của bạn. Ngoài bạn ra chưa ai nghe chúng: hãy cho chúng tôi biết bài nào ổn.', 'BACK': 'QUAY LẠI', 'Switch': 'Đổi người', 'A WOLF OF THE PACK': 'MỘT CON SÓI TRONG BẦY', 'You came to guard the Garden? Good wolf.': 'Em đến canh Vườn à? Sói ngoan.', 'NEW GAME+': 'CHƠI LẠI+' });

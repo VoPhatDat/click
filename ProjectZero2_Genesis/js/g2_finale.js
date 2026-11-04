@@ -155,19 +155,47 @@ G2.topMoves = function () { const n = Save.data.g2.actCount || {}; return Object
 G2.shatter = function () { G.g2crack = 1; G.flash = .8; Sound.sfx('ice_crack'); Sound.sfx('bigboom', { v: .5 }); G.addShake(14); };
 
 // Act 2: Vesper's memory. Vesper cannot fight. Run, shield, and at the altar hold the child.
-CHARS.vesperYoung = Object.assign({}, CHARS.vesper, { id: 'vesperYoung', name: 'VESPER', noAttack: true, hp: 120, skills: { s1: { name: 'Shield Wing', desc: 'Fold a wing over yourself for a moment.', cost: 10, cd: 150, col: '#ffffff', *run(p) { p.inv = 50; VFX.ring(p.x, p.y - 34, 50, '#ffffff', 12, 4); yield 10; } }, s2: { name: 'Shield Wing', desc: '', cost: 0, cd: 9999, col: '#ffffff', *run(p) { yield 1; } }, s3: { name: 'Shield Wing', desc: '', cost: 0, cd: 9999, col: '#ffffff', *run(p) { yield 1; } } }, ult: { name: 'NONE', col: '#ffffff', *run(p) { yield 1; } }, weapons: [{ id: 'none', name: 'No weapon', desc: '', gear: null, len: 10 }] });
-CHARS.vesperYoung.style = (() => { const S = vesperStyle(); S.backGear = (c, J) => { const n = J.neck, burn = G.g2burn || 0; for (let i = 0; i < 3; i++) for (const d of [-1, 1]) { c.save(); c.translate(n.x, n.y + 6); c.fillStyle = Paint.c(burn > (i + (d > 0 ? 0 : .5)) / 3.5 ? '#3a2a24' : '#f8f4ee'); c.beginPath(); c.ellipse(d * 18, -10 - i * 4, 22 - i * 3, 6, d * (.4 + i * .3), 0, TAU); c.fill(); c.restore(); } }; return S; })();
+CHARS.vesperYoung = Object.assign({}, CHARS.vesper, { id: 'vesperYoung', name: 'VESPER', noAttack: true, hp: 120, skills: {
+    s1: { name: 'Shield Wing', desc: 'Fold a wing over yourself: nothing touches you for a moment, and those close are pushed back.', cost: 10, cd: 150, col: '#ffffff', *run(p) { p.inv = 50; VFX.ring(p.x, p.y - 34, 90, '#ffffff', 14, 6); Sound.sfx('swing_l'); for (const e of G.enemies) if (!e.dead && Math.abs(e.x - p.x) < 110 && Math.abs(e.y - p.y) < 90) { e.vx = U.sign(e.x - p.x) * 11; e.stagger && e.stagger(30); } yield 10; } },
+    s2: { name: 'Wing Step', desc: 'One beat of the wings: a short dash forward that nothing can touch.', cost: 10, cd: 80, col: '#f8f4ee', *run(p) { p.inv = Math.max(p.inv, 18); for (let i = 0; i < 9; i++) { p.vx = p.facing * 15; if (i % 2 === 0) G.afterimage(p, '#ffffff'); yield 1; } p.vx = p.facing * 4; } },
+    s3: { name: 'Prayer of Rest', desc: 'Pray: everyone hunting her slows down for three seconds.', cost: 25, cd: 600, col: '#ffe8c0', *run(p) { VFX.ring(p.x, p.y - 34, 320, '#ffe8c0', 26, 10); Sound.sfx('checkpoint'); for (const e of G.enemies) if (!e.dead && Math.hypot(e.x - p.x, e.y - p.y) < 340) e.slowT = 180; yield 20; } } }, ult: { name: 'NONE', col: '#ffffff', *run(p) { yield 1; } }, weapons: [{ id: 'none', name: 'No weapon', desc: '', gear: null, len: 10 }] });
+CHARS.vesperYoung.style = (() => { const S = vesperStyle(); S.weaponF = null; S.weaponB = null; S.backGear = (c, J) => { const n = J.neck, burn = G.g2burn || 0; for (let i = 0; i < 3; i++) for (const d of [-1, 1]) { c.save(); c.translate(n.x, n.y + 6); c.fillStyle = Paint.c(burn > (i + (d > 0 ? 0 : .5)) / 3.5 ? '#3a2a24' : '#f8f4ee'); c.beginPath(); c.ellipse(d * 18, -10 - i * 4, 22 - i * 3, 6, d * (.4 + i * .3), 0, TAU); c.fill(); c.restore(); } }; return S; })();
 WEAPONS2.vesperYoung = CHARS.vesperYoung.weapons;
 Object.assign(ENEMIES, { mtroop: { name: 'Meridian Templar', ai: 'melee', body: 'human', hp: 9999, dmg: 14, spd: 3.6, xp: 0, col: { a: '#3a3a44', b: '#c8c8d0', g: '#ff8a3a', s: '#8a8a96' }, gear: 'blade', atks: [mkA(A.swipe, { s: 18 })] } });
+// At the altar: the soldiers close in but cannot reach her, she stays by the child, and the key to hold,
+// with how far along it is, stays on screen until it is done. (Before, the one toast was easy to miss, she
+// could walk away, the troopers kept hitting her, and the altar could not be used again.)
 G2.memoryEnd = function* () {
+    const P = G.player; G2.mem = { x: P.x, y: P.y };
     G.lockInput = true; G.letterbox = 1; Music.setState('boss'); G.g2music.phase = 1; G.say('HIGH PRIEST', 'Burn them both.', 140); yield 150;
-    G.g2holdT = 0; G.toast('Hold the Interact key: hold the child', '#ffffff'); G.lockInput = false; G.g2holding = true;
+    G.g2holdT = 0; G.lockInput = false; G.g2holding = true;
     yield () => (G.g2holdT || 0) >= 200 || (HEADLESS && (G.g2holdT = 200));
     G.g2holding = false; G.lockInput = true; G.flash = 1; Music.stop(.3); yield 60;
     G.say('VESPER', 'I protected a child once, too... the way he protects you.', 240); yield 250;
-    G2.shatter(); yield 40; G.g2sepia = 0; G.letterbox = 0; G.lockInput = false; G2.F.setAct(3); G2.cut('g2act2back', () => Game.loadLevel('architect2'));
+    G2.shatter(); yield 40; G.g2sepia = 0; G.letterbox = 0; G.lockInput = false; G2.mem = null; G2.F.setAct(3); G2.cut('g2act2back', () => Game.loadLevel('architect2'));
 };
-(function () { const upd = Player.prototype.update; Player.prototype.update = function () { upd.call(this); if (G.g2holding && this === G.player) { if (Input.down('interact')) { G.g2holdT = (G.g2holdT || 0) + 1; G.g2burn = Math.min(1, G.g2holdT / 200); this.vx = 0; if (G.time % 5 === 0) VFX.burst(this.x + U.rand(-30, 30), this.y - 60, '#ff8a3a', 3, 3, 20, 4, 1); } } }; })();
+(function () {
+    const upd = Player.prototype.update; Player.prototype.update = function () {
+        upd.call(this);
+        if (!G.g2holding || this !== G.player) return;
+        const M = G2.mem; if (M) { this.x = M.x; this.vx = 0; }
+        if (Input.down('interact')) { G.g2holdT = (G.g2holdT || 0) + 1; G.g2burn = Math.min(1, G.g2holdT / 200); if (G.time % 5 === 0) VFX.burst(this.x + U.rand(-30, 30), this.y - 60, '#ff8a3a', 3, 3, 20, 4, 1); }
+        // the soldiers press in, but cannot reach her while she holds the child
+        for (const e of G.enemies) { if (e.dead) continue; const d = e.x - this.x; if (Math.abs(d) < 230) e.x = this.x + (Math.sign(d) || 1) * 230; e.vx = 0; e.g2held = true; }
+    };
+    const hurt = Player.prototype.hurt; Player.prototype.hurt = function (d, s) { if (G.g2holding && this === G.player) return false; return hurt.call(this, d, s); };
+    // the key to hold and how far along it is, right above her
+    const hd = HUD.draw.bind(HUD); HUD.draw = function (c) {
+        hd(c); if (!G.g2holding || !G.player || Game.state !== 'play') return; const P = G.player, cam = G.cam, x = (P.x - cam.x) * cam.zoom, y = (P.y - 150 - cam.y) * cam.zoom, k = Math.min(1, (G.g2holdT || 0) / 200), key = this.keyName(Settings.binds.interact);
+        c.save(); c.textAlign = 'center'; c.font = 'bold 18px "Palatino Linotype", "Times New Roman", serif'; c.lineWidth = 4; c.strokeStyle = 'rgba(20,8,4,.9)'; const t = tr('Hold') + ' [' + key + '] ' + tr('to hold the child'); c.strokeText(t, x, y); c.fillStyle = '#ffffff'; c.fillText(t, x, y);
+        c.fillStyle = 'rgba(0,0,0,.6)'; c.fillRect(x - 80, y + 10, 160, 8); c.fillStyle = '#ffb060'; c.fillRect(x - 80, y + 10, 160 * k, 8); c.strokeStyle = 'rgba(255,230,190,.8)'; c.lineWidth = 1; c.strokeRect(x - 80, y + 10, 160, 8); c.restore();
+    };
+    // no '[E] The altar' over her once the altar is in use
+    const pr = HUD.prompt.bind(HUD); HUD.prompt = function (c, o) { if (o && o.g2used || G.g2holding) return; return pr(c, o); };
+    // nothing of the altar scene survives a reload: a retry starts it clean
+    const ll = Game.loadLevel.bind(Game); Game.loadLevel = function (id, cp) { G.g2holding = false; G.g2holdT = 0; G.g2burn = 0; G2.mem = null; return ll(id, cp); };
+})();
+Object.assign(VI, { 'Hold': 'Giữ', 'to hold the child': 'để ôm lấy đứa trẻ' });
 
 // Act 3: the Architect, whole again, with the whole party; the spared help, the slain return as ghosts.
 const ASSISTS = {
@@ -314,9 +342,10 @@ Object.assign(LEVELS, {
         return b.done();
     },
     memory() {
-        const b = new LB('memory', 200, 40, { name: 'VESPER’S MEMORY', sub: 'Before the first world ended', region: 'city', theme: THEMES.memory7, bg: 'memory7', spawn: { x: 5, y: 30 }, weather: 'ash', noAlly: true, forceChar: 'vesperYoung' });
+        const b = new LB('memory', 200, 40, { name: 'VESPER’S MEMORY', sub: 'Before the first world ended', region: 'city', theme: THEMES.memory7, bg: 'memory7', spawn: { x: 5, y: 30 }, weather: 'ash', noAlly: true, forceChar: 'vesperYoung', noSwap: true });
         b.at(0, 30).flat(30).beacon(4, 30);
         b.say(6, 30, 'VESPER', 'The child. They have the child. I am coming.', 160);
+        b.say(9, 30, '', 'This is Vesper’s memory. She had no weapon then: Shield Wing (1), Wing Step (2), Prayer of Rest (3). Reach the child.', 260);
         b.es([['mtroop', 2, 28]]); b.flat(20); b.haz('lava', b.cx - 14, 30, 3, 1, { dmg: 10 }); b.upS(2).flat(16).es([['mtroop', b.cx - 20, b.cy - 2]]); b.haz('lava', b.cx - 8, b.cy, 3, 1, { dmg: 10 }); b.downS(2).flat(20).beacon(b.cx - 6, b.cy);
         b.trig(b.cx - 16, b.cy - 12, 2, 13, () => { for (let i = 0; i < 4; i++) { const x = (G.player.x + 200 + i * 160); G.boss = null; Combat.warn({ shape: 'rect', x: x - 40, y: G.player.y - 400, w: 80, h: 400, t: 40 + i * 14, dmg: 18, src: { x, y: 0, def: {} } }); } Sound.sfx('slam'); G.toast('The pillars are falling', '#ffb060'); });
         b.flat(30).es([['mtroop', b.cx - 10, b.cy - 2], ['mtroop', b.cx - 26, b.cy - 2]]);
@@ -338,7 +367,7 @@ Object.assign(LEVELS, {
     G2.stationExt = G2.stationExt || {};
     G2.stationExt.witness = () => { Game.state = 'play'; };
     G2.stationExt.throneSeat = () => { Game.state = 'play'; G.toast('Not yet.', '#ffe8c8'); };
-    G2.stationExt.altarChild = () => { Game.state = 'play'; if (!G.flags.altar) { G.flags.altar = 1; G.runScript(G2.memoryEnd()); } };
+    G2.stationExt.altarChild = () => { Game.state = 'play'; if (!G.flags.altar) { G.flags.altar = 1; const o = G.nearObj; if (o) o.g2used = true; G.runScript(G2.memoryEnd()); } };
     const ll = Game.loadLevel.bind(Game); Game.loadLevel = function (id, cp) { if (id === 'throne') { const a = G2.F.act(); if (a === 2) id = 'memory'; else if (a === 3) id = 'architect2'; } ll(id, cp); G.g2sepia = !!G.level.g2sepia; if (id === 'architect2' && G2.F.act() === 4) G.delay(30, () => G2.throneChoice()); if (id === 'architect2' || id === 'weariness') { G.ghostT = 600; } };
     // Those Nyx spared kneel on the stair; the slain are broken stone.
     const od = ObjArt.draw.bind(ObjArt); ObjArt.draw = function (c, L) { od(c, L); for (const o of L.objs) { if (o.g2 === 'witness') { const g = Save.data.g2, x = o.x, y = o.y; if (g.spared[o.boss]) { c.fillStyle = '#e8e0f0'; Paint.disc(c, x, y - 70, 9, '#e8e0f0'); Paint.poly(c, [x - 12, y - 60, x + 12, y - 60, x + 18, y - 4, x - 18, y - 4], '#d8d0e0'); c.fillStyle = '#e8e0f0'; c.font = '11px "Palatino Linotype", serif'; c.textAlign = 'center'; c.fillText(tr(BOSSES[o.boss].name), x, y - 90); Paint.glow(c, x, y - 60, 30, '#ffffff'); } else if (g.killed[o.boss]) { c.fillStyle = '#5a5660'; Paint.poly(c, [x - 16, y, x - 10, y - 50, x + 2, y - 44, x + 14, y - 62, x + 16, y], '#5a5660'); c.fillRect(x - 20, y - 6, 40, 6); } } else if (o.g2 === 'throneSeat') { const x = o.x, y = o.y; c.fillStyle = '#d8d0e0'; c.fillRect(x - 30, y - 120, 60, 120); c.fillRect(x - 40, y - 60, 80, 14); Paint.glow(c, x, y - 80, 70, '#ffffff'); } else if (o.g2 === 'altarChild') { const x = o.x, y = o.y; c.fillStyle = '#4a3020'; c.fillRect(x - 50, y - 30, 100, 30); Paint.disc(c, x, y - 40, 7, '#e8d0b8'); c.fillStyle = '#6a5a4a'; c.fillRect(x - 14, y - 36, 28, 6); } } };
@@ -490,3 +519,7 @@ Object.assign(VI, {
     V.draw = (c, b) => { draw(c, b); if (b.reflect > 0 && !b.dead) { const k = Math.min(1, b.reflect / 30), y = b.y - 100; c.save(); c.globalAlpha = .55 * k; c.globalCompositeOperation = 'lighter'; const g = c.createLinearGradient(b.x - 50, y - 110, b.x + 50, y + 110); g.addColorStop(0, 'rgba(255,240,200,.1)'); g.addColorStop(.5, 'rgba(255,216,120,.9)'); g.addColorStop(1, 'rgba(255,240,200,.1)'); c.strokeStyle = g; c.lineWidth = 5; c.beginPath(); c.ellipse(b.x, y, 62, 118, 0, 0, TAU); c.stroke(); c.globalAlpha = .18 * k; c.fillStyle = '#ffd890'; c.fill(); c.restore(); } };
 })();
 Object.assign(VI, { 'Mirrored': 'Gương phản', 'Use something else.': 'Hãy dùng chiêu khác.' });
+
+Object.assign(VI, { 'Shield Wing': 'Cánh Che Chở', 'Fold a wing over yourself: nothing touches you for a moment, and those close are pushed back.': 'Khép cánh che mình: một lúc không gì chạm được, kẻ ở gần bị đẩy lùi.', 'Wing Step': 'Bước Cánh', 'One beat of the wings: a short dash forward that nothing can touch.': 'Một nhịp vỗ cánh: lướt ngắn về phía trước, không gì chạm được.', 'Prayer of Rest': 'Lời Cầu Nghỉ Ngơi', 'Pray: everyone hunting her slows down for three seconds.': 'Cầu nguyện: mọi kẻ đang săn cô chậm lại trong ba giây.',
+    'This is Vesper’s memory. She had no weapon then: Shield Wing (1), Wing Step (2), Prayer of Rest (3). Reach the child.': 'Đây là ký ức của Vesper. Khi ấy cô không có vũ khí: Cánh Che Chở (1), Bước Cánh (2), Lời Cầu Nghỉ Ngơi (3). Hãy tới chỗ đứa trẻ.',
+    'This is Vesper’s memory. No one else is here.': 'Đây là ký ức của Vesper. Ở đây không có ai khác.', 'UNARMED': 'TAY KHÔNG' });

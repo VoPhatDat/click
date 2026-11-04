@@ -67,7 +67,7 @@ G2.nyxKit = function (ch) {
 Object.assign(DEFAULT_BINDS, { party: 'KeyC' }); Object.assign(ALT_BINDS, { party: 'KeyV' }); if (!Settings.binds.party) Settings.binds.party = 'KeyC';
 G2.party = function () { const D = Save.data; return ['nyx', 'zero', 'vesper', 'rook', 'sable', 'mirae', 'ysolde'].filter(id => D.unlocked.includes(id) && CHARS[id] && (id !== 'zero' || D.g2.zeroBack)); };
 G2.swapParty = function (to) {
-    const P = G.player, list = G2.party(); if (!P || P.state === 'dead') return; if (!to && (list.length < 2 || P.state === 'skill' || G.level.soloNyx)) return;
+    const P = G.player, list = G2.party(); if (!P || P.state === 'dead') return; if (!to && G.level.noSwap) { G.toast('This is Vesper’s memory. No one else is here.', '#ffb060'); return; } if (!to && (list.length < 2 || P.state === 'skill' || G.level.soloNyx)) return;
     if (G.level.forceNyx && P.id === 'nyx' && !to) { G.toast('Only Nyx can see in this dark.', '#b48cff'); return; }
     const id = to || list[(list.indexOf(P.id) + 1) % list.length]; if (id === P.id) return;
     G.partyHp = G.partyHp || {}; G.partyHp[P.id] = P.hp / P.maxHp;
