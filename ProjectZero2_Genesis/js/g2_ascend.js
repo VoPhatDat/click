@@ -182,8 +182,8 @@ G2.drawAscendedBody = function (c, b) {
         for (let i = 0; i < 8; i++) { const a = i / 8 * TAU + t * .012, r = 300 * f2, sx = x + Math.cos(a) * r, sy = y + Math.sin(a) * r * .45; c.save(); c.translate(sx, sy); c.rotate(a + Math.PI / 2); c.globalAlpha = .85 * f2; const g = c.createLinearGradient(0, -70, 0, 50); g.addColorStop(0, '#ffffff'); g.addColorStop(1, 'rgba(200,176,255,.2)'); c.fillStyle = g; c.beginPath(); c.moveTo(0, -80); c.lineTo(9, 30); c.lineTo(0, 44); c.lineTo(-9, 30); c.fill(); c.fillStyle = '#ffd86b'; c.fillRect(-16, 30, 32, 5); c.restore(); }
     }
     if (!b.open) G2.drawEye(c, x, y, 92, b);
-    else G2.drawCoreFace(c, x, y, b);
     if (b.crack) { c.strokeStyle = `rgba(255,255,255,${b.crack})`; c.lineWidth = 2.4; const R = U.mulberry(3); for (let i = 0; i < 22 * b.crack; i++) { c.beginPath(); let px = x, py = y; c.moveTo(px, py); for (let k = 0; k < 5; k++) { px += (R() - .5) * 220; py += (R() - .5) * 200; c.lineTo(px, py); } c.stroke(); } }
+    if (b.open) G2.drawCoreFace(c, x, y, b);
 };
 
 G2.cy = b => b.y - 380 * (b.scale || 1);

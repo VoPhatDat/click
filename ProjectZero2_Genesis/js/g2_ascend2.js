@@ -141,13 +141,21 @@ G2.ascendBeat = function (b, bar, bi) {
 /* ------------------------------ THE CORE, OPENED ------------------------------ */
 // When it is dying the eye gives way, and inside is what it was made from: Zero, kneeling, as on the altar.
 G2.drawCoreFace = function (c, x, y, b) {
-    const t = b.anim, R = 74;
+    // Zero as he was on the altar: kneeling on a stone slab, bound by two chains of light, lit from behind
+    const t = b.anim, R = 104, fy = y + R * .62;
     if (!b.coreRig) { b.coreRig = new Rig(CHARS.zero.style); b.coreRig.owner = { element: 0, charge: 0 }; b.coreRig.play('kneel', 0); }
-    const r = b.coreRig; r.ground = true; r.gaitAmt = .2; r.tick(); r.updateChain(x, y + 44, 1, 0);
-    c.save(); const g = c.createRadialGradient(x, y, 10, x, y, R); g.addColorStop(0, '#2a2440'); g.addColorStop(.8, '#120e1c'); g.addColorStop(1, '#3a2a50'); c.fillStyle = g; c.beginPath(); c.arc(x, y, R, 0, TAU); c.fill();
-    c.clip(); c.globalAlpha = .55 + .2 * Math.sin(t * .05); c.drawImage(Glow.get('#7ad8ff'), x - 60, y - 70, 120, 120); c.globalAlpha = 1;
-    c.translate(x, y + 44); c.scale(1.5, 1.5); c.translate(-x, -(y + 44)); r.draw(c, x, y + 44, 1, .95); c.restore();
-    c.save(); c.globalCompositeOperation = 'lighter'; c.strokeStyle = 'rgba(255,240,210,.8)'; c.lineWidth = 3; c.beginPath(); c.arc(x, y, R, 0, TAU); c.stroke(); c.lineWidth = 1.2; c.strokeStyle = 'rgba(200,230,255,.5)'; c.beginPath(); c.arc(x, y, R + 8 + Math.sin(t * .08) * 3, 0, TAU); c.stroke(); c.restore();
+    const zx = x - 36, r = b.coreRig; r.ground = true; r.gaitAmt = .2; r.tick(); r.updateChain(zx, fy, 1, 0);
+    c.save(); c.shadowColor = '#000'; c.shadowBlur = 30; const g = c.createRadialGradient(x, y - 10, 10, x, y, R); g.addColorStop(0, '#4a4a66'); g.addColorStop(.75, '#22203a'); g.addColorStop(1, '#141024'); c.fillStyle = g; c.beginPath(); c.arc(x, y, R, 0, TAU); c.fill(); c.shadowBlur = 0;
+    c.clip();
+    c.globalAlpha = .7 + .15 * Math.sin(t * .05); c.drawImage(Glow.get('#9ad8ff'), x - 110, y - 120, 220, 200); c.globalAlpha = 1;
+    // the altar
+    c.fillStyle = '#5a5060'; c.fillRect(x - 90, fy, 180, 16); c.fillStyle = '#8a8090'; c.fillRect(x - 90, fy, 180, 3); c.fillStyle = '#2a2232'; c.fillRect(x - 80, fy + 16, 160, 40);
+    // chains of light to his wrists
+    c.strokeStyle = 'rgba(255,230,170,.75)'; c.lineWidth = 2; c.setLineDash([6, 4]); c.beginPath(); c.moveTo(x - R, y - 40); c.lineTo(zx - 6, fy - 50); c.moveTo(x + R, y - 40); c.lineTo(zx + 30, fy - 50); c.stroke(); c.setLineDash([]);
+    // the figure, big enough to read, with a pale rim of light around it
+    c.save(); c.translate(zx, fy); c.scale(2.1, 2.1); c.translate(-zx, -fy); c.shadowColor = '#cfe8ff'; c.shadowBlur = 14; r.draw(c, zx, fy, 1, 1); c.restore();
+    c.restore();
+    c.save(); c.globalCompositeOperation = 'lighter'; c.strokeStyle = 'rgba(255,240,210,.85)'; c.lineWidth = 3; c.beginPath(); c.arc(x, y, R, 0, TAU); c.stroke(); c.lineWidth = 1.2; c.strokeStyle = 'rgba(200,230,255,.5)'; c.beginPath(); c.arc(x, y, R + 9 + Math.sin(t * .08) * 3, 0, TAU); c.stroke(); c.restore();
 };
 
 /* ------------------------------ THE TORN HEAVEN ------------------------------ */
