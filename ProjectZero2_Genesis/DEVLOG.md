@@ -172,6 +172,12 @@ Công cụ mới `node tools/zerowatch.js` theo dõi Zero trong từng trận: s
 - Kết quả sau khi sửa: Mareva 6/6 trận thắng (trước đó 1/2). Các trận còn lại 2/2, không kẹt, không ra ngoài đấu trường, không lỗi.
 - Đã xóa dòng "Hết bản thử M1" ở cuối Ngày Thứ Nhất.
 
+### Phím chiêu bị trễ hoặc bị nuốt (`js/g2_input.js`)
+Có ba nguyên nhân, đều đã tái hiện bằng bot trên bản cũ (chiêu không ra) và kiểm tra lại trên bản mới (chiêu ra):
+1. **Hitstop.** Mỗi lần đánh trúng, game khựng vài khung hình. Những khung đó bỏ qua bước cập nhật nhân vật nhưng vẫn xóa phím đã bấm, nên bấm chiêu ngay sau một đòn trúng là mất. Chuyển động chậm cũng bị tương tự. Giờ phím bấm được giữ lại qua các khung đó.
+2. **Không có bộ đệm phím.** Bấm chiêu khi đang chém, đang né, đang dùng chiêu khác, hoặc chiêu sắp hồi xong thì lần bấm bị bỏ qua. Giờ phím chiêu được giữ khoảng 1/4 giây và chiêu ra ngay khi nhân vật hành động được.
+3. **Phím 3 và 4 không ngắt được đòn đánh thường.** Trước chỉ phím 1 và 2 ngắt được cuối nhịp chém. Giờ cả 4 phím đều ngắt được.
+
 ### Kiểm thử (đều do bot)
 - `node tools/e2e2.js`: chương 1 bằng Nyx (cả tha và giết), 7 nhân vật đánh thật Hiệp Sĩ và Seraphina: PASS.
 - `node tools/e2e3.js`: chiến dịch từ ngày 2 tới cả 4 kết thúc (cutscene, chương, lựa chọn, mở khóa, các hồi, NG+, lưu/tải). Người chơi được giữ sống, bài này kiểm tra mạch truyện, không kiểm tra độ khó: **CAMPAIGN II COMPLETE**.
