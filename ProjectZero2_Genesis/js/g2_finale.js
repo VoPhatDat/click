@@ -480,3 +480,13 @@ Object.assign(VI, {
     'Nyx said nothing. And under her feet, for the first time, a shadow appeared.': 'Nyx im lặng trước Ngai. Bóng của Nyx, thứ cô chưa từng có, bắt đầu hiện ra dưới chân.', 'The shadow pointed down: a stair beneath the Throne, to a second, older Throne. It was still warm, as if someone had just stood up.': 'Cái bóng chỉ xuống một cầu thang dẫn sâu dưới Ngai, tới cái Ngai cổ xưa thứ hai, vẫn còn ấm như vừa có người rời đi.', 'A name was carved into it.': 'Trên Ngai cổ khắc một cái tên.',
     '"You did well."': '"Con đã làm tốt."', 'Walk the Shore of the Seventh Day': 'Đi qua Bờ Ngày Thứ Bảy', 'Climb to the Empty Throne': 'Leo lên Ngai Trống', 'Reach the child on the altar': 'Đến chỗ đứa trẻ trên bàn thờ', 'Bring down the Architect, together': 'Cùng nhau hạ The Architect', 'Do not strike. Hold.': 'Đừng đánh. Hãy ôm.'
 });
+
+/* The Perfect Mirror, made readable and fair: it lasts about four seconds on its own, the moves it
+   sends back are named on screen, and a golden mirror stands in front of her while it shines. */
+(function () {
+    const V = BOSSES.vesper, tick = V.tick, draw = V.draw, mir = V.moves.mirror;
+    V.moves.mirror = function* (b) { b.reflect = 240; G.toast(tr('Mirrored') + ': ' + b.mirror.map(k => tr(G2.ACT_NAME[k] || k)).join(', ') + '. ' + tr('Use something else.'), '#ffb060'); yield* mir(b); };
+    V.tick = b => { tick(b); if (b.reflect > 0) b.reflect = Math.max(0, b.reflect - 1); };
+    V.draw = (c, b) => { draw(c, b); if (b.reflect > 0 && !b.dead) { const k = Math.min(1, b.reflect / 30), y = b.y - 100; c.save(); c.globalAlpha = .55 * k; c.globalCompositeOperation = 'lighter'; const g = c.createLinearGradient(b.x - 50, y - 110, b.x + 50, y + 110); g.addColorStop(0, 'rgba(255,240,200,.1)'); g.addColorStop(.5, 'rgba(255,216,120,.9)'); g.addColorStop(1, 'rgba(255,240,200,.1)'); c.strokeStyle = g; c.lineWidth = 5; c.beginPath(); c.ellipse(b.x, y, 62, 118, 0, 0, TAU); c.stroke(); c.globalAlpha = .18 * k; c.fillStyle = '#ffd890'; c.fill(); c.restore(); } };
+})();
+Object.assign(VI, { 'Mirrored': 'Gương phản', 'Use something else.': 'Hãy dùng chiêu khác.' });
